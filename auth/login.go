@@ -16,12 +16,13 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"go.mau.fi/mautrix-meta/pkg/messagix"
-	"go.mau.fi/mautrix-meta/pkg/messagix/bloks"
-	metaCookies "go.mau.fi/mautrix-meta/pkg/messagix/cookies"
-	metaTypes "go.mau.fi/mautrix-meta/pkg/messagix/types"
 	fberrors "go.mewis.me/fbgo/errors"
 	"go.mewis.me/fbgo/internal/protocol"
+	"go.mewis.me/meta-extra/pkg/messagix"
+	"go.mewis.me/meta-extra/pkg/messagix/bloks"
+	metaCookies "go.mewis.me/meta-extra/pkg/messagix/cookies"
+	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
+	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
 	"maunium.net/go/mautrix/bridgev2"
 )
 
@@ -57,7 +58,7 @@ type CredentialLogin struct {
 }
 
 func NewCredentialLogin() *CredentialLogin {
-	jar := &metaCookies.Cookies{Platform: metaTypes.MessengerLite}
+	jar := &metaCookies.Cookies{Platform: metaTypes.MessengerLiteIOS}
 	client := messagix.NewClient(jar, zerolog.Nop(), &messagix.Config{})
 	return &CredentialLogin{client: client}
 }
@@ -233,7 +234,7 @@ func normalizeCredentialLoginError(err error) error {
 		return err
 	}
 	var checkpoint bloks.CheckpointError
-	if errors.As(err, &checkpoint) || errors.Is(err, messagix.ErrCheckpointRequired) || strings.Contains(strings.ToLower(err.Error()), "checkpoint") {
+	if errors.As(err, &checkpoint) || errors.Is(err, metaHTTP.ErrCheckpointRequired) || strings.Contains(strings.ToLower(err.Error()), "checkpoint") {
 		return fmt.Errorf("%w: credential login requires checkpoint", fberrors.ErrCheckpointRequired)
 	}
 	if resp := loginResponseError(err); resp != nil {

@@ -13,12 +13,13 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"go.mau.fi/mautrix-meta/pkg/messagix"
-	metaCookies "go.mau.fi/mautrix-meta/pkg/messagix/cookies"
-	metaTypes "go.mau.fi/mautrix-meta/pkg/messagix/types"
 	fberrors "go.mewis.me/fbgo/errors"
 	"go.mewis.me/fbgo/internal/webapi"
 	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta-extra/pkg/messagix"
+	metaCookies "go.mewis.me/meta-extra/pkg/messagix/cookies"
+	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
+	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
 )
 
 type Session struct {
@@ -48,7 +49,7 @@ func (v SessionValidator) Validate(ctx context.Context, cookies Cookies) (Sessio
 	client := messagix.NewClient(jar, zerolog.Nop(), &messagix.Config{})
 	user, _, err := client.LoadMessagesPage(ctx)
 	if err != nil {
-		if errors.Is(err, messagix.ErrTokenInvalidated) || errors.Is(err, messagix.ErrCheckpointRequired) {
+		if errors.Is(err, metaHTTP.ErrTokenInvalidated) || errors.Is(err, metaHTTP.ErrCheckpointRequired) {
 			return Session{}, normalizeMessagixAuthError(err)
 		}
 		return Session{}, err
@@ -61,9 +62,9 @@ func (v SessionValidator) Validate(ctx context.Context, cookies Cookies) (Sessio
 
 func normalizeMessagixAuthError(err error) error {
 	switch {
-	case errors.Is(err, messagix.ErrCheckpointRequired):
+	case errors.Is(err, metaHTTP.ErrCheckpointRequired):
 		return fmt.Errorf("%w: %v", fberrors.ErrCheckpointRequired, err)
-	case errors.Is(err, messagix.ErrTokenInvalidated):
+	case errors.Is(err, metaHTTP.ErrTokenInvalidated):
 		return fmt.Errorf("%w: %v", fberrors.ErrSessionExpired, err)
 	default:
 		return err

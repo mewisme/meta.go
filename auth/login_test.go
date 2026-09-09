@@ -12,8 +12,8 @@ import (
 	"net/url"
 	"testing"
 
-	"go.mau.fi/mautrix-meta/pkg/messagix"
 	fberrors "go.mewis.me/fbgo/errors"
+	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 	"maunium.net/go/mautrix/bridgev2"
 )
 
@@ -23,7 +23,7 @@ func TestNormalizeCredentialLoginError(t *testing.T) {
 		err  error
 		want error
 	}{
-		{"checkpoint", messagix.ErrCheckpointRequired, fberrors.ErrCheckpointRequired},
+		{"checkpoint", metaHTTP.ErrCheckpointRequired, fberrors.ErrCheckpointRequired},
 		{"bad credentials", errors.New("Invalid username or password"), fberrors.ErrUnauthorized},
 		{"response rejection", bridgev2.RespError{ErrCode: "FI.MAU.META_LOGIN", Err: "rejected", StatusCode: 400}, fberrors.ErrUnauthorized},
 		{"phone input", bridgev2.RespError{ErrCode: "FI.MAU.META_PHONE_NUMBER", Err: "phone unsupported", StatusCode: 400}, fberrors.ErrInvalidInput},

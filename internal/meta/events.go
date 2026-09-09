@@ -7,38 +7,38 @@ import (
 	"strings"
 	"time"
 
-	"go.mau.fi/mautrix-meta/pkg/messagix"
-	"go.mau.fi/mautrix-meta/pkg/messagix/table"
 	"go.mau.fi/whatsmeow/proto/waConsumerApplication"
 	"go.mau.fi/whatsmeow/proto/waMediaTransport"
 	waEvents "go.mau.fi/whatsmeow/types/events"
 	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta-extra/pkg/messagix"
+	"go.mewis.me/meta-extra/pkg/messagix/table"
 )
 
 func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 	switch evt := event.(type) {
-	case *messagix.Event_Ready:
+	case *messagix.ConnectedEvent:
 		e.connected.Store(true)
 		e.regularState.Store(model.ConnectionConnected)
-		e.emit(Event{Kind: EventReady, IsNewSession: evt.IsNewSession})
-	case *messagix.Event_Reconnected:
+		e.emit(Event{Kind: EventReady, IsNewSession: true})
+	case *messagix.ReconnectedEvent:
 		e.connected.Store(true)
 		e.regularState.Store(model.ConnectionConnected)
 		e.reconnect.Add(1)
 		e.emit(Event{Kind: EventReconnected})
-	case *messagix.Event_SocketError:
+	case *messagix.TransientDisconnectEvent:
 		e.connected.Store(false)
 		e.regularState.Store(model.ConnectionFailed)
 		e.recordError(evt.Err)
 		e.emit(Event{Kind: EventError, Error: evt.Err})
-	case *messagix.Event_PermanentError:
+	case *messagix.PermanentErrorEvent:
 		e.connected.Store(false)
 		e.regularState.Store(model.ConnectionFailed)
 		e.recordError(evt.Err)
 		e.emit(Event{Kind: EventError, Error: evt.Err})
-	case *messagix.Event_PublishResponse:
-		if evt.Table != nil {
-			e.emitTable(evt.Table)
+	case *table.LSTable:
+		if evt != nil {
+			e.emitTable(evt)
 		}
 	case *waEvents.Connected:
 		e.e2eeReady.Store(true)

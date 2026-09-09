@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"go.mau.fi/mautrix-meta/pkg/messagix"
 	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta-extra/pkg/messagix"
 )
 
 type fakeBackend struct {
@@ -140,7 +140,7 @@ func TestEngineLifecycle(t *testing.T) {
 	if err != nil || account.ID != "1" || !engine.Connected() {
 		t.Fatalf("unexpected connect result: %#v %v", account, err)
 	}
-	backend.handler(context.Background(), &messagix.Event_Ready{IsNewSession: true})
+	backend.handler(context.Background(), &messagix.ConnectedEvent{})
 	select {
 	case event := <-engine.Events():
 		if event.Kind != EventReady {
@@ -194,7 +194,7 @@ func TestEngineConcurrentEmitAndClose(t *testing.T) {
 	go func() {
 		defer close(done)
 		for i := 0; i < 1000; i++ {
-			backend.handler(context.Background(), &messagix.Event_Reconnected{})
+			backend.handler(context.Background(), &messagix.ReconnectedEvent{})
 		}
 	}()
 	engine.Close()

@@ -12,15 +12,16 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"go.mau.fi/mautrix-meta/pkg/messagix"
-	"go.mau.fi/mautrix-meta/pkg/messagix/cookies"
-	"go.mau.fi/mautrix-meta/pkg/messagix/socket"
-	"go.mau.fi/mautrix-meta/pkg/messagix/table"
-	metaTypes "go.mau.fi/mautrix-meta/pkg/messagix/types"
 	"go.mau.fi/util/exhttp"
 	"go.mau.fi/whatsmeow"
 	"go.mewis.me/fbgo/internal/webapi"
 	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta-extra/pkg/messagix"
+	"go.mewis.me/meta-extra/pkg/messagix/cookies"
+	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
+	"go.mewis.me/meta-extra/pkg/messagix/socket"
+	"go.mewis.me/meta-extra/pkg/messagix/table"
+	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
 )
 
 const maxUploadBytes int64 = 100 << 20
@@ -246,7 +247,7 @@ func (b *messagixBackend) Upload(ctx context.Context, req UploadRequest) (Upload
 	if int64(len(data)) > maxUploadBytes {
 		return UploadResult{}, fmt.Errorf("upload exceeds %d-byte limit", maxUploadBytes)
 	}
-	response, err := b.client.SendMercuryUploadRequest(ctx, threadID, &messagix.MercuryUploadMedia{Filename: req.Name, MimeType: req.ContentType, MediaData: data, IsVoiceClip: req.Voice})
+	response, err := b.client.GetHTTP().SendMercuryUploadRequest(ctx, threadID, &metaHTTP.MercuryUploadMedia{Filename: req.Name, MimeType: req.ContentType, MediaData: data, IsVoiceClip: req.Voice})
 	if err != nil {
 		return UploadResult{}, err
 	}

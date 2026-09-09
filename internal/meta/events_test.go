@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"go.mau.fi/mautrix-meta/pkg/messagix"
-	"go.mau.fi/mautrix-meta/pkg/messagix/table"
 	"go.mau.fi/whatsmeow/proto/waMediaTransport"
 	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta-extra/pkg/messagix"
+	"go.mewis.me/meta-extra/pkg/messagix/table"
 )
 
 func TestEmitTableNormalizesRealtimeEvents(t *testing.T) {
@@ -68,7 +68,7 @@ func TestReconnectHealthCounter(t *testing.T) {
 	backend := new(fakeBackend)
 	engine := newEngine(nil, backend, 4)
 	engine.connected.Store(true)
-	engine.handleTransportEvent(nil, &messagix.Event_Reconnected{})
+	engine.handleTransportEvent(nil, &messagix.ReconnectedEvent{})
 	health := engine.Health()
 	if health.ReconnectCount != 1 || health.Regular != model.ConnectionConnected {
 		t.Fatalf("unexpected health: %#v", health)

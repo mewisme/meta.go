@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"go.mau.fi/mautrix-meta/pkg/messagix"
 	fberrors "go.mewis.me/fbgo/errors"
+	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 )
 
 func TestParseHomepage(t *testing.T) {
@@ -27,10 +27,10 @@ func TestParseHomepageProtocolChange(t *testing.T) {
 }
 
 func TestNormalizeMessagixAuthError(t *testing.T) {
-	if err := normalizeMessagixAuthError(messagix.ErrCheckpointRequired); !errors.Is(err, fberrors.ErrCheckpointRequired) {
+	if err := normalizeMessagixAuthError(metaHTTP.ErrCheckpointRequired); !errors.Is(err, fberrors.ErrCheckpointRequired) {
 		t.Fatalf("expected checkpoint normalization, got %v", err)
 	}
-	if err := normalizeMessagixAuthError(messagix.ErrTokenInvalidated); !errors.Is(err, fberrors.ErrSessionExpired) {
+	if err := normalizeMessagixAuthError(metaHTTP.ErrTokenInvalidated); !errors.Is(err, fberrors.ErrSessionExpired) {
 		t.Fatalf("expected session expiry normalization, got %v", err)
 	}
 }

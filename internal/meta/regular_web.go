@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	metaTypes "go.mau.fi/mautrix-meta/pkg/messagix/types"
-	"go.mau.fi/mautrix-meta/pkg/messagix/useragent"
 	"go.mewis.me/fbgo/internal/graphql"
 	"go.mewis.me/fbgo/internal/protocol"
 	"go.mewis.me/fbgo/internal/webapi"
 	"go.mewis.me/fbgo/model"
+	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
+	"go.mewis.me/meta-extra/pkg/messagix/useragent"
 )
 
 type browserFormState struct {
@@ -63,7 +63,7 @@ func (b *messagixBackend) browserFormState(ctx context.Context) (browserFormStat
 	if width, _ := b.client.GetCookies().GetViewports(); width != "" {
 		headers.Set("viewport-width", width)
 	}
-	_, body, err := b.client.MakeRequest(ctx, b.client.GetEndpoint("messages"), http.MethodGet, headers, nil, metaTypes.NONE)
+	_, body, err := b.client.GetHTTP().MakeRequest(ctx, b.client.GetEndpoint("messages"), http.MethodGet, headers, nil, metaTypes.NONE)
 	if err != nil {
 		return browserFormState{}, fmt.Errorf("load Messenger browser form state: %w", err)
 	}
@@ -151,7 +151,7 @@ func (b *messagixBackend) graphQL(ctx context.Context, friendlyName, docID strin
 	if state.LSD != "" {
 		headers.Set("x-fb-lsd", state.LSD)
 	}
-	_, data, err := b.client.MakeRequest(ctx, b.client.GetEndpoint("graphql"), http.MethodPost, headers, []byte(form.Encode()), metaTypes.FORM)
+	_, data, err := b.client.GetHTTP().MakeRequest(ctx, b.client.GetEndpoint("graphql"), http.MethodPost, headers, []byte(form.Encode()), metaTypes.FORM)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (b *messagixBackend) graphQLBatch(ctx context.Context, queries map[string]a
 	if state.LSD != "" {
 		headers.Set("x-fb-lsd", state.LSD)
 	}
-	_, data, err := b.client.MakeRequest(ctx, protocol.GraphQLBatchURL, http.MethodPost, headers, []byte(form.Encode()), metaTypes.FORM)
+	_, data, err := b.client.GetHTTP().MakeRequest(ctx, protocol.GraphQLBatchURL, http.MethodPost, headers, []byte(form.Encode()), metaTypes.FORM)
 	if err != nil {
 		return nil, err
 	}
@@ -327,9 +327,9 @@ type themeTask struct {
 }
 
 func (t *themeTask) GetLabel() string { return t.label }
-func (t *themeTask) Create() (any, any, bool) {
+func (t *themeTask) Create() (any, string) {
 	if !t.includeNulls {
-		return t, t.queue, false
+		return t, t.queue
 	}
 	return struct {
 		ThreadKey int64 `json:"thread_key"`
@@ -337,7 +337,7 @@ func (t *themeTask) Create() (any, any, bool) {
 		SyncGroup int64 `json:"sync_group"`
 		Source    any   `json:"source"`
 		Payload   any   `json:"payload"`
-	}{ThreadKey: t.ThreadKey, ThemeFBID: t.ThemeFBID, SyncGroup: t.SyncGroup}, t.queue, false
+	}{ThreadKey: t.ThreadKey, ThemeFBID: t.ThemeFBID, SyncGroup: t.SyncGroup}, t.queue
 }
 
 func (b *messagixBackend) SetTheme(ctx context.Context, threadID, themeID model.ID) error {

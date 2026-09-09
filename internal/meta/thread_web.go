@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"go.mau.fi/mautrix-meta/pkg/messagix/socket"
-	metaTypes "go.mau.fi/mautrix-meta/pkg/messagix/types"
 	"go.mewis.me/fbgo/internal/protocol"
 	"go.mewis.me/fbgo/internal/webapi"
 	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta-extra/pkg/messagix/socket"
+	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
 )
 
 func (b *messagixBackend) ListThreads(ctx context.Context, limit int) (model.ThreadList, error) {
@@ -201,7 +201,7 @@ func (b *messagixBackend) SetThreadName(ctx context.Context, threadID model.ID, 
 func (b *messagixBackend) postThreadMutation(ctx context.Context, endpoint string, form url.Values) error {
 	headers := b.graphQLHeaders("")
 	headers.Set("referer", protocol.FacebookBaseURL+"/messages/")
-	_, data, err := b.client.MakeRequest(ctx, endpoint, http.MethodPost, headers, []byte(form.Encode()), metaTypes.FORM)
+	_, data, err := b.client.GetHTTP().MakeRequest(ctx, endpoint, http.MethodPost, headers, []byte(form.Encode()), metaTypes.FORM)
 	if err != nil {
 		return err
 	}

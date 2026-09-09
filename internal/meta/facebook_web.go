@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	metaTypes "go.mau.fi/mautrix-meta/pkg/messagix/types"
 	"go.mewis.me/fbgo/internal/protocol"
 	"go.mewis.me/fbgo/internal/webapi"
 	"go.mewis.me/fbgo/model"
+	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
 )
 
 func (b *messagixBackend) GetFacebookUser(ctx context.Context, userID model.ID) (*model.FacebookUser, error) {
@@ -429,7 +429,7 @@ var marketplaceCategoryID = map[string]int64{
 
 func (b *messagixBackend) postFacebookForm(ctx context.Context, endpoint string, form url.Values) (map[string]any, error) {
 	headers := b.graphQLHeaders("")
-	_, data, err := b.client.MakeRequest(ctx, endpoint, http.MethodPost, headers, []byte(form.Encode()), metaTypes.FORM)
+	_, data, err := b.client.GetHTTP().MakeRequest(ctx, endpoint, http.MethodPost, headers, []byte(form.Encode()), metaTypes.FORM)
 	if err != nil {
 		return nil, err
 	}

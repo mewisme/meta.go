@@ -17,7 +17,7 @@ func TestNormalizePrivacy(t *testing.T) {
 
 func TestThemeTaskNullPayload(t *testing.T) {
 	task := &themeTask{ThreadKey: 1, ThemeFBID: 2, SyncGroup: 1, label: "43", queue: "thread_theme", includeNulls: true}
-	payload, queue, _ := task.Create()
+	payload, queue := task.Create()
 	data, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)

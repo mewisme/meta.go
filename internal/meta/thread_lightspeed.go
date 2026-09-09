@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"go.mau.fi/mautrix-meta/pkg/messagix"
-	"go.mau.fi/mautrix-meta/pkg/messagix/socket"
-	"go.mau.fi/mautrix-meta/pkg/messagix/table"
 	"go.mewis.me/fbgo/model"
+	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
+	"go.mewis.me/meta-extra/pkg/messagix/socket"
+	"go.mewis.me/meta-extra/pkg/messagix/table"
 )
 
 func (b *messagixBackend) CreatePoll(ctx context.Context, threadID model.ID, question string, options []string) error {
@@ -83,7 +83,7 @@ func (b *messagixBackend) SetThreadPhoto(ctx context.Context, threadID model.ID,
 	if contentType == "" {
 		contentType = "image/jpeg"
 	}
-	response, err := b.client.SendMercuryUploadRequest(ctx, thread, &messagix.MercuryUploadMedia{Filename: name, MimeType: contentType, MediaData: data})
+	response, err := b.client.GetHTTP().SendMercuryUploadRequest(ctx, thread, &metaHTTP.MercuryUploadMedia{Filename: name, MimeType: contentType, MediaData: data})
 	if err != nil {
 		return err
 	}
