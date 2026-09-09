@@ -39,6 +39,7 @@ type messagixBackend struct {
 	requestCounter webapi.RequestCounter
 	browserStateMu sync.Mutex
 	browserState   *browserFormState
+	lifetimeCtx    context.Context
 }
 
 func New(parent context.Context, cfg Config) (*Engine, error) {
@@ -79,6 +80,7 @@ func (b *messagixBackend) Bootstrap(ctx context.Context) (Account, error) {
 }
 
 func (b *messagixBackend) Connect(lifetimeCtx, startupCtx context.Context) error {
+	b.lifetimeCtx = lifetimeCtx
 	if err := b.client.Connect(lifetimeCtx); err != nil {
 		return err
 	}
@@ -108,7 +110,11 @@ func (b *messagixBackend) ConnectE2EE(ctx context.Context, accountID model.ID) e
 		return err
 	}
 	if b.handler != nil {
-		e2ee.AddEventHandler(func(event any) { b.handler(ctx, event) })
+		handlerCtx := b.lifetimeCtx
+		if handlerCtx == nil {
+			handlerCtx = context.Background()
+		}
+		e2ee.AddEventHandler(func(event any) { b.handler(handlerCtx, event) })
 	}
 	b.e2ee = e2ee
 	if err := b.client.RegisterE2EE(ctx, fbid); err != nil {
@@ -117,7 +123,14 @@ func (b *messagixBackend) ConnectE2EE(ctx context.Context, accountID model.ID) e
 	if err := b.deviceStore.Device().Save(ctx); err != nil {
 		return err
 	}
-	return e2ee.ConnectContext(ctx)
+	if err := e2ee.ConnectContext(ctx); err != nil {
+		return err
+	}
+	if !e2ee.WaitForConnection(15*time.Second) || !e2ee.IsLoggedIn() {
+		e2ee.Disconnect()
+		return ErrE2EENotReady
+	}
+	return nil
 }
 
 func (b *messagixBackend) E2EEConnected() bool {

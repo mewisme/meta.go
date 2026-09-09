@@ -50,6 +50,19 @@ func TestDeviceGenerationPropagatesRandomFailure(t *testing.T) {
 	}
 }
 
+func TestDeviceGenerationUsesBoundedRegistrationAndAdvSecret(t *testing.T) {
+	store, err := NewMemoryDeviceStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.Device().RegistrationID < 1 || store.Device().RegistrationID > maxRegistrationID {
+		t.Fatalf("registration ID out of range: %d", store.Device().RegistrationID)
+	}
+	if len(store.Device().AdvSecretKey) != 32 {
+		t.Fatalf("unexpected ADV secret size: %d", len(store.Device().AdvSecretKey))
+	}
+}
+
 type failingReader struct{}
 
 func (failingReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }

@@ -27,6 +27,14 @@ type Backend interface {
 	CreateNote(context.Context, string, string) (*model.Note, error)
 	DeleteNote(context.Context, model.ID) error
 	RecreateNote(context.Context, model.ID, string, string) (*model.Note, error)
+	SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error)
+	SendE2EEMedia(context.Context, model.E2EEMediaInput) (model.SendResult, error)
+	DownloadE2EEMedia(context.Context, model.E2EEMediaDownload) ([]byte, error)
+	ReactE2EE(context.Context, model.E2EEReactionRequest) error
+	EditE2EE(context.Context, string, model.ID, string) error
+	UnsendE2EE(context.Context, string, model.ID) error
+	TypingE2EE(context.Context, string, bool) error
+	ReadE2EE(context.Context, model.E2EEReadRequest) error
 }
 
 type Service struct{ backend Backend }
@@ -178,6 +186,101 @@ func (s *Service) RecreateNote(ctx context.Context, oldNoteID model.ID, text, pr
 		return nil, invalid("old note ID and new note text are required")
 	}
 	return s.backend.RecreateNote(ctx, oldNoteID, text, privacy)
+}
+
+func (s *Service) SendE2EE(ctx context.Context, req model.E2EESendRequest) (model.SendResult, error) {
+	if err := s.ready(); err != nil {
+		return model.SendResult{}, err
+	}
+	if req.ChatJID == "" && req.FacebookUserID.Empty() {
+		return model.SendResult{}, invalid("E2EE chat JID or Facebook user ID is required")
+	}
+	if strings.TrimSpace(req.Text) == "" {
+		return model.SendResult{}, invalid("E2EE message text is required")
+	}
+	return s.backend.SendE2EE(ctx, req)
+}
+
+func (s *Service) SendE2EEMedia(ctx context.Context, req model.E2EEMediaInput) (model.SendResult, error) {
+	if err := s.ready(); err != nil {
+		return model.SendResult{}, err
+	}
+	if req.ChatJID == "" && req.FacebookUserID.Empty() {
+		return model.SendResult{}, invalid("E2EE chat JID or Facebook user ID is required")
+	}
+	if req.Reader == nil {
+		return model.SendResult{}, invalid("E2EE media reader is required")
+	}
+	if req.Size < 0 {
+		return model.SendResult{}, invalid("E2EE media size cannot be negative")
+	}
+	switch req.Kind {
+	case model.E2EEMediaImage, model.E2EEMediaVideo, model.E2EEMediaAudio, model.E2EEMediaDocument, model.E2EEMediaSticker:
+	default:
+		return model.SendResult{}, invalid("unsupported E2EE media kind")
+	}
+	return s.backend.SendE2EEMedia(ctx, req)
+}
+
+func (s *Service) DownloadE2EE(ctx context.Context, req model.E2EEMediaDownload) ([]byte, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	ref := req.Reference
+	if ref.DirectPath == "" || len(ref.MediaKey) == 0 || len(ref.FileSHA256) == 0 {
+		return nil, invalid("E2EE media reference is incomplete")
+	}
+	return s.backend.DownloadE2EEMedia(ctx, req)
+}
+
+func (s *Service) ReactE2EE(ctx context.Context, req model.E2EEReactionRequest) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if req.ChatJID == "" || req.MessageID.Empty() || req.SenderJID == "" {
+		return invalid("E2EE chat JID, message ID and sender JID are required")
+	}
+	return s.backend.ReactE2EE(ctx, req)
+}
+
+func (s *Service) EditE2EE(ctx context.Context, chatJID string, messageID model.ID, text string) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if chatJID == "" || messageID.Empty() || text == "" {
+		return invalid("E2EE chat JID, message ID and replacement text are required")
+	}
+	return s.backend.EditE2EE(ctx, chatJID, messageID, text)
+}
+
+func (s *Service) UnsendE2EE(ctx context.Context, chatJID string, messageID model.ID) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if chatJID == "" || messageID.Empty() {
+		return invalid("E2EE chat JID and message ID are required")
+	}
+	return s.backend.UnsendE2EE(ctx, chatJID, messageID)
+}
+
+func (s *Service) TypingE2EE(ctx context.Context, chatJID string, typing bool) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if chatJID == "" {
+		return invalid("E2EE chat JID is required")
+	}
+	return s.backend.TypingE2EE(ctx, chatJID, typing)
+}
+
+func (s *Service) ReadE2EE(ctx context.Context, req model.E2EEReadRequest) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if req.ChatJID == "" || req.SenderJID == "" || len(req.MessageIDs) == 0 {
+		return invalid("E2EE chat JID, sender JID and message IDs are required")
+	}
+	return s.backend.ReadE2EE(ctx, req)
 }
 
 func (s *Service) ready() error {

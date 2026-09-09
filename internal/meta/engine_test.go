@@ -56,8 +56,22 @@ func (f *fakeBackend) SetTheme(context.Context, model.ID, model.ID) error       
 func (f *fakeBackend) CurrentNote(context.Context) (*Note, error)                    { return nil, nil }
 func (f *fakeBackend) CreateNote(context.Context, string, string) (*Note, error)     { return nil, nil }
 func (f *fakeBackend) DeleteNote(context.Context, model.ID) error                    { return nil }
-func (f *fakeBackend) ConnectE2EE(context.Context, model.ID) error                   { return nil }
-func (f *fakeBackend) E2EEConnected() bool                                           { return true }
+func (f *fakeBackend) SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error) {
+	return model.SendResult{MessageID: "e2ee.1", Timestamp: time.Unix(2, 0)}, nil
+}
+func (f *fakeBackend) SendE2EEMedia(context.Context, model.E2EEMediaInput) (model.SendResult, error) {
+	return model.SendResult{MessageID: "e2ee.media.1", Timestamp: time.Unix(3, 0)}, nil
+}
+func (f *fakeBackend) DownloadE2EEMedia(context.Context, model.E2EEMediaDownload) ([]byte, error) {
+	return []byte("media"), nil
+}
+func (f *fakeBackend) ReactE2EE(context.Context, model.E2EEReactionRequest) error { return nil }
+func (f *fakeBackend) EditE2EE(context.Context, string, model.ID, string) error   { return nil }
+func (f *fakeBackend) UnsendE2EE(context.Context, string, model.ID) error         { return nil }
+func (f *fakeBackend) TypingE2EE(context.Context, string, bool) error             { return nil }
+func (f *fakeBackend) ReadE2EE(context.Context, model.E2EEReadRequest) error      { return nil }
+func (f *fakeBackend) ConnectE2EE(context.Context, model.ID) error                { return nil }
+func (f *fakeBackend) E2EEConnected() bool                                        { return true }
 
 func TestEngineLifecycle(t *testing.T) {
 	backend := new(fakeBackend)
@@ -186,5 +200,19 @@ func (b *blockingBackend) SetTheme(context.Context, model.ID, model.ID) error   
 func (b *blockingBackend) CurrentNote(context.Context) (*Note, error)                { return nil, nil }
 func (b *blockingBackend) CreateNote(context.Context, string, string) (*Note, error) { return nil, nil }
 func (b *blockingBackend) DeleteNote(context.Context, model.ID) error                { return nil }
-func (b *blockingBackend) ConnectE2EE(context.Context, model.ID) error               { return nil }
-func (b *blockingBackend) E2EEConnected() bool                                       { return false }
+func (b *blockingBackend) SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error) {
+	return model.SendResult{}, nil
+}
+func (b *blockingBackend) SendE2EEMedia(context.Context, model.E2EEMediaInput) (model.SendResult, error) {
+	return model.SendResult{}, nil
+}
+func (b *blockingBackend) DownloadE2EEMedia(context.Context, model.E2EEMediaDownload) ([]byte, error) {
+	return nil, nil
+}
+func (b *blockingBackend) ReactE2EE(context.Context, model.E2EEReactionRequest) error { return nil }
+func (b *blockingBackend) EditE2EE(context.Context, string, model.ID, string) error   { return nil }
+func (b *blockingBackend) UnsendE2EE(context.Context, string, model.ID) error         { return nil }
+func (b *blockingBackend) TypingE2EE(context.Context, string, bool) error             { return nil }
+func (b *blockingBackend) ReadE2EE(context.Context, model.E2EEReadRequest) error      { return nil }
+func (b *blockingBackend) ConnectE2EE(context.Context, model.ID) error                { return nil }
+func (b *blockingBackend) E2EEConnected() bool                                        { return false }

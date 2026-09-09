@@ -1,11 +1,13 @@
 package meta
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
 	"go.mau.fi/mautrix-meta/pkg/messagix"
 	"go.mau.fi/mautrix-meta/pkg/messagix/table"
+	"go.mau.fi/whatsmeow/proto/waMediaTransport"
 	"go.mewis.me/fbgo/model"
 )
 
@@ -76,3 +78,24 @@ func TestReconnectHealthCounter(t *testing.T) {
 		t.Fatal("last receive timestamp was not exposed")
 	}
 }
+
+func TestE2EEAttachmentNormalizationPreservesDownloadReference(t *testing.T) {
+	transport := &waMediaTransport.WAMediaTransport{
+		Integral:  &waMediaTransport.WAMediaTransport_Integral{DirectPath: stringPtr("/media/path"), MediaKey: []byte{1, 2, 3}, FileSHA256: []byte{4, 5, 6}, FileEncSHA256: []byte{7, 8, 9}},
+		Ancillary: &waMediaTransport.WAMediaTransport_Ancillary{Mimetype: stringPtr("image/jpeg"), FileLength: uint64Ptr(123)},
+	}
+	attachment := e2eeAttachment(model.E2EEMediaImage, "a.jpg", transport, 10, 20, 0)
+	if attachment.Type != "image" || attachment.FileName != "a.jpg" || attachment.ContentType != "image/jpeg" || attachment.Size != 123 || attachment.Width != 10 || attachment.Height != 20 {
+		t.Fatalf("unexpected normalized attachment: %#v", attachment)
+	}
+	if attachment.E2EE == nil || attachment.E2EE.DirectPath != "/media/path" || !bytes.Equal(attachment.E2EE.MediaKey, []byte{1, 2, 3}) || !bytes.Equal(attachment.E2EE.FileSHA256, []byte{4, 5, 6}) || !bytes.Equal(attachment.E2EE.FileEncSHA256, []byte{7, 8, 9}) {
+		t.Fatalf("unexpected E2EE media reference: %#v", attachment.E2EE)
+	}
+	transport.Integral.MediaKey[0] = 99
+	if attachment.E2EE.MediaKey[0] != 1 {
+		t.Fatal("normalized E2EE media reference leaked mutable protocol buffers")
+	}
+}
+
+func stringPtr(value string) *string { return &value }
+func uint64Ptr(value uint64) *uint64 { return &value }

@@ -46,6 +46,20 @@ func (f *fakeBackend) DeleteNote(context.Context, model.ID) error { return nil }
 func (f *fakeBackend) RecreateNote(context.Context, model.ID, string, string) (*model.Note, error) {
 	return &model.Note{ID: "2"}, nil
 }
+func (f *fakeBackend) SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error) {
+	return model.SendResult{MessageID: "e2ee.1"}, nil
+}
+func (f *fakeBackend) SendE2EEMedia(context.Context, model.E2EEMediaInput) (model.SendResult, error) {
+	return model.SendResult{MessageID: "e2ee.media.1"}, nil
+}
+func (f *fakeBackend) DownloadE2EEMedia(context.Context, model.E2EEMediaDownload) ([]byte, error) {
+	return []byte("media"), nil
+}
+func (f *fakeBackend) ReactE2EE(context.Context, model.E2EEReactionRequest) error { return nil }
+func (f *fakeBackend) EditE2EE(context.Context, string, model.ID, string) error   { return nil }
+func (f *fakeBackend) UnsendE2EE(context.Context, string, model.ID) error         { return nil }
+func (f *fakeBackend) TypingE2EE(context.Context, string, bool) error             { return nil }
+func (f *fakeBackend) ReadE2EE(context.Context, model.E2EEReadRequest) error      { return nil }
 
 func TestServiceSendAndRemoveReaction(t *testing.T) {
 	backend := new(fakeBackend)
@@ -73,5 +87,21 @@ func TestServiceInputValidation(t *testing.T) {
 	}
 	if err := service.Edit(context.Background(), "", "x"); !errors.Is(err, fberrors.ErrInvalidInput) {
 		t.Fatalf("expected invalid input, got %v", err)
+	}
+}
+
+func TestServiceE2EEMediaValidation(t *testing.T) {
+	service := NewService(new(fakeBackend))
+	_, err := service.SendE2EEMedia(context.Background(), model.E2EEMediaInput{})
+	if !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid media input, got %v", err)
+	}
+	result, err := service.SendE2EEMedia(context.Background(), model.E2EEMediaInput{ChatJID: "1@msgr", Kind: model.E2EEMediaDocument, Reader: bytes.NewBufferString("x"), Size: 1})
+	if err != nil || result.MessageID != "e2ee.media.1" {
+		t.Fatalf("unexpected media send result: %#v %v", result, err)
+	}
+	data, err := service.DownloadE2EE(context.Background(), model.E2EEMediaDownload{Reference: model.E2EEMediaReference{Kind: model.E2EEMediaDocument, DirectPath: "/x", MediaKey: []byte{1}, FileSHA256: []byte{2}}})
+	if err != nil || string(data) != "media" {
+		t.Fatalf("unexpected media download result: %q %v", data, err)
 	}
 }

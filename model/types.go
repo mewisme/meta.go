@@ -67,16 +67,37 @@ type Thread struct {
 }
 
 type Attachment struct {
-	ID          ID     `json:"id,omitempty"`
-	Type        string `json:"type"`
-	URL         string `json:"url,omitempty"`
-	PreviewURL  string `json:"previewUrl,omitempty"`
-	FileName    string `json:"fileName,omitempty"`
-	ContentType string `json:"contentType,omitempty"`
-	Size        int64  `json:"size,omitempty"`
-	Width       int    `json:"width,omitempty"`
-	Height      int    `json:"height,omitempty"`
-	Duration    int    `json:"duration,omitempty"`
+	ID          ID                  `json:"id,omitempty"`
+	Type        string              `json:"type"`
+	URL         string              `json:"url,omitempty"`
+	PreviewURL  string              `json:"previewUrl,omitempty"`
+	FileName    string              `json:"fileName,omitempty"`
+	ContentType string              `json:"contentType,omitempty"`
+	Size        int64               `json:"size,omitempty"`
+	Width       int                 `json:"width,omitempty"`
+	Height      int                 `json:"height,omitempty"`
+	Duration    int                 `json:"duration,omitempty"`
+	E2EE        *E2EEMediaReference `json:"e2ee,omitempty"`
+}
+
+type E2EEMediaKind string
+
+const (
+	E2EEMediaImage    E2EEMediaKind = "image"
+	E2EEMediaVideo    E2EEMediaKind = "video"
+	E2EEMediaAudio    E2EEMediaKind = "audio"
+	E2EEMediaDocument E2EEMediaKind = "document"
+	E2EEMediaSticker  E2EEMediaKind = "sticker"
+)
+
+type E2EEMediaReference struct {
+	Kind          E2EEMediaKind `json:"kind"`
+	DirectPath    string        `json:"directPath"`
+	MediaKey      []byte        `json:"mediaKey"`
+	FileSHA256    []byte        `json:"fileSha256"`
+	FileEncSHA256 []byte        `json:"fileEncSha256,omitempty"`
+	ContentType   string        `json:"contentType,omitempty"`
+	Size          int64         `json:"size,omitempty"`
 }
 
 type ReplyReference struct {
@@ -140,6 +161,49 @@ type SendResult struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+type E2EESendRequest struct {
+	ChatJID        string
+	FacebookUserID ID
+	Text           string
+	ReplyTo        ID
+	ReplySenderJID string
+}
+
+type E2EEMediaInput struct {
+	ChatJID        string
+	FacebookUserID ID
+	Kind           E2EEMediaKind
+	Name           string
+	ContentType    string
+	Reader         io.Reader
+	Size           int64
+	Caption        string
+	Width          int
+	Height         int
+	Duration       int
+	Voice          bool
+	ReplyTo        ID
+	ReplySenderJID string
+}
+
+type E2EEMediaDownload struct {
+	Reference E2EEMediaReference
+}
+
+type E2EEReactionRequest struct {
+	ChatJID   string
+	MessageID ID
+	SenderJID string
+	Reaction  string
+}
+
+type E2EEReadRequest struct {
+	ChatJID    string
+	SenderJID  string
+	MessageIDs []ID
+	Timestamp  time.Time
+}
+
 type ReactionEvent struct {
 	MessageID ID     `json:"messageId"`
 	ThreadID  ID     `json:"threadId"`
@@ -180,6 +244,13 @@ type ThreadUpdateEvent struct {
 	ThreadID ID     `json:"threadId"`
 	Field    string `json:"field"`
 	Value    string `json:"value,omitempty"`
+}
+
+type E2EEReceiptEvent struct {
+	Type       string `json:"type"`
+	ChatJID    string `json:"chatJid"`
+	SenderJID  string `json:"senderJid"`
+	MessageIDs []ID   `json:"messageIds,omitempty"`
 }
 
 type MessageRequest struct {
@@ -237,6 +308,7 @@ const (
 	EventDeliveryReceipt EventKind = "deliveryReceipt"
 	EventThreadUpdate    EventKind = "threadUpdate"
 	EventE2EEReady       EventKind = "e2eeReady"
+	EventE2EEReceipt     EventKind = "e2eeReceipt"
 )
 
 type Event struct {

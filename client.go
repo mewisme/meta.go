@@ -90,7 +90,11 @@ func (c *Client) Connect(ctx context.Context) error {
 	if err := cookies.ValidateRegular(); err != nil {
 		return fmt.Errorf("%w: %v", fberrors.ErrUnauthorized, err)
 	}
-	engine, err := meta.New(c.ctx, meta.Config{Cookies: map[string]string(cookies), Platform: "facebook", Logger: zerolog.Nop(), EventBuffer: c.eventBuffer})
+	deviceStore, err := c.deviceStore(ctx, profile, secrets)
+	if err != nil {
+		return err
+	}
+	engine, err := meta.New(c.ctx, meta.Config{Cookies: map[string]string(cookies), Platform: "facebook", Logger: zerolog.Nop(), EventBuffer: c.eventBuffer, DeviceStore: deviceStore})
 	if err != nil {
 		return err
 	}
@@ -111,6 +115,31 @@ func (c *Client) Connect(ctx context.Context) error {
 	c.Messenger = messenger.NewService(engine)
 	c.mu.Unlock()
 	return nil
+}
+
+func (c *Client) deviceStore(ctx context.Context, profile storage.Profile, secrets storage.SecretStore) (*meta.DeviceStore, error) {
+	if !c.e2ee || profile.Name == "" || secrets == nil {
+		return nil, nil
+	}
+	const stateKey = "e2ee_state"
+	data, err := secrets.Get(ctx, profile.Name, stateKey)
+	var deviceStore *meta.DeviceStore
+	switch {
+	case err == nil:
+		deviceStore, err = meta.LoadDeviceStore(data)
+		if err != nil {
+			return nil, fmt.Errorf("load E2EE device state: %w", err)
+		}
+	case errors.Is(err, storage.ErrNotFound):
+		deviceStore, err = meta.NewMemoryDeviceStore()
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("load E2EE device state: %w", err)
+	}
+	deviceStore.WithPersistence(func(ctx context.Context, data []byte) error { return secrets.Put(ctx, profile.Name, stateKey, data) })
+	return deviceStore, nil
 }
 
 func (c *Client) Close() error {

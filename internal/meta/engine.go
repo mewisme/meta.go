@@ -52,6 +52,7 @@ const (
 	EventMessageUnsend   = model.EventMessageUnsend
 	EventThreadUpdate    = model.EventThreadUpdate
 	EventE2EEReady       = model.EventE2EEReady
+	EventE2EEReceipt     = model.EventE2EEReceipt
 )
 
 type SendTextRequest struct {
@@ -81,6 +82,14 @@ type backend interface {
 	CurrentNote(context.Context) (*Note, error)
 	CreateNote(context.Context, string, string) (*Note, error)
 	DeleteNote(context.Context, model.ID) error
+	SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error)
+	SendE2EEMedia(context.Context, model.E2EEMediaInput) (model.SendResult, error)
+	DownloadE2EEMedia(context.Context, model.E2EEMediaDownload) ([]byte, error)
+	ReactE2EE(context.Context, model.E2EEReactionRequest) error
+	EditE2EE(context.Context, string, model.ID, string) error
+	UnsendE2EE(context.Context, string, model.ID) error
+	TypingE2EE(context.Context, string, bool) error
+	ReadE2EE(context.Context, model.E2EEReadRequest) error
 	ConnectE2EE(context.Context, model.ID) error
 	E2EEConnected() bool
 }
@@ -99,6 +108,7 @@ type Engine struct {
 	e2eeReady atomic.Bool
 	reconnect atomic.Uint64
 	dropped   atomic.Uint64
+	lastSend  atomic.Int64
 	lastRecv  atomic.Int64
 
 	events chan Event
@@ -294,6 +304,86 @@ func (e *Engine) RecreateNote(ctx context.Context, oldNoteID model.ID, text, pri
 	return e.CreateNote(ctx, text, privacy)
 }
 
+func (e *Engine) SendE2EE(ctx context.Context, req model.E2EESendRequest) (model.SendResult, error) {
+	if !e.E2EEConnected() {
+		return model.SendResult{}, ErrE2EENotReady
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	result, err := e.backend.SendE2EE(ctx, req)
+	if err == nil {
+		e.lastSend.Store(result.Timestamp.UnixMilli())
+	}
+	return result, err
+}
+
+func (e *Engine) SendE2EEMedia(ctx context.Context, req model.E2EEMediaInput) (model.SendResult, error) {
+	if !e.E2EEConnected() {
+		return model.SendResult{}, ErrE2EENotReady
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	result, err := e.backend.SendE2EEMedia(ctx, req)
+	if err == nil {
+		e.lastSend.Store(result.Timestamp.UnixMilli())
+	}
+	return result, err
+}
+
+func (e *Engine) DownloadE2EEMedia(ctx context.Context, req model.E2EEMediaDownload) ([]byte, error) {
+	if !e.E2EEConnected() {
+		return nil, ErrE2EENotReady
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.DownloadE2EEMedia(ctx, req)
+}
+
+func (e *Engine) ReactE2EE(ctx context.Context, req model.E2EEReactionRequest) error {
+	if !e.E2EEConnected() {
+		return ErrE2EENotReady
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.ReactE2EE(ctx, req)
+}
+
+func (e *Engine) EditE2EE(ctx context.Context, chatJID string, messageID model.ID, text string) error {
+	if !e.E2EEConnected() {
+		return ErrE2EENotReady
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.EditE2EE(ctx, chatJID, messageID, text)
+}
+
+func (e *Engine) UnsendE2EE(ctx context.Context, chatJID string, messageID model.ID) error {
+	if !e.E2EEConnected() {
+		return ErrE2EENotReady
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.UnsendE2EE(ctx, chatJID, messageID)
+}
+
+func (e *Engine) TypingE2EE(ctx context.Context, chatJID string, typing bool) error {
+	if !e.E2EEConnected() {
+		return ErrE2EENotReady
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.TypingE2EE(ctx, chatJID, typing)
+}
+
+func (e *Engine) ReadE2EE(ctx context.Context, req model.E2EEReadRequest) error {
+	if !e.E2EEConnected() {
+		return ErrE2EENotReady
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.ReadE2EE(ctx, req)
+}
+
 func (e *Engine) ConnectE2EE(ctx context.Context, accountID model.ID) error {
 	e.connectMu.Lock()
 	defer e.connectMu.Unlock()
@@ -327,6 +417,9 @@ func (e *Engine) Health() model.HealthSnapshot {
 		e2ee = model.ConnectionConnected
 	}
 	snapshot := model.HealthSnapshot{Regular: regular, E2EE: e2ee, ReconnectCount: e.reconnect.Load(), DroppedEventCount: e.dropped.Load()}
+	if unixMilli := e.lastSend.Load(); unixMilli > 0 {
+		snapshot.LastSuccessfulSend = time.UnixMilli(unixMilli)
+	}
 	if unixMilli := e.lastRecv.Load(); unixMilli > 0 {
 		snapshot.LastReceive = time.UnixMilli(unixMilli)
 	}

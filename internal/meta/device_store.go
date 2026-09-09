@@ -31,6 +31,7 @@ type DeviceStore struct {
 	uploaded     map[uint32]struct{}
 	senderKeys   map[string][]byte
 	nextPreKeyID uint32
+	persist      func(context.Context, []byte) error
 }
 
 var _ store.AllStores = (*DeviceStore)(nil)
@@ -96,7 +97,16 @@ func (s *DeviceStore) PutDevice(ctx context.Context, device *store.Device) error
 	if device != s.device {
 		return errors.New("device does not belong to this store")
 	}
-	return nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.persist == nil {
+		return nil
+	}
+	data, err := s.snapshotLocked()
+	if err != nil {
+		return err
+	}
+	return s.persist(ctx, data)
 }
 
 func (s *DeviceStore) DeleteDevice(ctx context.Context, device *store.Device) error {
@@ -106,49 +116,41 @@ func (s *DeviceStore) DeleteDevice(ctx context.Context, device *store.Device) er
 	if device != s.device {
 		return errors.New("device does not belong to this store")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	device.Deleted = true
-	clear(s.identities)
-	clear(s.sessions)
-	clear(s.preKeys)
-	clear(s.uploaded)
-	clear(s.senderKeys)
-	return nil
+	return s.mutate(ctx, func() {
+		device.Deleted = true
+		clear(s.identities)
+		clear(s.sessions)
+		clear(s.preKeys)
+		clear(s.uploaded)
+		clear(s.senderKeys)
+	})
 }
 
 func (s *DeviceStore) PutIdentity(ctx context.Context, address string, key [32]byte) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	s.identities[address] = key
-	s.mu.Unlock()
-	return nil
+	return s.mutate(ctx, func() { s.identities[address] = key })
 }
 
 func (s *DeviceStore) DeleteIdentity(ctx context.Context, address string) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	delete(s.identities, address)
-	s.mu.Unlock()
-	return nil
+	return s.mutate(ctx, func() { delete(s.identities, address) })
 }
 
 func (s *DeviceStore) DeleteAllIdentities(ctx context.Context, phone string) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	for address := range s.identities {
-		if addressForPhone(address, phone) {
-			delete(s.identities, address)
+	return s.mutate(ctx, func() {
+		for address := range s.identities {
+			if addressForPhone(address, phone) {
+				delete(s.identities, address)
+			}
 		}
-	}
-	s.mu.Unlock()
-	return nil
+	})
 }
 
 func (s *DeviceStore) IsTrustedIdentity(ctx context.Context, address string, key [32]byte) (bool, error) {
@@ -202,36 +204,31 @@ func (s *DeviceStore) PutManySessions(ctx context.Context, sessions map[string][
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	for address, session := range sessions {
-		s.sessions[address] = clone(session)
-	}
-	s.mu.Unlock()
-	return nil
+	return s.mutate(ctx, func() {
+		for address, session := range sessions {
+			s.sessions[address] = clone(session)
+		}
+	})
 }
 
 func (s *DeviceStore) DeleteSession(ctx context.Context, address string) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	delete(s.sessions, address)
-	s.mu.Unlock()
-	return nil
+	return s.mutate(ctx, func() { delete(s.sessions, address) })
 }
 
 func (s *DeviceStore) DeleteAllSessions(ctx context.Context, phone string) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	for address := range s.sessions {
-		if addressForPhone(address, phone) {
-			delete(s.sessions, address)
+	return s.mutate(ctx, func() {
+		for address := range s.sessions {
+			if addressForPhone(address, phone) {
+				delete(s.sessions, address)
+			}
 		}
-	}
-	s.mu.Unlock()
-	return nil
+	})
 }
 
 func (s *DeviceStore) MigratePNToLID(ctx context.Context, pn, lid waTypes.JID) error {
@@ -242,21 +239,20 @@ func (s *DeviceStore) MigratePNToLID(ctx context.Context, pn, lid waTypes.JID) e
 	if oldPrefix == "" || newPrefix == "" || oldPrefix == newPrefix {
 		return nil
 	}
-	s.mu.Lock()
-	for address, session := range s.sessions {
-		if addressForPhone(address, oldPrefix) {
-			s.sessions[newPrefix+strings.TrimPrefix(address, oldPrefix)] = session
-			delete(s.sessions, address)
+	return s.mutate(ctx, func() {
+		for address, session := range s.sessions {
+			if addressForPhone(address, oldPrefix) {
+				s.sessions[newPrefix+strings.TrimPrefix(address, oldPrefix)] = session
+				delete(s.sessions, address)
+			}
 		}
-	}
-	for address, identity := range s.identities {
-		if addressForPhone(address, oldPrefix) {
-			s.identities[newPrefix+strings.TrimPrefix(address, oldPrefix)] = identity
-			delete(s.identities, address)
+		for address, identity := range s.identities {
+			if addressForPhone(address, oldPrefix) {
+				s.identities[newPrefix+strings.TrimPrefix(address, oldPrefix)] = identity
+				delete(s.identities, address)
+			}
 		}
-	}
-	s.mu.Unlock()
-	return nil
+	})
 }
 
 func (s *DeviceStore) GetOrGenPreKeys(ctx context.Context, count uint32) ([]*keys.PreKey, error) {
@@ -265,6 +261,10 @@ func (s *DeviceStore) GetOrGenPreKeys(ctx context.Context, count uint32) ([]*key
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	before, err := s.stateLocked()
+	if err != nil {
+		return nil, err
+	}
 	ids := make([]uint32, 0, len(s.preKeys))
 	for id := range s.preKeys {
 		if _, uploaded := s.uploaded[id]; !uploaded {
@@ -284,6 +284,9 @@ func (s *DeviceStore) GetOrGenPreKeys(ctx context.Context, count uint32) ([]*key
 		s.preKeys[s.nextPreKeyID] = key
 		s.nextPreKeyID++
 		result = append(result, key)
+	}
+	if err := s.persistLocked(ctx, before); err != nil {
+		return nil, err
 	}
 	return result, nil
 }
@@ -316,25 +319,23 @@ func (s *DeviceStore) RemovePreKey(ctx context.Context, id uint32) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	delete(s.preKeys, id)
-	delete(s.uploaded, id)
-	s.mu.Unlock()
-	return nil
+	return s.mutate(ctx, func() {
+		delete(s.preKeys, id)
+		delete(s.uploaded, id)
+	})
 }
 
 func (s *DeviceStore) MarkPreKeysAsUploaded(ctx context.Context, upToID uint32) error {
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	for id := range s.preKeys {
-		if id <= upToID {
-			s.uploaded[id] = struct{}{}
+	return s.mutate(ctx, func() {
+		for id := range s.preKeys {
+			if id <= upToID {
+				s.uploaded[id] = struct{}{}
+			}
 		}
-	}
-	s.mu.Unlock()
-	return nil
+	})
 }
 
 func (s *DeviceStore) UploadedPreKeyCount(ctx context.Context) (int, error) {
@@ -351,10 +352,7 @@ func (s *DeviceStore) PutSenderKey(ctx context.Context, group, user string, sess
 	if err := ctxErr(ctx); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	s.senderKeys[group+":"+user] = clone(session)
-	s.mu.Unlock()
-	return nil
+	return s.mutate(ctx, func() { s.senderKeys[group+":"+user] = clone(session) })
 }
 
 func (s *DeviceStore) GetSenderKey(ctx context.Context, group, user string) ([]byte, error) {
