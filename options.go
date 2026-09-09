@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"go.mewis.me/fbgo/auth"
 	"go.mewis.me/fbgo/internal/logging"
+	"go.mewis.me/fbgo/storage"
 )
 
 // Option configures a Client.
@@ -34,6 +36,30 @@ func WithTimeout(timeout time.Duration) Option {
 	return func(client *Client) {
 		if timeout > 0 {
 			client.timeout = timeout
+		}
+	}
+}
+
+func WithCookies(cookies auth.Cookies) Option {
+	return func(client *Client) { client.cookies = cookies.Clone() }
+}
+
+func WithProfile(profile storage.Profile) Option {
+	return func(client *Client) { client.profile = profile }
+}
+
+func WithSecretStore(store storage.SecretStore) Option {
+	return func(client *Client) { client.secrets = store }
+}
+
+func WithE2EE(enabled bool) Option {
+	return func(client *Client) { client.e2ee = enabled }
+}
+
+func WithEventBuffer(size int) Option {
+	return func(client *Client) {
+		if size > 0 {
+			client.eventBuffer = size
 		}
 	}
 }

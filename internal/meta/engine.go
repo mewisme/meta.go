@@ -4,18 +4,19 @@ package meta
 import (
 	"context"
 	"errors"
-	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	fberrors "go.mewis.me/fbgo/errors"
 	"go.mewis.me/fbgo/model"
 )
 
 var (
 	ErrClosed       = errors.New("meta engine closed")
-	ErrNotConnected = errors.New("meta engine not connected")
-	ErrE2EENotReady = errors.New("meta engine E2EE not ready")
+	ErrNotConnected = fberrors.ErrNotConnected
+	ErrE2EENotReady = fberrors.ErrE2EENotReady
 )
 
 type Account struct {
@@ -24,91 +25,45 @@ type Account struct {
 	Username string
 }
 
-type EventKind string
+type EventKind = model.EventKind
+type Event = model.Event
+type ReactionEvent = model.ReactionEvent
+type TypingEvent = model.TypingEvent
+type ReadReceiptEvent = model.ReadReceiptEvent
+type DeliveryReceiptEvent = model.DeliveryReceiptEvent
+type MessageEditEvent = model.MessageEditEvent
+type MessageUnsendEvent = model.MessageUnsendEvent
+type ThreadUpdateEvent = model.ThreadUpdateEvent
+type MessageRequest = model.MessageRequest
+type Theme = model.Theme
+type Note = model.Note
 
 const (
-	EventReady           EventKind = "ready"
-	EventReconnected     EventKind = "reconnected"
-	EventDisconnected    EventKind = "disconnected"
-	EventError           EventKind = "error"
-	EventMessage         EventKind = "message"
-	EventReaction        EventKind = "reaction"
-	EventTyping          EventKind = "typing"
-	EventReadReceipt     EventKind = "readReceipt"
-	EventDeliveryReceipt EventKind = "deliveryReceipt"
-	EventMessageEdit     EventKind = "messageEdit"
-	EventMessageUnsend   EventKind = "messageUnsend"
-	EventThreadUpdate    EventKind = "threadUpdate"
-	EventE2EEReady       EventKind = "e2eeReady"
+	EventReady           = model.EventReady
+	EventReconnected     = model.EventReconnected
+	EventDisconnected    = model.EventDisconnected
+	EventError           = model.EventError
+	EventMessage         = model.EventMessage
+	EventReaction        = model.EventReaction
+	EventTyping          = model.EventTyping
+	EventReadReceipt     = model.EventReadReceipt
+	EventDeliveryReceipt = model.EventDeliveryReceipt
+	EventMessageEdit     = model.EventMessageEdit
+	EventMessageUnsend   = model.EventMessageUnsend
+	EventThreadUpdate    = model.EventThreadUpdate
+	EventE2EEReady       = model.EventE2EEReady
 )
 
-type Event struct {
-	Kind EventKind
-	Data any
-}
-
-type ReactionEvent struct {
-	MessageID model.ID
-	ThreadID  model.ID
-	ActorID   model.ID
-	Reaction  string
-}
-
-type TypingEvent struct {
-	ThreadID model.ID
-	SenderID model.ID
-	Typing   bool
-}
-
-type ReadReceiptEvent struct {
-	ThreadID  model.ID
-	ReaderID  model.ID
-	Watermark time.Time
-}
-
-type DeliveryReceiptEvent struct {
-	ThreadID    model.ID
-	RecipientID model.ID
-	Watermark   time.Time
-}
-
-type MessageEditEvent struct {
-	MessageID model.ID
-	Text      string
-	EditCount int64
-}
-
-type MessageUnsendEvent struct {
-	MessageID model.ID
-	ThreadID  model.ID
-}
-
-type ThreadUpdateEvent struct {
-	ThreadID model.ID
-	Field    string
-	Value    string
-}
-
 type SendTextRequest struct {
-	ThreadID model.ID
-	Text     string
-	ReplyTo  model.ID
-	Mentions []model.Mention
+	ThreadID      model.ID
+	Text          string
+	ReplyTo       model.ID
+	Mentions      []model.Mention
+	AttachmentIDs []model.ID
 }
 
-type UploadRequest struct {
-	ThreadID    model.ID
-	Name        string
-	ContentType string
-	Reader      io.Reader
-	Size        int64
-	Voice       bool
-}
-
-type UploadResult struct {
-	ID   model.ID
-	Name string
-}
+type UploadRequest = model.UploadInput
+type UploadResult = model.UploadResult
 
 type backend interface {
 	SetEventHandler(func(context.Context, any))
@@ -117,6 +72,15 @@ type backend interface {
 	Disconnect()
 	SendText(context.Context, SendTextRequest) (model.SendResult, error)
 	Upload(context.Context, UploadRequest) (UploadResult, error)
+	React(context.Context, model.ID, model.ID, string) error
+	Edit(context.Context, model.ID, string) error
+	Unsend(context.Context, model.ID) error
+	ListMessageRequests(context.Context) ([]MessageRequest, error)
+	ListThemes(context.Context) ([]Theme, error)
+	SetTheme(context.Context, model.ID, model.ID) error
+	CurrentNote(context.Context) (*Note, error)
+	CreateNote(context.Context, string, string) (*Note, error)
+	DeleteNote(context.Context, model.ID) error
 	ConnectE2EE(context.Context, model.ID) error
 	E2EEConnected() bool
 }
@@ -181,6 +145,31 @@ func (e *Engine) SendText(ctx context.Context, req SendTextRequest) (model.SendR
 	return e.backend.SendText(ctx, req)
 }
 
+func (e *Engine) Send(ctx context.Context, req model.SendRequest) (model.SendResult, error) {
+	if !e.connected.Load() {
+		return model.SendResult{}, ErrNotConnected
+	}
+	if req.Encryption == model.EncryptionRequired {
+		return model.SendResult{}, ErrE2EENotReady
+	}
+	attachmentIDs := make([]model.ID, 0, len(req.Attachments))
+	for _, attachment := range req.Attachments {
+		result, err := e.Upload(ctx, UploadRequest{ThreadID: req.ThreadID, Name: attachment.Name, ContentType: attachment.ContentType, Reader: attachment.Reader, Size: attachment.Size})
+		if err != nil {
+			return model.SendResult{}, err
+		}
+		if result.ID.Empty() {
+			return model.SendResult{}, errors.New("media upload returned empty attachment ID")
+		}
+		attachmentIDs = append(attachmentIDs, result.ID)
+	}
+	var replyTo model.ID
+	if req.ReplyTo != nil {
+		replyTo = req.ReplyTo.MessageID
+	}
+	return e.SendText(ctx, SendTextRequest{ThreadID: req.ThreadID, Text: req.Text, ReplyTo: replyTo, Mentions: req.Mentions, AttachmentIDs: attachmentIDs})
+}
+
 func (e *Engine) Upload(ctx context.Context, req UploadRequest) (UploadResult, error) {
 	if !e.connected.Load() {
 		return UploadResult{}, ErrNotConnected
@@ -188,6 +177,121 @@ func (e *Engine) Upload(ctx context.Context, req UploadRequest) (UploadResult, e
 	ctx, cancel := mergeContext(e.ctx, ctx)
 	defer cancel()
 	return e.backend.Upload(ctx, req)
+}
+
+func (e *Engine) React(ctx context.Context, threadID, messageID model.ID, reaction string) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.React(ctx, threadID, messageID, reaction)
+}
+
+func (e *Engine) Edit(ctx context.Context, messageID model.ID, text string) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.Edit(ctx, messageID, text)
+}
+
+func (e *Engine) Unsend(ctx context.Context, messageID model.ID) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.Unsend(ctx, messageID)
+}
+
+func (e *Engine) ListMessageRequests(ctx context.Context) ([]MessageRequest, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.ListMessageRequests(ctx)
+}
+
+func (e *Engine) ListThemes(ctx context.Context) ([]Theme, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.ListThemes(ctx)
+}
+
+func (e *Engine) FindTheme(ctx context.Context, query string) (*Theme, error) {
+	themes, err := e.ListThemes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	normalized := strings.ToLower(strings.TrimSpace(query))
+	if normalized == "" {
+		return nil, errors.New("theme query is required")
+	}
+	for index := range themes {
+		if themes[index].ID.String() == normalized {
+			return &themes[index], nil
+		}
+	}
+	for index := range themes {
+		if strings.EqualFold(themes[index].Name, normalized) {
+			return &themes[index], nil
+		}
+	}
+	for index := range themes {
+		if strings.Contains(strings.ToLower(themes[index].Name), normalized) {
+			return &themes[index], nil
+		}
+	}
+	return nil, errors.New("theme not found")
+}
+
+func (e *Engine) SetTheme(ctx context.Context, threadID, themeID model.ID) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetTheme(ctx, threadID, themeID)
+}
+
+func (e *Engine) CurrentNote(ctx context.Context) (*Note, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.CurrentNote(ctx)
+}
+
+func (e *Engine) CreateNote(ctx context.Context, text, privacy string) (*Note, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.CreateNote(ctx, text, privacy)
+}
+
+func (e *Engine) DeleteNote(ctx context.Context, noteID model.ID) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.DeleteNote(ctx, noteID)
+}
+
+func (e *Engine) RecreateNote(ctx context.Context, oldNoteID model.ID, text, privacy string) (*Note, error) {
+	if err := e.DeleteNote(ctx, oldNoteID); err != nil {
+		return nil, err
+	}
+	return e.CreateNote(ctx, text, privacy)
 }
 
 func (e *Engine) ConnectE2EE(ctx context.Context, accountID model.ID) error {

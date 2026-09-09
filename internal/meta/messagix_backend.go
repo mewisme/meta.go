@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -15,6 +17,7 @@ import (
 	"go.mau.fi/mautrix-meta/pkg/messagix/table"
 	metaTypes "go.mau.fi/mautrix-meta/pkg/messagix/types"
 	"go.mau.fi/whatsmeow"
+	"go.mewis.me/fbgo/internal/webapi"
 	"go.mewis.me/fbgo/model"
 )
 
@@ -29,10 +32,13 @@ type Config struct {
 }
 
 type messagixBackend struct {
-	client      *messagix.Client
-	deviceStore *DeviceStore
-	e2ee        *whatsmeow.Client
-	handler     func(context.Context, any)
+	client         *messagix.Client
+	deviceStore    *DeviceStore
+	e2ee           *whatsmeow.Client
+	handler        func(context.Context, any)
+	requestCounter webapi.RequestCounter
+	browserStateMu sync.Mutex
+	browserState   *browserFormState
 }
 
 func New(parent context.Context, cfg Config) (*Engine, error) {
@@ -127,7 +133,19 @@ func (b *messagixBackend) SendText(ctx context.Context, req SendTextRequest) (mo
 		return model.SendResult{}, err
 	}
 	otid := time.Now().UnixNano()
-	task := &socket.SendMessageTask{ThreadId: threadID, Otid: otid, Text: req.Text, Source: table.MESSENGER_INBOX_IN_THREAD, SendType: table.TEXT, SyncGroup: 1}
+	sendType := table.TEXT
+	attachmentIDs := make([]int64, 0, len(req.AttachmentIDs))
+	for _, attachmentID := range req.AttachmentIDs {
+		id, err := strconv.ParseInt(attachmentID.String(), 10, 64)
+		if err != nil || id == 0 {
+			return model.SendResult{}, fmt.Errorf("invalid attachment ID %q", attachmentID)
+		}
+		attachmentIDs = append(attachmentIDs, id)
+	}
+	if len(attachmentIDs) > 0 {
+		sendType = table.MEDIA
+	}
+	task := &socket.SendMessageTask{ThreadId: threadID, Otid: otid, Text: req.Text, Source: table.MESSENGER_INBOX_IN_THREAD, SendType: sendType, AttachmentFBIds: attachmentIDs, SyncGroup: 1}
 	if req.ReplyTo != "" {
 		task.ReplyMetaData = &socket.ReplyMetaData{ReplyMessageId: req.ReplyTo.String(), ReplySourceType: 1}
 	}
@@ -177,7 +195,55 @@ func (b *messagixBackend) Upload(ctx context.Context, req UploadRequest) (Upload
 	if response != nil && response.Payload.RealMetadata != nil {
 		id = response.Payload.RealMetadata.GetFbId()
 	}
-	return UploadResult{ID: id64(id), Name: req.Name}, nil
+	return UploadResult{ID: id64(id), Name: req.Name, ContentType: req.ContentType, Type: uploadType(req.ContentType)}, nil
+}
+
+func uploadType(contentType string) string {
+	contentType = strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
+	switch {
+	case contentType == "image/gif":
+		return "gif"
+	case strings.HasPrefix(contentType, "image/"):
+		return "image"
+	case strings.HasPrefix(contentType, "video/"):
+		return "video"
+	case strings.HasPrefix(contentType, "audio/"):
+		return "audio"
+	default:
+		return "file"
+	}
+}
+
+func (b *messagixBackend) React(ctx context.Context, threadID, messageID model.ID, reaction string) error {
+	thread, err := strconv.ParseInt(threadID.String(), 10, 64)
+	if err != nil || thread == 0 {
+		return fmt.Errorf("invalid thread ID %q", threadID)
+	}
+	account, err := b.client.GetCurrentAccount()
+	if err != nil {
+		return err
+	}
+	_, err = b.client.ExecuteTasks(ctx, &socket.SendReactionTask{ThreadKey: thread, MessageID: messageID.String(), ActorID: account.GetFBID(), Reaction: reaction, SendAttribution: table.MESSENGER_INBOX_IN_THREAD})
+	return err
+}
+
+func (b *messagixBackend) Edit(ctx context.Context, messageID model.ID, text string) error {
+	if messageID.Empty() {
+		return errors.New("message ID is required")
+	}
+	if text == "" {
+		return errors.New("edit text is required")
+	}
+	_, err := b.client.ExecuteTasks(ctx, &socket.EditMessageTask{MessageID: messageID.String(), Text: text})
+	return err
+}
+
+func (b *messagixBackend) Unsend(ctx context.Context, messageID model.ID) error {
+	if messageID.Empty() {
+		return errors.New("message ID is required")
+	}
+	_, err := b.client.ExecuteTasks(ctx, &socket.DeleteMessageTask{MessageId: messageID.String()})
+	return err
 }
 
 func mentionData(mentions []model.Mention) *socket.MentionData {

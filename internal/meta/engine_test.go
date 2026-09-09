@@ -47,8 +47,17 @@ func (f *fakeBackend) Upload(_ context.Context, req UploadRequest) (UploadResult
 	_, _ = io.ReadAll(req.Reader)
 	return UploadResult{ID: "2", Name: req.Name}, nil
 }
-func (f *fakeBackend) ConnectE2EE(context.Context, model.ID) error { return nil }
-func (f *fakeBackend) E2EEConnected() bool                         { return true }
+func (f *fakeBackend) React(context.Context, model.ID, model.ID, string) error       { return nil }
+func (f *fakeBackend) Edit(context.Context, model.ID, string) error                  { return nil }
+func (f *fakeBackend) Unsend(context.Context, model.ID) error                        { return nil }
+func (f *fakeBackend) ListMessageRequests(context.Context) ([]MessageRequest, error) { return nil, nil }
+func (f *fakeBackend) ListThemes(context.Context) ([]Theme, error)                   { return nil, nil }
+func (f *fakeBackend) SetTheme(context.Context, model.ID, model.ID) error            { return nil }
+func (f *fakeBackend) CurrentNote(context.Context) (*Note, error)                    { return nil, nil }
+func (f *fakeBackend) CreateNote(context.Context, string, string) (*Note, error)     { return nil, nil }
+func (f *fakeBackend) DeleteNote(context.Context, model.ID) error                    { return nil }
+func (f *fakeBackend) ConnectE2EE(context.Context, model.ID) error                   { return nil }
+func (f *fakeBackend) E2EEConnected() bool                                           { return true }
 
 func TestEngineLifecycle(t *testing.T) {
 	backend := new(fakeBackend)
@@ -166,5 +175,16 @@ func (b *blockingBackend) SendText(context.Context, SendTextRequest) (model.Send
 func (b *blockingBackend) Upload(context.Context, UploadRequest) (UploadResult, error) {
 	return UploadResult{}, nil
 }
-func (b *blockingBackend) ConnectE2EE(context.Context, model.ID) error { return nil }
-func (b *blockingBackend) E2EEConnected() bool                         { return false }
+func (b *blockingBackend) React(context.Context, model.ID, model.ID, string) error { return nil }
+func (b *blockingBackend) Edit(context.Context, model.ID, string) error            { return nil }
+func (b *blockingBackend) Unsend(context.Context, model.ID) error                  { return nil }
+func (b *blockingBackend) ListMessageRequests(context.Context) ([]MessageRequest, error) {
+	return nil, nil
+}
+func (b *blockingBackend) ListThemes(context.Context) ([]Theme, error)               { return nil, nil }
+func (b *blockingBackend) SetTheme(context.Context, model.ID, model.ID) error        { return nil }
+func (b *blockingBackend) CurrentNote(context.Context) (*Note, error)                { return nil, nil }
+func (b *blockingBackend) CreateNote(context.Context, string, string) (*Note, error) { return nil, nil }
+func (b *blockingBackend) DeleteNote(context.Context, model.ID) error                { return nil }
+func (b *blockingBackend) ConnectE2EE(context.Context, model.ID) error               { return nil }
+func (b *blockingBackend) E2EEConnected() bool                                       { return false }

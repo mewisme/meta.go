@@ -1,31 +1,46 @@
 package fbgo
 
 import (
-	"io"
-	"log/slog"
-	"net/http"
+	"context"
+	"errors"
 	"testing"
-	"time"
+
+	"go.mewis.me/fbgo/auth"
+	fberrors "go.mewis.me/fbgo/errors"
+	"go.mewis.me/fbgo/storage"
 )
 
-func TestNewDefaults(t *testing.T) {
+func TestClientConnectRequiresCredentials(t *testing.T) {
 	client := New()
-	if client.httpClient == nil || client.logger == nil {
-		t.Fatal("expected default dependencies")
-	}
-	if client.timeout != 30*time.Second || client.httpClient.Timeout != 30*time.Second {
-		t.Fatalf("unexpected default timeout: %s / %s", client.timeout, client.httpClient.Timeout)
+	defer client.Close()
+	if err := client.Connect(context.Background()); !errors.Is(err, fberrors.ErrUnauthorized) {
+		t.Fatalf("expected unauthorized, got %v", err)
 	}
 }
 
-func TestNewOptions(t *testing.T) {
-	httpClient := &http.Client{}
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	client := New(WithHTTPClient(httpClient), WithLogger(logger), WithTimeout(5*time.Second))
-	if client.httpClient != httpClient || client.logger == nil || client.timeout != 5*time.Second {
-		t.Fatal("options were not applied")
+func TestClientLoadsCookiesFromSecretStore(t *testing.T) {
+	secrets := storage.NewMemorySecretStore()
+	manager := auth.ProfileManager{Profiles: storage.NewMemoryProfileStore(), Secrets: secrets}
+	ctx := context.Background()
+	if _, err := manager.Create(ctx, "default", ""); err != nil {
+		t.Fatal(err)
 	}
-	if httpClient.Timeout != 5*time.Second {
-		t.Fatalf("HTTP timeout was not propagated: %s", httpClient.Timeout)
+	if err := manager.ImportCookies(ctx, "default", auth.Cookies{"c_user": "1", "xs": "x"}); err != nil {
+		t.Fatal(err)
+	}
+	client := New(WithProfile(storage.Profile{Name: "default"}), WithSecretStore(secrets))
+	client.mu.RLock()
+	profile := client.profile
+	store := client.secrets
+	client.mu.RUnlock()
+	loaded, err := (auth.ProfileManager{Secrets: store}).LoadCookies(ctx, profile.Name)
+	if err != nil || loaded["c_user"] != "1" {
+		t.Fatalf("unexpected cookies: %#v %v", loaded, err)
+	}
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
