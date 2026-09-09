@@ -1,0 +1,8 @@
+.cgm/
+*baseline*
+
+/fbgo
+/coverage.out
+*.test
+
+/fbgo.exe
