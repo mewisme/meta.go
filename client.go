@@ -12,17 +12,21 @@ import (
 	"github.com/rs/zerolog"
 	"go.mewis.me/fbgo/auth"
 	fberrors "go.mewis.me/fbgo/errors"
+	facebookservice "go.mewis.me/fbgo/facebook"
 	"go.mewis.me/fbgo/internal/logging"
 	"go.mewis.me/fbgo/internal/meta"
 	"go.mewis.me/fbgo/messenger"
 	"go.mewis.me/fbgo/model"
 	"go.mewis.me/fbgo/storage"
+	threadservice "go.mewis.me/fbgo/thread"
 )
 
 // Client is the root fbgo client. Feature services are attached as the
 // implementation phases add their transport capabilities.
 type Client struct {
 	Messenger *messenger.Service
+	Thread    *threadservice.Service
+	Facebook  *facebookservice.Service
 
 	httpClient  *http.Client
 	logger      *slog.Logger
@@ -113,6 +117,8 @@ func (c *Client) Connect(ctx context.Context) error {
 	c.engine = engine
 	c.account = model.User{ID: account.ID, Name: account.Name, Username: account.Username}
 	c.Messenger = messenger.NewService(engine)
+	c.Thread = threadservice.NewService(engine)
+	c.Facebook = facebookservice.NewService(engine)
 	c.mu.Unlock()
 	return nil
 }
@@ -157,6 +163,8 @@ func (c *Client) Close() error {
 	engine := c.engine
 	c.engine = nil
 	c.Messenger = nil
+	c.Thread = nil
+	c.Facebook = nil
 	c.mu.Unlock()
 	c.cancel()
 	if engine != nil {

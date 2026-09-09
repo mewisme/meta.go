@@ -52,18 +52,99 @@ type HealthSnapshot struct {
 }
 
 type User struct {
-	ID       ID     `json:"id"`
-	Name     string `json:"name"`
-	Username string `json:"username,omitempty"`
+	ID         ID     `json:"id"`
+	Name       string `json:"name"`
+	Username   string `json:"username,omitempty"`
+	ProfileURL string `json:"profileUrl,omitempty"`
+	AvatarURL  string `json:"avatarUrl,omitempty"`
+	Gender     string `json:"gender,omitempty"`
+}
+
+type FacebookUser struct {
+	ID            ID     `json:"id"`
+	Name          string `json:"name,omitempty"`
+	FirstName     string `json:"firstName,omitempty"`
+	Username      string `json:"username,omitempty"`
+	ProfileURL    string `json:"profileUrl,omitempty"`
+	AvatarURL     string `json:"avatarUrl,omitempty"`
+	Gender        string `json:"gender,omitempty"`
+	AlternateName string `json:"alternateName,omitempty"`
+	NonFriend     bool   `json:"nonFriend,omitempty"`
+}
+
+type SearchResult struct {
+	ID   ID     `json:"id"`
+	Name string `json:"name,omitempty"`
+	URL  string `json:"url,omitempty"`
+}
+
+type Notification struct {
+	ID        ID        `json:"id,omitempty"`
+	Text      string    `json:"text"`
+	URL       string    `json:"url,omitempty"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
+}
+
+type Post struct {
+	ID  ID     `json:"id,omitempty"`
+	URL string `json:"url,omitempty"`
+}
+
+type PostOwnership string
+
+const (
+	PostOwned  PostOwnership = "owned"
+	PostShared PostOwnership = "shared"
+)
+
+type MarketplaceLocation struct {
+	Latitude  float64 `json:"latitude,omitempty"`
+	Longitude float64 `json:"longitude,omitempty"`
+	Name      string  `json:"name,omitempty"`
+}
+
+type MarketplaceListingInput struct {
+	Title       string
+	Brand       string
+	Price       string
+	Currency    string
+	Description string
+	Hashtags    []string
+	Category    string
+	PhotoIDs    []ID
+	Location    MarketplaceLocation
+}
+
+type MarketplaceListing struct {
+	ID          ID                  `json:"id"`
+	Title       string              `json:"title,omitempty"`
+	Description string              `json:"description,omitempty"`
+	Price       string              `json:"price,omitempty"`
+	Currency    string              `json:"currency,omitempty"`
+	Seller      FacebookUser        `json:"seller,omitempty"`
+	Location    MarketplaceLocation `json:"location,omitempty"`
+	URL         string              `json:"url,omitempty"`
+	CreatedAt   time.Time           `json:"createdAt,omitempty"`
 }
 
 type Thread struct {
-	ID           ID     `json:"id"`
-	Name         string `json:"name,omitempty"`
-	Type         string `json:"type,omitempty"`
-	Participants []User `json:"participants,omitempty"`
-	Admins       []ID   `json:"admins,omitempty"`
-	Emoji        string `json:"emoji,omitempty"`
+	ID           ID            `json:"id"`
+	Name         string        `json:"name,omitempty"`
+	Type         string        `json:"type,omitempty"`
+	Participants []User        `json:"participants,omitempty"`
+	Admins       []ID          `json:"admins,omitempty"`
+	Nicknames    map[ID]string `json:"nicknames,omitempty"`
+	Emoji        string        `json:"emoji,omitempty"`
+	MessageCount int64         `json:"messageCount,omitempty"`
+	ApprovalMode bool          `json:"approvalMode,omitempty"`
+	Joinable     bool          `json:"joinable,omitempty"`
+	JoinableURL  string        `json:"joinableUrl,omitempty"`
+	LastActivity time.Time     `json:"lastActivity,omitempty"`
+}
+
+type ThreadList struct {
+	Threads        []Thread `json:"threads"`
+	SyncSequenceID int64    `json:"syncSequenceId"`
 }
 
 type Attachment struct {

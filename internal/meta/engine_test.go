@@ -56,6 +56,47 @@ func (f *fakeBackend) SetTheme(context.Context, model.ID, model.ID) error       
 func (f *fakeBackend) CurrentNote(context.Context) (*Note, error)                    { return nil, nil }
 func (f *fakeBackend) CreateNote(context.Context, string, string) (*Note, error)     { return nil, nil }
 func (f *fakeBackend) DeleteNote(context.Context, model.ID) error                    { return nil }
+func (f *fakeBackend) ListThreads(context.Context, int) (model.ThreadList, error) {
+	return model.ThreadList{Threads: []model.Thread{{ID: "10"}}, SyncSequenceID: 1}, nil
+}
+func (f *fakeBackend) GetThread(context.Context, model.ID) (*model.Thread, error) {
+	return &model.Thread{ID: "10"}, nil
+}
+func (f *fakeBackend) SetThreadAdmin(context.Context, model.ID, model.ID, bool) error { return nil }
+func (f *fakeBackend) SetThreadName(context.Context, model.ID, string) error          { return nil }
+func (f *fakeBackend) SetThreadEmoji(context.Context, model.ID, string) error         { return nil }
+func (f *fakeBackend) SetThreadNickname(context.Context, model.ID, model.ID, string) error {
+	return nil
+}
+func (f *fakeBackend) GetFacebookUser(context.Context, model.ID) (*model.FacebookUser, error) {
+	return &model.FacebookUser{ID: "1"}, nil
+}
+func (f *fakeBackend) SearchFacebook(context.Context, string, int) ([]model.SearchResult, error) {
+	return []model.SearchResult{{ID: "1"}}, nil
+}
+func (f *fakeBackend) ListNotifications(context.Context, int) ([]model.Notification, error) {
+	return []model.Notification{{Text: "x"}}, nil
+}
+func (f *fakeBackend) SetFacebookBio(context.Context, string, bool) error            { return nil }
+func (f *fakeBackend) CreateAdditionalProfile(context.Context, string, string) error { return nil }
+func (f *fakeBackend) UnfriendFacebookUser(context.Context, model.ID) error          { return nil }
+func (f *fakeBackend) SetFacebookBlocked(context.Context, model.ID, bool) error      { return nil }
+func (f *fakeBackend) CreateFacebookPost(context.Context, string) (*model.Post, error) {
+	return &model.Post{URL: "x"}, nil
+}
+func (f *fakeBackend) ArchiveFacebookPost(context.Context, model.ID, model.PostOwnership) error {
+	return nil
+}
+func (f *fakeBackend) DeleteFacebookPost(context.Context, model.ID, model.PostOwnership) error {
+	return nil
+}
+func (f *fakeBackend) CreateMarketplaceListing(context.Context, model.MarketplaceListingInput) (*model.MarketplaceListing, error) {
+	return &model.MarketplaceListing{ID: "m1"}, nil
+}
+func (f *fakeBackend) GetMarketplaceListing(context.Context, model.ID) (*model.MarketplaceListing, error) {
+	return &model.MarketplaceListing{ID: "m1"}, nil
+}
+func (f *fakeBackend) SetProfessionalMode(context.Context, bool) error { return nil }
 func (f *fakeBackend) SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error) {
 	return model.SendResult{MessageID: "e2ee.1", Timestamp: time.Unix(2, 0)}, nil
 }
@@ -200,6 +241,47 @@ func (b *blockingBackend) SetTheme(context.Context, model.ID, model.ID) error   
 func (b *blockingBackend) CurrentNote(context.Context) (*Note, error)                { return nil, nil }
 func (b *blockingBackend) CreateNote(context.Context, string, string) (*Note, error) { return nil, nil }
 func (b *blockingBackend) DeleteNote(context.Context, model.ID) error                { return nil }
+func (b *blockingBackend) ListThreads(context.Context, int) (model.ThreadList, error) {
+	return model.ThreadList{}, nil
+}
+func (b *blockingBackend) GetThread(context.Context, model.ID) (*model.Thread, error) {
+	return nil, nil
+}
+func (b *blockingBackend) SetThreadAdmin(context.Context, model.ID, model.ID, bool) error { return nil }
+func (b *blockingBackend) SetThreadName(context.Context, model.ID, string) error          { return nil }
+func (b *blockingBackend) SetThreadEmoji(context.Context, model.ID, string) error         { return nil }
+func (b *blockingBackend) SetThreadNickname(context.Context, model.ID, model.ID, string) error {
+	return nil
+}
+func (b *blockingBackend) GetFacebookUser(context.Context, model.ID) (*model.FacebookUser, error) {
+	return nil, nil
+}
+func (b *blockingBackend) SearchFacebook(context.Context, string, int) ([]model.SearchResult, error) {
+	return nil, nil
+}
+func (b *blockingBackend) ListNotifications(context.Context, int) ([]model.Notification, error) {
+	return nil, nil
+}
+func (b *blockingBackend) SetFacebookBio(context.Context, string, bool) error            { return nil }
+func (b *blockingBackend) CreateAdditionalProfile(context.Context, string, string) error { return nil }
+func (b *blockingBackend) UnfriendFacebookUser(context.Context, model.ID) error          { return nil }
+func (b *blockingBackend) SetFacebookBlocked(context.Context, model.ID, bool) error      { return nil }
+func (b *blockingBackend) CreateFacebookPost(context.Context, string) (*model.Post, error) {
+	return nil, nil
+}
+func (b *blockingBackend) ArchiveFacebookPost(context.Context, model.ID, model.PostOwnership) error {
+	return nil
+}
+func (b *blockingBackend) DeleteFacebookPost(context.Context, model.ID, model.PostOwnership) error {
+	return nil
+}
+func (b *blockingBackend) CreateMarketplaceListing(context.Context, model.MarketplaceListingInput) (*model.MarketplaceListing, error) {
+	return nil, nil
+}
+func (b *blockingBackend) GetMarketplaceListing(context.Context, model.ID) (*model.MarketplaceListing, error) {
+	return nil, nil
+}
+func (b *blockingBackend) SetProfessionalMode(context.Context, bool) error { return nil }
 func (b *blockingBackend) SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error) {
 	return model.SendResult{}, nil
 }

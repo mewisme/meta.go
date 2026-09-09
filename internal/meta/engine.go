@@ -82,6 +82,25 @@ type backend interface {
 	CurrentNote(context.Context) (*Note, error)
 	CreateNote(context.Context, string, string) (*Note, error)
 	DeleteNote(context.Context, model.ID) error
+	ListThreads(context.Context, int) (model.ThreadList, error)
+	GetThread(context.Context, model.ID) (*model.Thread, error)
+	SetThreadAdmin(context.Context, model.ID, model.ID, bool) error
+	SetThreadName(context.Context, model.ID, string) error
+	SetThreadEmoji(context.Context, model.ID, string) error
+	SetThreadNickname(context.Context, model.ID, model.ID, string) error
+	GetFacebookUser(context.Context, model.ID) (*model.FacebookUser, error)
+	SearchFacebook(context.Context, string, int) ([]model.SearchResult, error)
+	ListNotifications(context.Context, int) ([]model.Notification, error)
+	SetFacebookBio(context.Context, string, bool) error
+	CreateAdditionalProfile(context.Context, string, string) error
+	UnfriendFacebookUser(context.Context, model.ID) error
+	SetFacebookBlocked(context.Context, model.ID, bool) error
+	CreateFacebookPost(context.Context, string) (*model.Post, error)
+	ArchiveFacebookPost(context.Context, model.ID, model.PostOwnership) error
+	DeleteFacebookPost(context.Context, model.ID, model.PostOwnership) error
+	CreateMarketplaceListing(context.Context, model.MarketplaceListingInput) (*model.MarketplaceListing, error)
+	GetMarketplaceListing(context.Context, model.ID) (*model.MarketplaceListing, error)
+	SetProfessionalMode(context.Context, bool) error
 	SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error)
 	SendE2EEMedia(context.Context, model.E2EEMediaInput) (model.SendResult, error)
 	DownloadE2EEMedia(context.Context, model.E2EEMediaDownload) ([]byte, error)
@@ -302,6 +321,177 @@ func (e *Engine) RecreateNote(ctx context.Context, oldNoteID model.ID, text, pri
 		return nil, err
 	}
 	return e.CreateNote(ctx, text, privacy)
+}
+
+func (e *Engine) ListThreads(ctx context.Context, limit int) (model.ThreadList, error) {
+	if !e.connected.Load() {
+		return model.ThreadList{}, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.ListThreads(ctx, limit)
+}
+
+func (e *Engine) GetThread(ctx context.Context, threadID model.ID) (*model.Thread, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.GetThread(ctx, threadID)
+}
+
+func (e *Engine) SetThreadAdmin(ctx context.Context, threadID, userID model.ID, admin bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetThreadAdmin(ctx, threadID, userID, admin)
+}
+
+func (e *Engine) SetThreadName(ctx context.Context, threadID model.ID, name string) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetThreadName(ctx, threadID, name)
+}
+
+func (e *Engine) SetThreadEmoji(ctx context.Context, threadID model.ID, emoji string) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetThreadEmoji(ctx, threadID, emoji)
+}
+
+func (e *Engine) SetThreadNickname(ctx context.Context, threadID, userID model.ID, nickname string) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetThreadNickname(ctx, threadID, userID, nickname)
+}
+
+func (e *Engine) GetFacebookUser(ctx context.Context, userID model.ID) (*model.FacebookUser, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.GetFacebookUser(ctx, userID)
+}
+
+func (e *Engine) SearchFacebook(ctx context.Context, query string, limit int) ([]model.SearchResult, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SearchFacebook(ctx, query, limit)
+}
+
+func (e *Engine) ListNotifications(ctx context.Context, limit int) ([]model.Notification, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.ListNotifications(ctx, limit)
+}
+
+func (e *Engine) SetFacebookBio(ctx context.Context, bio string, publish bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetFacebookBio(ctx, bio, publish)
+}
+
+func (e *Engine) CreateAdditionalProfile(ctx context.Context, name, username string) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.CreateAdditionalProfile(ctx, name, username)
+}
+
+func (e *Engine) UnfriendFacebookUser(ctx context.Context, userID model.ID) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.UnfriendFacebookUser(ctx, userID)
+}
+
+func (e *Engine) SetFacebookBlocked(ctx context.Context, userID model.ID, blocked bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetFacebookBlocked(ctx, userID, blocked)
+}
+
+func (e *Engine) CreateFacebookPost(ctx context.Context, text string) (*model.Post, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.CreateFacebookPost(ctx, text)
+}
+
+func (e *Engine) ArchiveFacebookPost(ctx context.Context, postID model.ID, ownership model.PostOwnership) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.ArchiveFacebookPost(ctx, postID, ownership)
+}
+
+func (e *Engine) DeleteFacebookPost(ctx context.Context, postID model.ID, ownership model.PostOwnership) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.DeleteFacebookPost(ctx, postID, ownership)
+}
+
+func (e *Engine) CreateMarketplaceListing(ctx context.Context, input model.MarketplaceListingInput) (*model.MarketplaceListing, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.CreateMarketplaceListing(ctx, input)
+}
+
+func (e *Engine) GetMarketplaceListing(ctx context.Context, listingID model.ID) (*model.MarketplaceListing, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.GetMarketplaceListing(ctx, listingID)
+}
+
+func (e *Engine) SetProfessionalMode(ctx context.Context, enabled bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetProfessionalMode(ctx, enabled)
 }
 
 func (e *Engine) SendE2EE(ctx context.Context, req model.E2EESendRequest) (model.SendResult, error) {
