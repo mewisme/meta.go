@@ -52,3 +52,40 @@ func AtomicWriteFile(path string, data []byte, mode os.FileMode) error {
 	}
 	return nil
 }
+
+func ExclusiveWriteFile(path string, data []byte, mode os.FileMode) error {
+	dir := filepath.Dir(path)
+	if err := EnsurePrivateDir(dir); err != nil {
+		return fmt.Errorf("create private directory: %w", err)
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+	if err != nil {
+		return err
+	}
+	remove := true
+	defer func() {
+		if remove {
+			_ = os.Remove(path)
+		}
+	}()
+	if n, err := f.Write(data); err != nil {
+		_ = f.Close()
+		return err
+	} else if n != len(data) {
+		_ = f.Close()
+		return io.ErrShortWrite
+	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	remove = false
+	if d, err := os.Open(dir); err == nil {
+		defer d.Close()
+		_ = d.Sync()
+	}
+	return nil
+}

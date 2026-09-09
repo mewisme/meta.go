@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"go.mewis.me/fbgo/internal/logging"
 )
 
 // Client is the root fbgo client. Feature services are attached as the
@@ -16,7 +18,7 @@ type Client struct {
 
 // New creates a client with production-safe defaults and applies opts in order.
 func New(opts ...Option) *Client {
-	client := &Client{httpClient: &http.Client{}, logger: slog.Default(), timeout: 30 * time.Second}
+	client := &Client{httpClient: &http.Client{}, logger: logging.RedactLogger(slog.Default()), timeout: 30 * time.Second}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(client)

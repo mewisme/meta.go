@@ -16,6 +16,7 @@ import (
 )
 
 const CurrentSchemaVersion = 1
+const DefaultFileName = "config.toml"
 
 var (
 	ErrAmbiguousConfig   = errors.New("multiple default config files found")
@@ -74,6 +75,33 @@ func DefaultDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, "fbgo"), nil
+}
+
+func DefaultPath(dir string) (string, error) {
+	if dir == "" {
+		var err error
+		dir, err = DefaultDir()
+		if err != nil {
+			return "", err
+		}
+	}
+	return filepath.Join(dir, DefaultFileName), nil
+}
+
+func InitDefault(dir string) (string, error) {
+	path, err := DefaultPath(dir)
+	if err != nil {
+		return "", err
+	}
+	config := Default()
+	data, err := encode(".toml", config)
+	if err != nil {
+		return "", err
+	}
+	if err := fsutil.ExclusiveWriteFile(path, data, 0o600); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func Discover(dir string) (string, error) {

@@ -22,7 +22,7 @@ func TestNewOptions(t *testing.T) {
 	httpClient := &http.Client{}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	client := New(WithHTTPClient(httpClient), WithLogger(logger), WithTimeout(5*time.Second))
-	if client.httpClient != httpClient || client.logger != logger || client.timeout != 5*time.Second {
+	if client.httpClient != httpClient || client.logger == nil || client.timeout != 5*time.Second {
 		t.Fatal("options were not applied")
 	}
 	if httpClient.Timeout != 5*time.Second {

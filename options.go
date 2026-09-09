@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"go.mewis.me/fbgo/internal/logging"
 )
 
 // Option configures a Client.
@@ -22,7 +24,7 @@ func WithHTTPClient(httpClient *http.Client) Option {
 func WithLogger(logger *slog.Logger) Option {
 	return func(client *Client) {
 		if logger != nil {
-			client.logger = logger
+			client.logger = logging.RedactLogger(logger)
 		}
 	}
 }

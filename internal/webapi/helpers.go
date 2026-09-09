@@ -2,13 +2,17 @@ package webapi
 
 import (
 	"bytes"
+	"context"
 	cryptorand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -32,7 +36,11 @@ func ParseCookieString(value string) map[string]string {
 		if !ok {
 			continue
 		}
-		result[strings.TrimSpace(key)] = strings.TrimSpace(val)
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		result[key] = strings.TrimSpace(val)
 	}
 	return result
 }
@@ -94,9 +102,65 @@ type Client struct {
 
 func NewClient(client *http.Client) *Client {
 	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second}
+		client = &http.Client{}
 	}
-	return &Client{HTTP: client, MaxBodyBytes: 16 << 20}
+	clone := *client
+	if clone.Timeout == 0 {
+		clone.Timeout = 30 * time.Second
+	}
+	if clone.Jar == nil {
+		clone.Jar, _ = cookiejar.New(nil)
+	}
+	if clone.CheckRedirect == nil {
+		clone.CheckRedirect = SafeRedirectPolicy
+	}
+	return &Client{HTTP: &clone, MaxBodyBytes: 16 << 20}
+}
+
+func SafeRedirectPolicy(req *http.Request, via []*http.Request) error {
+	if len(via) >= 10 {
+		return errors.New("too many redirects")
+	}
+	if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme == "http" {
+		return errors.New("refusing HTTPS to HTTP redirect")
+	}
+	return nil
+}
+
+func NewRequest(ctx context.Context, method, rawURL string, body io.Reader) (*http.Request, error) {
+	if ctx == nil {
+		return nil, errors.New("nil context")
+	}
+	return http.NewRequestWithContext(ctx, method, rawURL, body)
+}
+
+func NewFormRequest(ctx context.Context, method, rawURL string, form url.Values) (*http.Request, error) {
+	req, err := NewRequest(ctx, method, rawURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	return req, nil
+}
+
+func ApplyBrowserHeaders(req *http.Request, origin, referer string) {
+	if origin != "" {
+		req.Header.Set("Origin", origin)
+	}
+	if referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+}
+
+func IsRetryable(err error, statusCode int) bool {
+	switch statusCode {
+	case http.StatusRequestTimeout, http.StatusTooEarly, http.StatusTooManyRequests, http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+		return true
+	}
+	var networkError net.Error
+	return err != nil && errors.As(err, &networkError) && (networkError.Timeout() || networkError.Temporary())
 }
 
 func (c *Client) Do(req *http.Request) ([]byte, error) {
