@@ -73,3 +73,24 @@ func TestLegacyE2EEImportDoesNotOverwrite(t *testing.T) {
 		t.Fatal("expected E2EE state overwrite refusal")
 	}
 }
+
+func TestProfileRenameMovesSecrets(t *testing.T) {
+	profiles := storage.NewMemoryProfileStore()
+	secrets := storage.NewMemorySecretStore()
+	manager := ProfileManager{Profiles: profiles, Secrets: secrets}
+	ctx := context.Background()
+	_, _ = manager.Create(ctx, "old", "Old")
+	if err := manager.ImportCookies(ctx, "old", Cookies{"c_user": "1", "xs": "x"}); err != nil {
+		t.Fatal(err)
+	}
+	renamed, err := manager.Rename(ctx, "old", "new")
+	if err != nil || renamed.Name != "new" {
+		t.Fatalf("rename failed: %#v %v", renamed, err)
+	}
+	if _, err := manager.LoadCookies(ctx, "old"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("old secret still exists: %v", err)
+	}
+	if cookies, err := manager.LoadCookies(ctx, "new"); err != nil || cookies["c_user"] != "1" {
+		t.Fatalf("new secret missing: %#v %v", cookies, err)
+	}
+}

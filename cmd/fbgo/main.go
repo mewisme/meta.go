@@ -1,15 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"go.mewis.me/fbgo/internal/cli"
 )
 
-func main() {
-	if err := cli.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-}
+func main() { os.Exit(cli.Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr)) }

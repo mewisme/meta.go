@@ -104,15 +104,15 @@ type MarketplaceLocation struct {
 }
 
 type MarketplaceListingInput struct {
-	Title       string
-	Brand       string
-	Price       string
-	Currency    string
-	Description string
-	Hashtags    []string
-	Category    string
-	PhotoIDs    []ID
-	Location    MarketplaceLocation
+	Title       string              `json:"title"`
+	Brand       string              `json:"brand,omitempty"`
+	Price       string              `json:"price"`
+	Currency    string              `json:"currency"`
+	Description string              `json:"description,omitempty"`
+	Hashtags    []string            `json:"hashtags,omitempty"`
+	Category    string              `json:"category"`
+	PhotoIDs    []ID                `json:"photoIds"`
+	Location    MarketplaceLocation `json:"location"`
 }
 
 type MarketplaceListing struct {

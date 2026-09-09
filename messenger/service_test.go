@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	fberrors "go.mewis.me/fbgo/errors"
 	"go.mewis.me/fbgo/model"
@@ -26,8 +27,10 @@ func (f *fakeBackend) React(_ context.Context, _, _ model.ID, reaction string) e
 	f.reaction = reaction
 	return nil
 }
-func (f *fakeBackend) Edit(context.Context, model.ID, string) error { return nil }
-func (f *fakeBackend) Unsend(context.Context, model.ID) error       { return nil }
+func (f *fakeBackend) Edit(context.Context, model.ID, string) error              { return nil }
+func (f *fakeBackend) Unsend(context.Context, model.ID) error                    { return nil }
+func (f *fakeBackend) Typing(context.Context, model.ID, bool, bool, int64) error { return nil }
+func (f *fakeBackend) Read(context.Context, model.ID, time.Time) error           { return nil }
 func (f *fakeBackend) ListMessageRequests(context.Context) ([]model.MessageRequest, error) {
 	return []model.MessageRequest{{SenderID: "1"}}, nil
 }
@@ -87,6 +90,15 @@ func TestServiceInputValidation(t *testing.T) {
 	}
 	if err := service.Edit(context.Background(), "", "x"); !errors.Is(err, fberrors.ErrInvalidInput) {
 		t.Fatalf("expected invalid input, got %v", err)
+	}
+	if err := service.Typing(context.Background(), "", true, false, 1); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid typing target, got %v", err)
+	}
+	if err := service.Typing(context.Background(), "1", true, false, -1); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid thread type, got %v", err)
+	}
+	if err := service.Read(context.Background(), "", time.Time{}); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid read target, got %v", err)
 	}
 }
 

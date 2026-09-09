@@ -50,6 +50,8 @@ func (f *fakeBackend) Upload(_ context.Context, req UploadRequest) (UploadResult
 func (f *fakeBackend) React(context.Context, model.ID, model.ID, string) error       { return nil }
 func (f *fakeBackend) Edit(context.Context, model.ID, string) error                  { return nil }
 func (f *fakeBackend) Unsend(context.Context, model.ID) error                        { return nil }
+func (f *fakeBackend) Typing(context.Context, model.ID, bool, bool, int64) error     { return nil }
+func (f *fakeBackend) Read(context.Context, model.ID, time.Time) error               { return nil }
 func (f *fakeBackend) ListMessageRequests(context.Context) ([]MessageRequest, error) { return nil, nil }
 func (f *fakeBackend) ListThemes(context.Context) ([]Theme, error)                   { return nil, nil }
 func (f *fakeBackend) SetTheme(context.Context, model.ID, model.ID) error            { return nil }
@@ -230,9 +232,11 @@ func (b *blockingBackend) SendText(context.Context, SendTextRequest) (model.Send
 func (b *blockingBackend) Upload(context.Context, UploadRequest) (UploadResult, error) {
 	return UploadResult{}, nil
 }
-func (b *blockingBackend) React(context.Context, model.ID, model.ID, string) error { return nil }
-func (b *blockingBackend) Edit(context.Context, model.ID, string) error            { return nil }
-func (b *blockingBackend) Unsend(context.Context, model.ID) error                  { return nil }
+func (b *blockingBackend) React(context.Context, model.ID, model.ID, string) error   { return nil }
+func (b *blockingBackend) Edit(context.Context, model.ID, string) error              { return nil }
+func (b *blockingBackend) Unsend(context.Context, model.ID) error                    { return nil }
+func (b *blockingBackend) Typing(context.Context, model.ID, bool, bool, int64) error { return nil }
+func (b *blockingBackend) Read(context.Context, model.ID, time.Time) error           { return nil }
 func (b *blockingBackend) ListMessageRequests(context.Context) ([]MessageRequest, error) {
 	return nil, nil
 }

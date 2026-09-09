@@ -61,3 +61,19 @@ func TestStrictUnknownFields(t *testing.T) {
 		}
 	}
 }
+
+func TestInitSupportsAllFormats(t *testing.T) {
+	for _, format := range []string{"toml", "json", "yaml"} {
+		dir := filepath.Join(t.TempDir(), format)
+		path, err := Init(dir, format)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := LoadFile(path); err != nil {
+			t.Fatalf("load %s: %v", format, err)
+		}
+	}
+	if _, err := Init(t.TempDir(), "xml"); !errors.Is(err, ErrUnsupportedFormat) {
+		t.Fatalf("expected unsupported format, got %v", err)
+	}
+}

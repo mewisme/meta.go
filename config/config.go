@@ -88,20 +88,37 @@ func DefaultPath(dir string) (string, error) {
 	return filepath.Join(dir, DefaultFileName), nil
 }
 
-func InitDefault(dir string) (string, error) {
-	path, err := DefaultPath(dir)
-	if err != nil {
-		return "", err
+func InitDefault(dir string) (string, error) { return Init(dir, "toml") }
+
+func Init(dir, format string) (string, error) {
+	if dir == "" {
+		var err error
+		dir, err = DefaultDir()
+		if err != nil {
+			return "", err
+		}
 	}
-	config := Default()
-	data, err := encode(".toml", config)
-	if err != nil {
-		return "", err
+	format = strings.ToLower(strings.TrimSpace(format))
+	if format == "" {
+		format = "toml"
 	}
-	if err := fsutil.ExclusiveWriteFile(path, data, 0o600); err != nil {
+	ext := "." + format
+	if format == "yml" {
+		ext = ".yaml"
+	}
+	path := filepath.Join(dir, "config"+ext)
+	if err := InitFile(path); err != nil {
 		return "", err
 	}
 	return path, nil
+}
+
+func InitFile(path string) error {
+	data, err := encode(strings.ToLower(filepath.Ext(path)), Default())
+	if err != nil {
+		return err
+	}
+	return fsutil.ExclusiveWriteFile(path, data, 0o600)
 }
 
 func Discover(dir string) (string, error) {

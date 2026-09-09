@@ -259,6 +259,36 @@ func (b *messagixBackend) Unsend(ctx context.Context, messageID model.ID) error 
 	return err
 }
 
+func (b *messagixBackend) Typing(ctx context.Context, threadID model.ID, typing, group bool, threadType int64) error {
+	thread, err := strconv.ParseInt(threadID.String(), 10, 64)
+	if err != nil || thread == 0 {
+		return fmt.Errorf("invalid thread ID %q", threadID)
+	}
+	if threadType <= 0 {
+		threadType = 1
+	}
+	typingValue, groupValue := int64(0), int64(0)
+	if typing {
+		typingValue = 1
+	}
+	if group {
+		groupValue = 1
+	}
+	return b.client.ExecuteStatelessTask(ctx, &socket.UpdatePresenceTask{ThreadKey: thread, IsGroupThread: groupValue, IsTyping: typingValue, Attribution: 0, SyncGroup: 1, ThreadType: threadType})
+}
+
+func (b *messagixBackend) Read(ctx context.Context, threadID model.ID, watermark time.Time) error {
+	thread, err := strconv.ParseInt(threadID.String(), 10, 64)
+	if err != nil || thread == 0 {
+		return fmt.Errorf("invalid thread ID %q", threadID)
+	}
+	if watermark.IsZero() {
+		watermark = time.Now()
+	}
+	_, err = b.client.ExecuteTasks(ctx, &socket.ThreadMarkReadTask{ThreadId: thread, LastReadWatermarkTs: watermark.UnixMilli(), SyncGroup: 1})
+	return err
+}
+
 func mentionData(mentions []model.Mention) *socket.MentionData {
 	ids, offsets, lengths, types := "", "", "", ""
 	for index, mention := range mentions {

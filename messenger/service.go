@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	fberrors "go.mewis.me/fbgo/errors"
 	"go.mewis.me/fbgo/model"
@@ -19,6 +20,8 @@ type Backend interface {
 	React(context.Context, model.ID, model.ID, string) error
 	Edit(context.Context, model.ID, string) error
 	Unsend(context.Context, model.ID) error
+	Typing(context.Context, model.ID, bool, bool, int64) error
+	Read(context.Context, model.ID, time.Time) error
 	ListMessageRequests(context.Context) ([]model.MessageRequest, error)
 	ListThemes(context.Context) ([]model.Theme, error)
 	FindTheme(context.Context, string) (*model.Theme, error)
@@ -115,6 +118,32 @@ func (s *Service) Unsend(ctx context.Context, messageID model.ID) error {
 		return invalid("message ID is required")
 	}
 	return s.backend.Unsend(ctx, messageID)
+}
+
+func (s *Service) Typing(ctx context.Context, threadID model.ID, typing, group bool, threadType int64) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() {
+		return invalid("thread ID is required")
+	}
+	if threadType == 0 {
+		threadType = 1
+	}
+	if threadType < 0 {
+		return invalid("thread type cannot be negative")
+	}
+	return s.backend.Typing(ctx, threadID, typing, group, threadType)
+}
+
+func (s *Service) Read(ctx context.Context, threadID model.ID, watermark time.Time) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() {
+		return invalid("thread ID is required")
+	}
+	return s.backend.Read(ctx, threadID, watermark)
 }
 
 func (s *Service) MessageRequests(ctx context.Context) ([]model.MessageRequest, error) {

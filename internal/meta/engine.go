@@ -76,6 +76,8 @@ type backend interface {
 	React(context.Context, model.ID, model.ID, string) error
 	Edit(context.Context, model.ID, string) error
 	Unsend(context.Context, model.ID) error
+	Typing(context.Context, model.ID, bool, bool, int64) error
+	Read(context.Context, model.ID, time.Time) error
 	ListMessageRequests(context.Context) ([]MessageRequest, error)
 	ListThemes(context.Context) ([]Theme, error)
 	SetTheme(context.Context, model.ID, model.ID) error
@@ -233,6 +235,24 @@ func (e *Engine) Unsend(ctx context.Context, messageID model.ID) error {
 	ctx, cancel := mergeContext(e.ctx, ctx)
 	defer cancel()
 	return e.backend.Unsend(ctx, messageID)
+}
+
+func (e *Engine) Typing(ctx context.Context, threadID model.ID, typing, group bool, threadType int64) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.Typing(ctx, threadID, typing, group, threadType)
+}
+
+func (e *Engine) Read(ctx context.Context, threadID model.ID, watermark time.Time) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.Read(ctx, threadID, watermark)
 }
 
 func (e *Engine) ListMessageRequests(ctx context.Context) ([]MessageRequest, error) {

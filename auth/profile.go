@@ -164,3 +164,51 @@ func (m ProfileManager) ImportLegacyE2EEState(ctx context.Context, profile strin
 	}
 	return m.Secrets.Put(ctx, profile, secretE2EE, append([]byte(nil), data...))
 }
+
+func (m ProfileManager) Rename(ctx context.Context, oldName, newName string) (storage.Profile, error) {
+	oldName, newName = strings.TrimSpace(oldName), strings.TrimSpace(newName)
+	if oldName == "" || newName == "" {
+		return storage.Profile{}, errors.New("profile names are required")
+	}
+	if _, err := m.Profiles.Get(ctx, newName); err == nil {
+		return storage.Profile{}, errors.New("destination profile already exists")
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return storage.Profile{}, err
+	}
+	profile, err := m.Profiles.Get(ctx, oldName)
+	if err != nil {
+		return storage.Profile{}, err
+	}
+	profile.Name = newName
+	if err := m.Profiles.Put(ctx, profile); err != nil {
+		return storage.Profile{}, err
+	}
+	moved := make([]string, 0, 3)
+	for _, key := range []string{secretCookies, secretSession, secretE2EE} {
+		value, err := m.Secrets.Get(ctx, oldName, key)
+		if errors.Is(err, storage.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			return storage.Profile{}, err
+		}
+		if err := m.Secrets.Put(ctx, newName, key, value); err != nil {
+			return storage.Profile{}, err
+		}
+		moved = append(moved, key)
+	}
+	if err := m.Profiles.Delete(ctx, oldName); err != nil {
+		return storage.Profile{}, err
+	}
+	for _, key := range moved {
+		_ = m.Secrets.Delete(ctx, oldName, key)
+	}
+	return profile, nil
+}
+
+func (m ProfileManager) Remove(ctx context.Context, name string) error {
+	if err := m.Logout(ctx, name, LogoutPolicy{RemoveCookies: true, RemoveSession: true, RemoveE2EE: true}); err != nil {
+		return err
+	}
+	return m.Profiles.Delete(ctx, name)
+}
