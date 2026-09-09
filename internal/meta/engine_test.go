@@ -40,6 +40,9 @@ func (f *fakeBackend) SendText(_ context.Context, req SendTextRequest) (model.Se
 	}
 	return model.SendResult{MessageID: "mid.1", Timestamp: time.Unix(1, 0)}, nil
 }
+func (f *fakeBackend) Forward(context.Context, model.ID, model.ID) (model.SendResult, error) {
+	return model.SendResult{MessageID: "mid.forward"}, nil
+}
 func (f *fakeBackend) Upload(_ context.Context, req UploadRequest) (UploadResult, error) {
 	if req.Reader == nil {
 		return UploadResult{}, errors.New("nil reader")
@@ -63,6 +66,20 @@ func (f *fakeBackend) ListThreads(context.Context, int) (model.ThreadList, error
 }
 func (f *fakeBackend) GetThread(context.Context, model.ID) (*model.Thread, error) {
 	return &model.Thread{ID: "10"}, nil
+}
+func (f *fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error   { return nil }
+func (f *fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error { return nil }
+func (f *fakeBackend) MuteThread(context.Context, model.ID, time.Duration) error      { return nil }
+func (f *fakeBackend) SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error {
+	return nil
+}
+func (f *fakeBackend) DeleteThread(context.Context, model.ID) error         { return nil }
+func (f *fakeBackend) CreateDM(context.Context, model.ID) (model.ID, error) { return "10", nil }
+func (f *fakeBackend) SearchMessengerUsers(context.Context, string) ([]model.User, error) {
+	return nil, nil
+}
+func (f *fakeBackend) GetMessengerContact(context.Context, model.ID) (*model.User, error) {
+	return &model.User{ID: "1"}, nil
 }
 func (f *fakeBackend) SetThreadAdmin(context.Context, model.ID, model.ID, bool) error { return nil }
 func (f *fakeBackend) SetThreadName(context.Context, model.ID, string) error          { return nil }
@@ -229,6 +246,9 @@ func (b *blockingBackend) Disconnect()                                    {}
 func (b *blockingBackend) SendText(context.Context, SendTextRequest) (model.SendResult, error) {
 	return model.SendResult{}, nil
 }
+func (b *blockingBackend) Forward(context.Context, model.ID, model.ID) (model.SendResult, error) {
+	return model.SendResult{}, nil
+}
 func (b *blockingBackend) Upload(context.Context, UploadRequest) (UploadResult, error) {
 	return UploadResult{}, nil
 }
@@ -249,6 +269,20 @@ func (b *blockingBackend) ListThreads(context.Context, int) (model.ThreadList, e
 	return model.ThreadList{}, nil
 }
 func (b *blockingBackend) GetThread(context.Context, model.ID) (*model.Thread, error) {
+	return nil, nil
+}
+func (b *blockingBackend) CreatePoll(context.Context, model.ID, string, []string) error   { return nil }
+func (b *blockingBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error { return nil }
+func (b *blockingBackend) MuteThread(context.Context, model.ID, time.Duration) error      { return nil }
+func (b *blockingBackend) SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error {
+	return nil
+}
+func (b *blockingBackend) DeleteThread(context.Context, model.ID) error         { return nil }
+func (b *blockingBackend) CreateDM(context.Context, model.ID) (model.ID, error) { return "", nil }
+func (b *blockingBackend) SearchMessengerUsers(context.Context, string) ([]model.User, error) {
+	return nil, nil
+}
+func (b *blockingBackend) GetMessengerContact(context.Context, model.ID) (*model.User, error) {
 	return nil, nil
 }
 func (b *blockingBackend) SetThreadAdmin(context.Context, model.ID, model.ID, bool) error { return nil }

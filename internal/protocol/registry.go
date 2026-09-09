@@ -2,6 +2,7 @@ package protocol
 
 const (
 	FacebookBaseURL  = "https://www.facebook.com"
+	FB4AAuthURL      = "https://b-graph.facebook.com/auth/login"
 	GraphQLBatchURL  = FacebookBaseURL + "/api/graphqlbatch/"
 	GraphQLURL       = FacebookBaseURL + "/api/graphql/"
 	MercuryUploadURL = FacebookBaseURL + "/ajax/mercury/upload.php"
@@ -50,6 +51,8 @@ const (
 	NoteCreateFriendlyName          = "MWInboxTrayNoteCreationDialogCreationStepContentMutation"
 	NoteDeleteDocID                 = "9532619970198958"
 	NoteDeleteFriendlyName          = "useMWInboxTrayDeleteNoteMutation"
+	FB4AAPIKey                      = "882a8490361da98702bf97a021ddc14d"
+	FB4AAppAccessToken              = "350685531728|62f8ce9f74b12f84c123cc23437a4a32"
 )
 
 var RequiredSessionCookies = []string{"c_user", "xs"}

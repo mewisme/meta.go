@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"go.mewis.me/fbgo"
+	"go.mewis.me/fbgo/auth"
 	"go.mewis.me/fbgo/config"
 	fberrors "go.mewis.me/fbgo/errors"
 	"go.mewis.me/fbgo/model"
@@ -19,7 +20,7 @@ import (
 func TestWriteVersionText(t *testing.T) {
 	var out bytes.Buffer
 	info := fbgo.VersionInfo{Version: "v1.2.3", Commit: "abc", GoVersion: "go1.test"}
-	if err := writeVersion(&out, false, info); err != nil {
+	if err := writeVersion(&out, false, "", info); err != nil {
 		t.Fatal(err)
 	}
 	if got := out.String(); got != "fbgo v1.2.3 (abc) go1.test\n" {
@@ -30,7 +31,7 @@ func TestWriteVersionText(t *testing.T) {
 func TestWriteVersionJSON(t *testing.T) {
 	var out bytes.Buffer
 	info := fbgo.VersionInfo{Version: "v1.2.3", Commit: "abc", GoVersion: "go1.test"}
-	if err := writeVersion(&out, true, info); err != nil {
+	if err := writeVersion(&out, true, "", info); err != nil {
 		t.Fatal(err)
 	}
 	var decoded struct {
@@ -42,6 +43,50 @@ func TestWriteVersionJSON(t *testing.T) {
 	}
 	if !decoded.OK || decoded.Data.Version != info.Version || decoded.Data.Commit != info.Commit || !strings.HasSuffix(out.String(), "\n") {
 		t.Fatalf("unexpected JSON output: %q", out.String())
+	}
+}
+
+func TestJQOutputFiltersFinalEnvelopeAndImpliesJSON(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := Run([]string{"--jqo", ".data.version", "version"}, strings.NewReader(""), &out, &errOut)
+	if code != ExitOK {
+		t.Fatalf("unexpected exit code %d: %s", code, errOut.String())
+	}
+	if got := strings.TrimSpace(out.String()); got != `"dev"` {
+		t.Fatalf("unexpected jqo output: %q", got)
+	}
+}
+
+func TestJQOutputSupportsMultipleAndEmptyResults(t *testing.T) {
+	var out bytes.Buffer
+	value := outputEnvelope{OK: true, Data: map[string]any{"items": []int{1, 2}}}
+	if err := writeJSONOutput(&out, value, ".data.items[]"); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.String(); got != "1\n2\n" {
+		t.Fatalf("unexpected multi-result output: %q", got)
+	}
+	out.Reset()
+	if err := writeJSONOutput(&out, value, ".data.items[] | select(. > 10)"); err != nil {
+		t.Fatal(err)
+	}
+	if out.Len() != 0 {
+		t.Fatalf("expected empty jq output, got %q", out.String())
+	}
+}
+
+func TestInvalidJQOutputReturnsJSONUsageError(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := Run([]string{"--jqo", ".[", "version"}, strings.NewReader(""), &out, &errOut)
+	if code != ExitUsage {
+		t.Fatalf("expected usage exit code, got %d", code)
+	}
+	var payload errorOutputEnvelope
+	if err := json.Unmarshal(errOut.Bytes(), &payload); err != nil {
+		t.Fatalf("invalid error JSON: %q %v", errOut.String(), err)
+	}
+	if payload.OK || payload.Error.Code != ExitUsage {
+		t.Fatalf("unexpected error envelope: %#v", payload)
 	}
 }
 
@@ -145,7 +190,7 @@ func TestExitCodeContract(t *testing.T) {
 		want int
 	}{
 		{fberrors.ErrInvalidInput, ExitUsage}, {fberrors.ErrUnauthorized, ExitAuth}, {context.DeadlineExceeded, ExitNetwork},
-		{fberrors.ErrProtocolChanged, ExitProtocol}, {fberrors.ErrE2EENotReady, ExitE2EE}, {fberrors.ErrPermissionDenied, ExitRemote}, {errors.New("internal"), ExitInternal},
+		{fberrors.ErrProtocolChanged, ExitProtocol}, {fberrors.ErrE2EENotReady, ExitE2EE}, {fberrors.ErrPermissionDenied, ExitRemote}, {fberrors.ErrRateLimited, ExitRemote}, {auth.ErrTwoFactorRequired, ExitAuth}, {errors.New("internal"), ExitInternal},
 	}
 	for _, test := range tests {
 		if got := ExitCode(test.err); got != test.want {

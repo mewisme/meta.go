@@ -20,6 +20,9 @@ func (f *fakeBackend) Send(_ context.Context, req model.SendRequest) (model.Send
 	f.lastSend = req
 	return model.SendResult{MessageID: "mid.1"}, nil
 }
+func (f *fakeBackend) Forward(context.Context, model.ID, model.ID) (model.SendResult, error) {
+	return model.SendResult{MessageID: "mid.forward"}, nil
+}
 func (f *fakeBackend) Upload(context.Context, model.UploadInput) (model.UploadResult, error) {
 	return model.UploadResult{ID: "1"}, nil
 }
@@ -82,6 +85,17 @@ func TestServiceSendAndRemoveReaction(t *testing.T) {
 	}
 }
 
+func TestServiceForward(t *testing.T) {
+	service := NewService(new(fakeBackend))
+	result, err := service.Forward(context.Background(), "10", "mid.1")
+	if err != nil || result.MessageID != "mid.forward" {
+		t.Fatalf("unexpected forward result: %#v %v", result, err)
+	}
+	if _, err := service.Forward(context.Background(), "", "mid.1"); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid forward target, got %v", err)
+	}
+}
+
 func TestServiceInputValidation(t *testing.T) {
 	service := NewService(new(fakeBackend))
 	_, err := service.Send(context.Background(), model.SendRequest{})
@@ -99,6 +113,15 @@ func TestServiceInputValidation(t *testing.T) {
 	}
 	if err := service.Read(context.Background(), "", time.Time{}); !errors.Is(err, fberrors.ErrInvalidInput) {
 		t.Fatalf("expected invalid read target, got %v", err)
+	}
+	if _, err := service.Send(context.Background(), model.SendRequest{ThreadID: "1", Attachments: []model.AttachmentInput{{Reader: bytes.NewBufferString("x")}}, StickerID: "2"}); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected mutually exclusive send content, got %v", err)
+	}
+	if _, err := service.Send(context.Background(), model.SendRequest{ThreadID: "1", StickerID: "2"}); err != nil {
+		t.Fatalf("sticker send rejected: %v", err)
+	}
+	if _, err := service.Send(context.Background(), model.SendRequest{ThreadID: "1", URL: "https://example.com/media"}); err != nil {
+		t.Fatalf("external media send rejected: %v", err)
 	}
 }
 

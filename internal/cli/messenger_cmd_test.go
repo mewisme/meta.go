@@ -24,7 +24,7 @@ func TestMessengerE2EEFlags(t *testing.T) {
 		path  []string
 		flags []string
 	}{
-		{[]string{"messenger", "send"}, []string{"e2ee", "regular"}},
+		{[]string{"messenger", "send"}, []string{"e2ee", "regular", "sticker-id", "url"}},
 		{[]string{"messenger", "media", "upload"}, []string{"e2ee", "kind", "caption"}},
 		{[]string{"messenger", "react"}, []string{"e2ee", "sender-jid"}},
 		{[]string{"messenger", "edit"}, []string{"e2ee", "chat-jid"}},
@@ -40,6 +40,13 @@ func TestMessengerE2EEFlags(t *testing.T) {
 				t.Fatalf("%v missing --%s", test.path, name)
 			}
 		}
+	}
+}
+
+func TestMessengerForwardCommandExists(t *testing.T) {
+	root := New()
+	if _, _, err := root.Find([]string{"messenger", "forward"}); err != nil {
+		t.Fatalf("missing messenger forward: %v", err)
 	}
 }
 
@@ -71,16 +78,16 @@ func TestResolveE2EEMediaKind(t *testing.T) {
 }
 
 func TestWriteEventHumanAndNDJSON(t *testing.T) {
-	event := model.Event{Kind: model.EventMessage, Data: map[string]any{"id": "1"}}
+	event := model.Event{Kind: model.EventMessage, Message: &model.Message{ID: "1"}}
 	var human bytes.Buffer
-	if err := writeEvent(&human, false, event); err != nil {
+	if err := writeEvent(&human, false, "", event); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.HasPrefix(human.String(), "message\t") {
 		t.Fatalf("unexpected human event: %q", human.String())
 	}
 	var ndjson bytes.Buffer
-	if err := writeEvent(&ndjson, true, event); err != nil {
+	if err := writeEvent(&ndjson, true, "", event); err != nil {
 		t.Fatal(err)
 	}
 	var decoded model.Event
@@ -89,5 +96,12 @@ func TestWriteEventHumanAndNDJSON(t *testing.T) {
 	}
 	if decoded.Kind != model.EventMessage || !strings.HasSuffix(ndjson.String(), "\n") {
 		t.Fatalf("unexpected NDJSON event: %q", ndjson.String())
+	}
+	ndjson.Reset()
+	if err := writeEvent(&ndjson, true, ".kind", event); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(ndjson.String()); got != `"message"` {
+		t.Fatalf("unexpected filtered NDJSON event: %q", got)
 	}
 }

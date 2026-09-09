@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -33,7 +32,7 @@ func newFacebookUserCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, value, value.ID.String()+"\t"+value.Name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, value, value.ID.String()+"\t"+value.Name)
 	}}
 }
 
@@ -54,7 +53,7 @@ func newFacebookSearchCommand(opts *options) *cobra.Command {
 			return err
 		}
 		if opts.json {
-			return writeValue(cmd.OutOrStdout(), true, values, "")
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, values, "")
 		}
 		for _, value := range values {
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\n", value.ID, value.Name, value.URL)
@@ -82,7 +81,7 @@ func newFacebookNotificationsCommand(opts *options) *cobra.Command {
 			return err
 		}
 		if opts.json {
-			return writeValue(cmd.OutOrStdout(), true, values, "")
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, values, "")
 		}
 		for _, value := range values {
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), value.Text)
@@ -108,7 +107,7 @@ func newFacebookBioCommand(opts *options) *cobra.Command {
 		if err := c.Facebook.SetBio(cmd.Context(), args[0], publish); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]bool{"updated": true}, "bio updated")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"updated": true}, "bio updated")
 	}}
 	cmd.Flags().BoolVar(&publish, "publish", false, "publish a feed story for the bio change")
 	return cmd
@@ -128,7 +127,7 @@ func newFacebookAdditionalProfileCommand(opts *options) *cobra.Command {
 		if err := c.Facebook.CreateAdditionalProfile(cmd.Context(), args[0], args[1]); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]bool{"created": true}, "additional profile created")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"created": true}, "additional profile created")
 	}}
 }
 
@@ -146,7 +145,7 @@ func newFacebookUnfriendCommand(opts *options) *cobra.Command {
 		if err := c.Facebook.Unfriend(cmd.Context(), model.ID(args[0])); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]bool{"unfriended": true}, "user unfriended")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"unfriended": true}, "user unfriended")
 	}}
 }
 
@@ -170,7 +169,7 @@ func newFacebookBlockCommand(opts *options) *cobra.Command {
 			if err := c.Facebook.SetBlocked(cmd.Context(), model.ID(args[0]), item.blocked); err != nil {
 				return err
 			}
-			return writeValue(cmd.OutOrStdout(), opts.json, map[string]bool{"blocked": item.blocked}, "block state updated")
+			return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"blocked": item.blocked}, "block state updated")
 		}})
 	}
 	return cmd
@@ -192,7 +191,7 @@ func newFacebookPostCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, post, post.URL)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, post, post.URL)
 	}})
 	for _, action := range []string{"archive", "delete"} {
 		action := action
@@ -219,7 +218,7 @@ func newFacebookPostCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return writeValue(cmd.OutOrStdout(), opts.json, map[string]bool{action + "d": true}, "post "+action+"d")
+			return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{action + "d": true}, "post "+action+"d")
 		}}
 		sub.Flags().StringVar(&ownership, "ownership", "owned", "post ownership: owned or shared")
 		cmd.AddCommand(sub)
@@ -232,7 +231,7 @@ func newFacebookMarketplaceCommand(opts *options) *cobra.Command {
 	cmd.AddCommand(&cobra.Command{Use: "categories", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		values := cCategories()
 		if opts.json {
-			return writeValue(cmd.OutOrStdout(), true, values, "")
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, values, "")
 		}
 		for _, value := range values {
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), value)
@@ -253,7 +252,7 @@ func newFacebookMarketplaceCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, value, value.ID.String()+"\t"+value.Title)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, value, value.ID.String()+"\t"+value.Title)
 	}})
 	cmd.AddCommand(&cobra.Command{Use: "create <input.json>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		data, err := os.ReadFile(args[0])
@@ -261,7 +260,7 @@ func newFacebookMarketplaceCommand(opts *options) *cobra.Command {
 			return err
 		}
 		var input model.MarketplaceListingInput
-		if err := json.Unmarshal(data, &input); err != nil {
+		if err := decodeJSONInput(data, opts.jqi, &input); err != nil {
 			return err
 		}
 		r, err := loadRuntime(cmd.Context(), opts)
@@ -277,7 +276,7 @@ func newFacebookMarketplaceCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, value, value.URL)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, value, value.URL)
 	}})
 	return cmd
 }
@@ -302,6 +301,6 @@ func newFacebookProfessionalCommand(opts *options) *cobra.Command {
 		if err := c.Facebook.SetProfessionalMode(cmd.Context(), value == "on"); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]bool{"enabled": value == "on"}, "professional mode "+value)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"enabled": value == "on"}, "professional mode "+value)
 	}}
 }

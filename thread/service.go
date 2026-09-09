@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	fberrors "go.mewis.me/fbgo/errors"
 	"go.mewis.me/fbgo/model"
@@ -16,6 +17,14 @@ var ErrUnavailable = errors.New("thread service unavailable")
 type Backend interface {
 	ListThreads(context.Context, int) (model.ThreadList, error)
 	GetThread(context.Context, model.ID) (*model.Thread, error)
+	CreatePoll(context.Context, model.ID, string, []string) error
+	VotePoll(context.Context, model.ID, model.ID, []model.ID) error
+	MuteThread(context.Context, model.ID, time.Duration) error
+	SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error
+	DeleteThread(context.Context, model.ID) error
+	CreateDM(context.Context, model.ID) (model.ID, error)
+	SearchMessengerUsers(context.Context, string) ([]model.User, error)
+	GetMessengerContact(context.Context, model.ID) (*model.User, error)
 	SetThreadAdmin(context.Context, model.ID, model.ID, bool) error
 	SetThreadName(context.Context, model.ID, string) error
 	SetThreadEmoji(context.Context, model.ID, string) error
@@ -47,6 +56,104 @@ func (s *Service) Get(ctx context.Context, threadID model.ID) (*model.Thread, er
 		return nil, invalid("thread ID is required")
 	}
 	return s.backend.GetThread(ctx, threadID)
+}
+
+func (s *Service) CreatePoll(ctx context.Context, threadID model.ID, question string, options []string) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	question = strings.TrimSpace(question)
+	if threadID.Empty() || question == "" || len(options) < 2 {
+		return invalid("thread ID, question and at least two options are required")
+	}
+	clean := make([]string, len(options))
+	for i, option := range options {
+		clean[i] = strings.TrimSpace(option)
+		if clean[i] == "" {
+			return invalid("poll options cannot be empty")
+		}
+	}
+	return s.backend.CreatePoll(ctx, threadID, question, clean)
+}
+
+func (s *Service) VotePoll(ctx context.Context, threadID, pollID model.ID, optionIDs []model.ID) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() || pollID.Empty() || len(optionIDs) == 0 {
+		return invalid("thread ID, poll ID and selected option IDs are required")
+	}
+	for _, optionID := range optionIDs {
+		if optionID.Empty() {
+			return invalid("poll option IDs cannot be empty")
+		}
+	}
+	return s.backend.VotePoll(ctx, threadID, pollID, optionIDs)
+}
+
+// Mute mutes a thread for duration. Zero unmutes; any negative duration mutes indefinitely.
+func (s *Service) Mute(ctx context.Context, threadID model.ID, duration time.Duration) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() {
+		return invalid("thread ID is required")
+	}
+	return s.backend.MuteThread(ctx, threadID, duration)
+}
+
+func (s *Service) SetPhoto(ctx context.Context, threadID model.ID, input model.AttachmentInput) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() || input.Reader == nil {
+		return invalid("thread ID and photo reader are required")
+	}
+	if input.Size < 0 {
+		return invalid("photo size cannot be negative")
+	}
+	return s.backend.SetThreadPhoto(ctx, threadID, input)
+}
+
+func (s *Service) Delete(ctx context.Context, threadID model.ID) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() {
+		return invalid("thread ID is required")
+	}
+	return s.backend.DeleteThread(ctx, threadID)
+}
+
+func (s *Service) CreateDM(ctx context.Context, userID model.ID) (model.ID, error) {
+	if err := s.ready(); err != nil {
+		return "", err
+	}
+	if userID.Empty() {
+		return "", invalid("user ID is required")
+	}
+	return s.backend.CreateDM(ctx, userID)
+}
+
+func (s *Service) SearchUsers(ctx context.Context, query string) ([]model.User, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, invalid("search query is required")
+	}
+	return s.backend.SearchMessengerUsers(ctx, query)
+}
+
+func (s *Service) GetContact(ctx context.Context, userID model.ID) (*model.User, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	if userID.Empty() {
+		return nil, invalid("user ID is required")
+	}
+	return s.backend.GetMessengerContact(ctx, userID)
 }
 
 func (s *Service) SetAdmin(ctx context.Context, threadID, userID model.ID, admin bool) error {

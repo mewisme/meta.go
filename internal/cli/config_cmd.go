@@ -51,7 +51,7 @@ func newConfigInitCommand(opts *options) *cobra.Command {
 				return err
 			}
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]string{"path": created}, created)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]string{"path": created}, created)
 	}}
 	cmd.Flags().StringVar(&format, "format", "toml", "config format: toml, json, yaml")
 	return cmd
@@ -68,7 +68,7 @@ func newConfigShowCommand(opts *options) *cobra.Command {
 			return err
 		}
 		if opts.json {
-			return writeValue(cmd.OutOrStdout(), true, cfg, "")
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, cfg, "")
 		}
 		data, err := json.MarshalIndent(cfg, "", "  ")
 		if err != nil {
@@ -85,7 +85,7 @@ func newConfigPathCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]string{"path": path}, path)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]string{"path": path}, path)
 	}}
 }
 
@@ -125,6 +125,6 @@ func newConfigSetCommand(opts *options) *cobra.Command {
 		if err := config.SaveFile(path, cfg); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"key": key, "value": value}, key+" = "+value)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"key": key, "value": value}, key+" = "+value)
 	}}
 }

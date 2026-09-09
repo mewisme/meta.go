@@ -25,7 +25,7 @@ import (
 // implementation phases add their transport capabilities.
 type Client struct {
 	Messenger *messenger.Service
-	Thread    *threadservice.Service
+	Threads   *threadservice.Service
 	Facebook  *facebookservice.Service
 
 	httpClient  *http.Client
@@ -42,25 +42,39 @@ type Client struct {
 
 	mu        sync.RWMutex
 	connectMu sync.Mutex
+	handlerMu sync.RWMutex
 	engine    *meta.Engine
 	account   model.User
 	closed    bool
+	nextID    uint64
+	handlers  map[uint64]clientHandler
 }
 
-// New creates a client with production-safe defaults and applies opts in order.
-func New(opts ...Option) *Client {
+type clientHandler struct {
+	kind    EventKind
+	handler Handler
+}
+
+// NewClient creates a client with production-safe defaults and applies opts in order.
+func NewClient(opts ...Option) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	client := &Client{httpClient: &http.Client{}, logger: logging.RedactLogger(slog.Default()), timeout: 30 * time.Second, eventBuffer: 100, ctx: ctx, cancel: cancel}
+	client := &Client{httpClient: &http.Client{}, logger: logging.RedactLogger(slog.Default()), timeout: 30 * time.Second, eventBuffer: 100, ctx: ctx, cancel: cancel, handlers: map[uint64]clientHandler{}}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(client)
 		}
 	}
+	if client.timeout <= 0 {
+		cancel()
+		return nil, fmt.Errorf("%w: timeout must be positive", fberrors.ErrInvalidInput)
+	}
+	if client.eventBuffer < 1 {
+		cancel()
+		return nil, fmt.Errorf("%w: event buffer must be positive", fberrors.ErrInvalidInput)
+	}
 	client.httpClient.Timeout = client.timeout
-	return client
+	return client, nil
 }
-
-func NewClient(opts ...Option) (*Client, error) { return New(opts...), nil }
 
 func (c *Client) Connect(ctx context.Context) error {
 	if c == nil {
@@ -102,6 +116,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	engine.On(c.dispatchEvent)
 	account, err := engine.Connect(ctx)
 	if err != nil {
 		engine.Close()
@@ -117,7 +132,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	c.engine = engine
 	c.account = model.User{ID: account.ID, Name: account.Name, Username: account.Username}
 	c.Messenger = messenger.NewService(engine)
-	c.Thread = threadservice.NewService(engine)
+	c.Threads = threadservice.NewService(engine)
 	c.Facebook = facebookservice.NewService(engine)
 	c.mu.Unlock()
 	return nil
@@ -163,7 +178,7 @@ func (c *Client) Close() error {
 	engine := c.engine
 	c.engine = nil
 	c.Messenger = nil
-	c.Thread = nil
+	c.Threads = nil
 	c.Facebook = nil
 	c.mu.Unlock()
 	c.cancel()
@@ -197,6 +212,45 @@ func (c *Client) Events() <-chan Event {
 		return nil
 	}
 	return engine.Events()
+}
+
+func (c *Client) On(kind EventKind, handler Handler) UnsubscribeFunc {
+	if c == nil || handler == nil {
+		return func() {}
+	}
+	c.mu.RLock()
+	closed := c.closed
+	c.mu.RUnlock()
+	if closed {
+		return func() {}
+	}
+	c.handlerMu.Lock()
+	c.nextID++
+	id := c.nextID
+	c.handlers[id] = clientHandler{kind: kind, handler: handler}
+	c.handlerMu.Unlock()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			c.handlerMu.Lock()
+			delete(c.handlers, id)
+			c.handlerMu.Unlock()
+		})
+	}
+}
+
+func (c *Client) dispatchEvent(event Event) {
+	c.handlerMu.RLock()
+	handlers := make([]Handler, 0, len(c.handlers))
+	for _, item := range c.handlers {
+		if item.kind == "" || item.kind == event.Kind {
+			handlers = append(handlers, item.handler)
+		}
+	}
+	c.handlerMu.RUnlock()
+	for _, handler := range handlers {
+		handler(event)
+	}
 }
 
 func (c *Client) Account() User {

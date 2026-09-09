@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"io"
 	"time"
 )
@@ -52,12 +53,16 @@ type HealthSnapshot struct {
 }
 
 type User struct {
-	ID         ID     `json:"id"`
-	Name       string `json:"name"`
-	Username   string `json:"username,omitempty"`
-	ProfileURL string `json:"profileUrl,omitempty"`
-	AvatarURL  string `json:"avatarUrl,omitempty"`
-	Gender     string `json:"gender,omitempty"`
+	ID               ID     `json:"id"`
+	Name             string `json:"name"`
+	FirstName        string `json:"firstName,omitempty"`
+	Username         string `json:"username,omitempty"`
+	ProfileURL       string `json:"profileUrl,omitempty"`
+	AvatarURL        string `json:"avatarUrl,omitempty"`
+	Gender           string `json:"gender,omitempty"`
+	IsMessengerUser  bool   `json:"isMessengerUser,omitempty"`
+	IsVerified       bool   `json:"isVerified,omitempty"`
+	CanViewerMessage bool   `json:"canViewerMessage,omitempty"`
 }
 
 type FacebookUser struct {
@@ -234,6 +239,8 @@ type SendRequest struct {
 	ReplyTo     *ReplyReference
 	Mentions    []Mention
 	Attachments []AttachmentInput
+	StickerID   ID
+	URL         string
 	Encryption  EncryptionPolicy
 }
 
@@ -393,6 +400,113 @@ const (
 )
 
 type Event struct {
-	Kind EventKind `json:"kind"`
-	Data any       `json:"data,omitempty"`
+	Kind            EventKind             `json:"kind"`
+	IsNewSession    bool                  `json:"-"`
+	Error           error                 `json:"-"`
+	Transport       TransportKind         `json:"-"`
+	Message         *Message              `json:"-"`
+	MessageEdit     *MessageEditEvent     `json:"-"`
+	MessageUnsend   *MessageUnsendEvent   `json:"-"`
+	Reaction        *ReactionEvent        `json:"-"`
+	Typing          *TypingEvent          `json:"-"`
+	ReadReceipt     *ReadReceiptEvent     `json:"-"`
+	DeliveryReceipt *DeliveryReceiptEvent `json:"-"`
+	ThreadUpdate    *ThreadUpdateEvent    `json:"-"`
+	E2EEReceipt     *E2EEReceiptEvent     `json:"-"`
 }
+
+func (e Event) MarshalJSON() ([]byte, error) {
+	var data any
+	switch e.Kind {
+	case EventReady:
+		data = e.IsNewSession
+	case EventError:
+		if e.Error != nil {
+			data = e.Error.Error()
+		}
+	case EventDisconnected:
+		if e.Transport != "" {
+			data = e.Transport
+		}
+	case EventMessage:
+		data = e.Message
+	case EventMessageEdit:
+		data = e.MessageEdit
+	case EventMessageUnsend:
+		data = e.MessageUnsend
+	case EventReaction:
+		data = e.Reaction
+	case EventTyping:
+		data = e.Typing
+	case EventReadReceipt:
+		data = e.ReadReceipt
+	case EventDeliveryReceipt:
+		data = e.DeliveryReceipt
+	case EventThreadUpdate:
+		data = e.ThreadUpdate
+	case EventE2EEReceipt:
+		data = e.E2EEReceipt
+	}
+	return json.Marshal(struct {
+		Kind EventKind `json:"kind"`
+		Data any       `json:"data,omitempty"`
+	}{Kind: e.Kind, Data: data})
+}
+
+func (e *Event) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Kind EventKind       `json:"kind"`
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	e.Kind = raw.Kind
+	if len(raw.Data) == 0 || string(raw.Data) == "null" {
+		return nil
+	}
+	switch raw.Kind {
+	case EventReady:
+		return json.Unmarshal(raw.Data, &e.IsNewSession)
+	case EventError:
+		var message string
+		if err := json.Unmarshal(raw.Data, &message); err != nil {
+			return err
+		}
+		e.Error = eventError(message)
+	case EventDisconnected:
+		return json.Unmarshal(raw.Data, &e.Transport)
+	case EventMessage:
+		e.Message = new(Message)
+		return json.Unmarshal(raw.Data, e.Message)
+	case EventMessageEdit:
+		e.MessageEdit = new(MessageEditEvent)
+		return json.Unmarshal(raw.Data, e.MessageEdit)
+	case EventMessageUnsend:
+		e.MessageUnsend = new(MessageUnsendEvent)
+		return json.Unmarshal(raw.Data, e.MessageUnsend)
+	case EventReaction:
+		e.Reaction = new(ReactionEvent)
+		return json.Unmarshal(raw.Data, e.Reaction)
+	case EventTyping:
+		e.Typing = new(TypingEvent)
+		return json.Unmarshal(raw.Data, e.Typing)
+	case EventReadReceipt:
+		e.ReadReceipt = new(ReadReceiptEvent)
+		return json.Unmarshal(raw.Data, e.ReadReceipt)
+	case EventDeliveryReceipt:
+		e.DeliveryReceipt = new(DeliveryReceiptEvent)
+		return json.Unmarshal(raw.Data, e.DeliveryReceipt)
+	case EventThreadUpdate:
+		e.ThreadUpdate = new(ThreadUpdateEvent)
+		return json.Unmarshal(raw.Data, e.ThreadUpdate)
+	case EventE2EEReceipt:
+		e.E2EEReceipt = new(E2EEReceiptEvent)
+		return json.Unmarshal(raw.Data, e.E2EEReceipt)
+	}
+	return nil
+}
+
+type eventError string
+
+func (e eventError) Error() string { return string(e) }

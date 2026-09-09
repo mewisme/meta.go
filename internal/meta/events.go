@@ -19,17 +19,17 @@ func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 	switch evt := event.(type) {
 	case *messagix.Event_Ready:
 		e.connected.Store(true)
-		e.emit(Event{Kind: EventReady, Data: evt.IsNewSession})
+		e.emit(Event{Kind: EventReady, IsNewSession: evt.IsNewSession})
 	case *messagix.Event_Reconnected:
 		e.connected.Store(true)
 		e.reconnect.Add(1)
 		e.emit(Event{Kind: EventReconnected})
 	case *messagix.Event_SocketError:
 		e.connected.Store(false)
-		e.emit(Event{Kind: EventError, Data: evt.Err})
+		e.emit(Event{Kind: EventError, Error: evt.Err})
 	case *messagix.Event_PermanentError:
 		e.connected.Store(false)
-		e.emit(Event{Kind: EventError, Data: evt.Err})
+		e.emit(Event{Kind: EventError, Error: evt.Err})
 	case *messagix.Event_PublishResponse:
 		if evt.Table != nil {
 			e.emitTable(evt.Table)
@@ -39,7 +39,7 @@ func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 		e.emit(Event{Kind: EventE2EEReady})
 	case *waEvents.Disconnected:
 		e.e2eeReady.Store(false)
-		e.emit(Event{Kind: EventDisconnected, Data: model.TransportE2EE})
+		e.emit(Event{Kind: EventDisconnected, Transport: model.TransportE2EE})
 	case *waEvents.FBMessage:
 		e.emitE2EEMessage(evt)
 	case *waEvents.Receipt:
@@ -48,10 +48,10 @@ func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 			ids[index] = model.ID(id)
 		}
 		e.lastRecv.Store(time.Now().UnixMilli())
-		e.emit(Event{Kind: EventE2EEReceipt, Data: model.E2EEReceiptEvent{Type: string(evt.Type), ChatJID: evt.Chat.String(), SenderJID: evt.Sender.String(), MessageIDs: ids}})
+		e.emit(Event{Kind: EventE2EEReceipt, E2EEReceipt: &model.E2EEReceiptEvent{Type: string(evt.Type), ChatJID: evt.Chat.String(), SenderJID: evt.Sender.String(), MessageIDs: ids}})
 	case *waEvents.UndecryptableMessage:
 		e.lastRecv.Store(time.Now().UnixMilli())
-		e.emit(Event{Kind: EventError, Data: fmt.Errorf("E2EE message %s could not be decrypted", evt.Info.ID)})
+		e.emit(Event{Kind: EventError, Error: fmt.Errorf("E2EE message %s could not be decrypted", evt.Info.ID)})
 	}
 }
 
@@ -67,7 +67,7 @@ func (e *Engine) emitE2EEMessage(evt *waEvents.FBMessage) {
 	payload := consumer.GetPayload()
 	if applicationData := payload.GetApplicationData(); applicationData != nil {
 		if revoke := applicationData.GetRevoke(); revoke != nil && revoke.GetKey() != nil {
-			e.emit(Event{Kind: EventMessageUnsend, Data: model.MessageUnsendEvent{MessageID: model.ID(revoke.GetKey().GetID()), ThreadID: model.ID(evt.Info.Chat.User)}})
+			e.emit(Event{Kind: EventMessageUnsend, MessageUnsend: &model.MessageUnsendEvent{MessageID: model.ID(revoke.GetKey().GetID()), ThreadID: model.ID(evt.Info.Chat.User)}})
 		}
 		return
 	}
@@ -81,24 +81,24 @@ func (e *Engine) emitE2EEMessage(evt *waEvents.FBMessage) {
 		if message.MessageText != nil {
 			text = message.MessageText.GetText()
 		}
-		e.emit(Event{Kind: EventMessage, Data: model.Message{ID: model.ID(evt.Info.ID), ThreadID: model.ID(evt.Info.Chat.User), SenderID: model.ID(evt.Info.Sender.User), Text: text, Timestamp: evt.Info.Timestamp, Transport: model.TransportE2EE, Encryption: model.EncryptionE2EE, ReplyTo: e2eeReply(evt)}})
+		e.emit(Event{Kind: EventMessage, Message: &model.Message{ID: model.ID(evt.Info.ID), ThreadID: model.ID(evt.Info.Chat.User), SenderID: model.ID(evt.Info.Sender.User), Text: text, Timestamp: evt.Info.Timestamp, Transport: model.TransportE2EE, Encryption: model.EncryptionE2EE, ReplyTo: e2eeReply(evt)}})
 	case *waConsumerApplication.ConsumerApplication_Content_ReactionMessage:
 		if message.ReactionMessage == nil || message.ReactionMessage.GetKey() == nil {
 			return
 		}
-		e.emit(Event{Kind: EventReaction, Data: model.ReactionEvent{MessageID: model.ID(message.ReactionMessage.GetKey().GetID()), ThreadID: model.ID(evt.Info.Chat.User), ActorID: model.ID(evt.Info.Sender.User), Reaction: message.ReactionMessage.GetText()}})
+		e.emit(Event{Kind: EventReaction, Reaction: &model.ReactionEvent{MessageID: model.ID(message.ReactionMessage.GetKey().GetID()), ThreadID: model.ID(evt.Info.Chat.User), ActorID: model.ID(evt.Info.Sender.User), Reaction: message.ReactionMessage.GetText()}})
 	case *waConsumerApplication.ConsumerApplication_Content_EditMessage:
 		if message.EditMessage == nil || message.EditMessage.GetKey() == nil {
 			return
 		}
-		e.emit(Event{Kind: EventMessageEdit, Data: model.MessageEditEvent{MessageID: model.ID(message.EditMessage.GetKey().GetID()), Text: message.EditMessage.GetMessage().GetText(), EditCount: 1}})
+		e.emit(Event{Kind: EventMessageEdit, MessageEdit: &model.MessageEditEvent{MessageID: model.ID(message.EditMessage.GetKey().GetID()), Text: message.EditMessage.GetMessage().GetText(), EditCount: 1}})
 	case *waConsumerApplication.ConsumerApplication_Content_ImageMessage:
 		if message.ImageMessage == nil {
 			return
 		}
 		decoded, err := message.ImageMessage.Decode()
 		if err != nil {
-			e.emit(Event{Kind: EventError, Data: fmt.Errorf("decode E2EE image: %w", err)})
+			e.emit(Event{Kind: EventError, Error: fmt.Errorf("decode E2EE image: %w", err)})
 			return
 		}
 		attachment := e2eeAttachment(model.E2EEMediaImage, "", decoded.GetIntegral().GetTransport(), int(decoded.GetAncillary().GetWidth()), int(decoded.GetAncillary().GetHeight()), 0)
@@ -109,7 +109,7 @@ func (e *Engine) emitE2EEMessage(evt *waEvents.FBMessage) {
 		}
 		decoded, err := message.VideoMessage.Decode()
 		if err != nil {
-			e.emit(Event{Kind: EventError, Data: fmt.Errorf("decode E2EE video: %w", err)})
+			e.emit(Event{Kind: EventError, Error: fmt.Errorf("decode E2EE video: %w", err)})
 			return
 		}
 		attachment := e2eeAttachment(model.E2EEMediaVideo, "", decoded.GetIntegral().GetTransport(), int(decoded.GetAncillary().GetWidth()), int(decoded.GetAncillary().GetHeight()), int(decoded.GetAncillary().GetSeconds()))
@@ -120,7 +120,7 @@ func (e *Engine) emitE2EEMessage(evt *waEvents.FBMessage) {
 		}
 		decoded, err := message.AudioMessage.Decode()
 		if err != nil {
-			e.emit(Event{Kind: EventError, Data: fmt.Errorf("decode E2EE audio: %w", err)})
+			e.emit(Event{Kind: EventError, Error: fmt.Errorf("decode E2EE audio: %w", err)})
 			return
 		}
 		attachment := e2eeAttachment(model.E2EEMediaAudio, "", decoded.GetIntegral().GetTransport(), 0, 0, int(decoded.GetAncillary().GetSeconds()))
@@ -134,7 +134,7 @@ func (e *Engine) emitE2EEMessage(evt *waEvents.FBMessage) {
 		}
 		decoded, err := message.DocumentMessage.Decode()
 		if err != nil {
-			e.emit(Event{Kind: EventError, Data: fmt.Errorf("decode E2EE document: %w", err)})
+			e.emit(Event{Kind: EventError, Error: fmt.Errorf("decode E2EE document: %w", err)})
 			return
 		}
 		attachment := e2eeAttachment(model.E2EEMediaDocument, message.DocumentMessage.GetFileName(), decoded.GetIntegral().GetTransport(), 0, 0, 0)
@@ -145,7 +145,7 @@ func (e *Engine) emitE2EEMessage(evt *waEvents.FBMessage) {
 		}
 		decoded, err := message.StickerMessage.Decode()
 		if err != nil {
-			e.emit(Event{Kind: EventError, Data: fmt.Errorf("decode E2EE sticker: %w", err)})
+			e.emit(Event{Kind: EventError, Error: fmt.Errorf("decode E2EE sticker: %w", err)})
 			return
 		}
 		attachment := e2eeAttachment(model.E2EEMediaSticker, "", decoded.GetIntegral().GetTransport(), int(decoded.GetAncillary().GetWidth()), int(decoded.GetAncillary().GetHeight()), 0)
@@ -154,7 +154,7 @@ func (e *Engine) emitE2EEMessage(evt *waEvents.FBMessage) {
 }
 
 func (e *Engine) emitE2EEMediaMessage(evt *waEvents.FBMessage, text string, attachment model.Attachment) {
-	e.emit(Event{Kind: EventMessage, Data: model.Message{ID: model.ID(evt.Info.ID), ThreadID: model.ID(evt.Info.Chat.User), SenderID: model.ID(evt.Info.Sender.User), Text: text, Timestamp: evt.Info.Timestamp, Attachments: []model.Attachment{attachment}, Transport: model.TransportE2EE, Encryption: model.EncryptionE2EE, ReplyTo: e2eeReply(evt)}})
+	e.emit(Event{Kind: EventMessage, Message: &model.Message{ID: model.ID(evt.Info.ID), ThreadID: model.ID(evt.Info.Chat.User), SenderID: model.ID(evt.Info.Sender.User), Text: text, Timestamp: evt.Info.Timestamp, Attachments: []model.Attachment{attachment}, Transport: model.TransportE2EE, Encryption: model.EncryptionE2EE, ReplyTo: e2eeReply(evt)}})
 }
 
 func e2eeAttachment(kind model.E2EEMediaKind, name string, transport *waMediaTransport.WAMediaTransport, width, height, duration int) model.Attachment {
@@ -202,7 +202,7 @@ func (e *Engine) emitTable(tbl *table.LSTable) {
 			continue
 		}
 		seen[msg.MessageId] = struct{}{}
-		e.emit(Event{Kind: EventMessage, Data: model.Message{
+		e.emit(Event{Kind: EventMessage, Message: &model.Message{
 			ID: model.ID(msg.MessageId), ThreadID: id64(msg.ThreadKey), SenderID: id64(msg.SenderId), Text: msg.Text,
 			Timestamp: time.UnixMilli(msg.TimestampMs), Attachments: wrappedAttachments(msg), Transport: model.TransportMessenger, Encryption: model.EncryptionNone,
 		}})
@@ -211,55 +211,55 @@ func (e *Engine) emitTable(tbl *table.LSTable) {
 		if reaction == nil {
 			continue
 		}
-		e.emit(Event{Kind: EventReaction, Data: ReactionEvent{MessageID: model.ID(reaction.MessageId), ThreadID: id64(reaction.ThreadKey), ActorID: id64(reaction.ActorId), Reaction: reaction.Reaction}})
+		e.emit(Event{Kind: EventReaction, Reaction: &ReactionEvent{MessageID: model.ID(reaction.MessageId), ThreadID: id64(reaction.ThreadKey), ActorID: id64(reaction.ActorId), Reaction: reaction.Reaction}})
 	}
 	for _, reaction := range tbl.LSDeleteReaction {
 		if reaction == nil {
 			continue
 		}
-		e.emit(Event{Kind: EventReaction, Data: ReactionEvent{MessageID: model.ID(reaction.MessageId), ThreadID: id64(reaction.ThreadKey), ActorID: id64(reaction.ActorId)}})
+		e.emit(Event{Kind: EventReaction, Reaction: &ReactionEvent{MessageID: model.ID(reaction.MessageId), ThreadID: id64(reaction.ThreadKey), ActorID: id64(reaction.ActorId)}})
 	}
 	for _, typing := range tbl.LSUpdateTypingIndicator {
 		if typing == nil {
 			continue
 		}
-		e.emit(Event{Kind: EventTyping, Data: TypingEvent{ThreadID: id64(typing.ThreadKey), SenderID: id64(typing.SenderId), Typing: typing.IsTyping}})
+		e.emit(Event{Kind: EventTyping, Typing: &TypingEvent{ThreadID: id64(typing.ThreadKey), SenderID: id64(typing.SenderId), Typing: typing.IsTyping}})
 	}
 	for _, receipt := range tbl.LSUpdateReadReceipt {
 		if receipt == nil {
 			continue
 		}
-		e.emit(Event{Kind: EventReadReceipt, Data: ReadReceiptEvent{ThreadID: id64(receipt.ThreadKey), ReaderID: id64(receipt.ContactId), Watermark: time.UnixMilli(receipt.ReadWatermarkTimestampMs)}})
+		e.emit(Event{Kind: EventReadReceipt, ReadReceipt: &ReadReceiptEvent{ThreadID: id64(receipt.ThreadKey), ReaderID: id64(receipt.ContactId), Watermark: time.UnixMilli(receipt.ReadWatermarkTimestampMs)}})
 	}
 	for _, receipt := range tbl.LSUpdateDeliveryReceipt {
 		if receipt == nil {
 			continue
 		}
-		e.emit(Event{Kind: EventDeliveryReceipt, Data: DeliveryReceiptEvent{ThreadID: id64(receipt.ThreadKey), RecipientID: id64(receipt.ContactId), Watermark: time.UnixMilli(receipt.DeliveredWatermarkTimestampMs)}})
+		e.emit(Event{Kind: EventDeliveryReceipt, DeliveryReceipt: &DeliveryReceiptEvent{ThreadID: id64(receipt.ThreadKey), RecipientID: id64(receipt.ContactId), Watermark: time.UnixMilli(receipt.DeliveredWatermarkTimestampMs)}})
 	}
 	for _, edit := range tbl.LSEditMessage {
 		if edit == nil || edit.MessageID == "" {
 			continue
 		}
-		e.emit(Event{Kind: EventMessageEdit, Data: MessageEditEvent{MessageID: model.ID(edit.MessageID), Text: edit.Text, EditCount: edit.EditCount}})
+		e.emit(Event{Kind: EventMessageEdit, MessageEdit: &MessageEditEvent{MessageID: model.ID(edit.MessageID), Text: edit.Text, EditCount: edit.EditCount}})
 	}
 	for _, deleted := range tbl.LSDeleteMessage {
 		if deleted == nil || deleted.MessageId == "" {
 			continue
 		}
-		e.emit(Event{Kind: EventMessageUnsend, Data: MessageUnsendEvent{MessageID: model.ID(deleted.MessageId), ThreadID: id64(deleted.ThreadKey)}})
+		e.emit(Event{Kind: EventMessageUnsend, MessageUnsend: &MessageUnsendEvent{MessageID: model.ID(deleted.MessageId), ThreadID: id64(deleted.ThreadKey)}})
 	}
 	for _, update := range tbl.LSSyncUpdateThreadName {
 		if update == nil {
 			continue
 		}
-		e.emit(Event{Kind: EventThreadUpdate, Data: ThreadUpdateEvent{ThreadID: id64(update.ThreadKey), Field: "name", Value: update.ThreadName}})
+		e.emit(Event{Kind: EventThreadUpdate, ThreadUpdate: &ThreadUpdateEvent{ThreadID: id64(update.ThreadKey), Field: "name", Value: update.ThreadName}})
 	}
 	for _, update := range tbl.LSSetThreadImageURL {
 		if update == nil {
 			continue
 		}
-		e.emit(Event{Kind: EventThreadUpdate, Data: ThreadUpdateEvent{ThreadID: id64(update.ThreadKey), Field: "image", Value: update.ImageURL}})
+		e.emit(Event{Kind: EventThreadUpdate, ThreadUpdate: &ThreadUpdateEvent{ThreadID: id64(update.ThreadKey), Field: "image", Value: update.ImageURL}})
 	}
 }
 

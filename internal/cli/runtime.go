@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -51,11 +50,9 @@ type appRuntime struct {
 
 func ExitCode(err error) int { return classifyExitCode(err) }
 
-func writeValue(out io.Writer, asJSON bool, value any, text string) error {
+func writeValue(out io.Writer, asJSON bool, selector string, value any, text string) error {
 	if asJSON {
-		enc := json.NewEncoder(out)
-		enc.SetEscapeHTML(false)
-		return enc.Encode(outputEnvelope{OK: true, Data: value})
+		return writeJSONOutput(out, outputEnvelope{OK: true, Data: value}, selector)
 	}
 	_, err := fmt.Fprintln(out, text)
 	return err
@@ -170,7 +167,10 @@ func (r *appRuntime) client(ctx context.Context, opts *options) (*fbgo.Client, e
 	if err != nil {
 		return nil, err
 	}
-	client := fbgo.New(fbgo.WithProfile(profile), fbgo.WithSecretStore(r.secrets), fbgo.WithTimeout(r.config.Timeout), fbgo.WithE2EE(r.config.E2EE), fbgo.WithEventBuffer(r.config.EventBuffer), fbgo.WithLogger(logger))
+	client, err := fbgo.NewClient(fbgo.WithProfile(profile), fbgo.WithSecretStore(r.secrets), fbgo.WithTimeout(r.config.Timeout), fbgo.WithE2EE(r.config.E2EE), fbgo.WithEventBuffer(r.config.EventBuffer), fbgo.WithLogger(logger))
+	if err != nil {
+		return nil, err
+	}
 	if err := client.Connect(ctx); err != nil {
 		client.Close()
 		return nil, err

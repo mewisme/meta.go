@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime"
@@ -19,8 +18,27 @@ import (
 
 func newMessengerCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{Use: "messenger", Short: "Messenger operations"}
-	cmd.AddCommand(newMessengerListenCommand(opts), newMessengerSendCommand(opts), newMessengerReactCommand(opts), newMessengerEditCommand(opts), newMessengerUnsendCommand(opts), newMessengerTypingCommand(opts), newMessengerReadCommand(opts), newMediaCommand(opts), newThemeCommand(opts), newNoteCommand(opts), newRequestsCommand(opts))
+	cmd.AddCommand(newMessengerListenCommand(opts), newMessengerSendCommand(opts), newMessengerForwardCommand(opts), newMessengerReactCommand(opts), newMessengerEditCommand(opts), newMessengerUnsendCommand(opts), newMessengerTypingCommand(opts), newMessengerReadCommand(opts), newMediaCommand(opts), newThemeCommand(opts), newNoteCommand(opts), newRequestsCommand(opts))
 	return cmd
+}
+
+func newMessengerForwardCommand(opts *options) *cobra.Command {
+	return &cobra.Command{Use: "forward <thread-id> <message-id>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		client, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		result, err := client.Messenger.Forward(cmd.Context(), model.ID(args[0]), model.ID(args[1]))
+		if err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, result, result.MessageID.String())
+	}}
 }
 
 func newMessengerListenCommand(opts *options) *cobra.Command {
@@ -43,7 +61,7 @@ func newMessengerListenCommand(opts *options) *cobra.Command {
 				if !ok {
 					return nil
 				}
-				if err := writeEvent(cmd.OutOrStdout(), ndjson || opts.json, event); err != nil {
+				if err := writeEvent(cmd.OutOrStdout(), ndjson || opts.json, opts.jqo, event); err != nil {
 					return err
 				}
 			}
@@ -55,6 +73,7 @@ func newMessengerListenCommand(opts *options) *cobra.Command {
 
 func newMessengerSendCommand(opts *options) *cobra.Command {
 	attachments := []string{}
+	stickerID, externalURL := "", ""
 	regular, e2ee := false, false
 	cmd := &cobra.Command{Use: "send <thread-id|chat-jid> [text]", Args: cobra.RangeArgs(1, 2), RunE: func(cmd *cobra.Command, args []string) error {
 		r, err := loadRuntime(cmd.Context(), opts)
@@ -74,8 +93,8 @@ func newMessengerSendCommand(opts *options) *cobra.Command {
 			return fmt.Errorf("%w: --regular and --e2ee are mutually exclusive", fberrors.ErrInvalidInput)
 		}
 		if e2ee {
-			if len(attachments) > 0 {
-				return fmt.Errorf("%w: use messenger media upload --e2ee for encrypted attachments", fberrors.ErrInvalidInput)
+			if len(attachments) > 0 || stickerID != "" || externalURL != "" {
+				return fmt.Errorf("%w: regular attachments, stickers and external URLs cannot be used with --e2ee", fberrors.ErrInvalidInput)
 			}
 			req := model.E2EESendRequest{Text: text}
 			if strings.Contains(args[0], "@") {
@@ -87,9 +106,9 @@ func newMessengerSendCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return writeValue(cmd.OutOrStdout(), opts.json, result, result.MessageID.String())
+			return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, result, result.MessageID.String())
 		}
-		req := model.SendRequest{ThreadID: model.ID(args[0]), Text: text, Encryption: model.EncryptionDisabled}
+		req := model.SendRequest{ThreadID: model.ID(args[0]), Text: text, StickerID: model.ID(stickerID), URL: externalURL, Encryption: model.EncryptionDisabled}
 		opened := make([]*os.File, 0, len(attachments))
 		defer func() {
 			for _, f := range opened {
@@ -116,9 +135,11 @@ func newMessengerSendCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, result, result.MessageID.String())
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, result, result.MessageID.String())
 	}}
 	cmd.Flags().StringSliceVarP(&attachments, "attachment", "a", nil, "attachment file path (repeatable)")
+	cmd.Flags().StringVar(&stickerID, "sticker-id", "", "regular Messenger sticker ID")
+	cmd.Flags().StringVar(&externalURL, "url", "", "regular Messenger external media URL")
 	cmd.Flags().BoolVar(&regular, "regular", false, "force regular Messenger transport")
 	cmd.Flags().BoolVar(&e2ee, "e2ee", false, "send through E2EE Messenger transport")
 	return cmd
@@ -154,7 +175,7 @@ func newMessengerReactCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"updated": true, "e2ee": e2ee}, "reaction updated")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"updated": true, "e2ee": e2ee}, "reaction updated")
 	}}
 	cmd.Flags().BoolVar(&e2ee, "e2ee", false, "react through E2EE Messenger transport")
 	cmd.Flags().StringVar(&senderJID, "sender-jid", "", "E2EE original message sender JID")
@@ -187,7 +208,7 @@ func newMessengerEditCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"edited": true, "e2ee": e2ee}, "message edited")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"edited": true, "e2ee": e2ee}, "message edited")
 	}}
 	cmd.Flags().BoolVar(&e2ee, "e2ee", false, "edit through E2EE Messenger transport")
 	cmd.Flags().StringVar(&chatJID, "chat-jid", "", "E2EE chat JID")
@@ -220,7 +241,7 @@ func newMessengerUnsendCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"unsent": true, "e2ee": e2ee}, "message unsent")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"unsent": true, "e2ee": e2ee}, "message unsent")
 	}}
 	cmd.Flags().BoolVar(&e2ee, "e2ee", false, "unsend through E2EE Messenger transport")
 	cmd.Flags().StringVar(&chatJID, "chat-jid", "", "E2EE chat JID")
@@ -256,7 +277,7 @@ func newMessengerTypingCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"typing": typing, "e2ee": e2ee}, "typing updated")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"typing": typing, "e2ee": e2ee}, "typing updated")
 	}}
 	cmd.Flags().BoolVar(&group, "group", false, "regular target is a group thread")
 	cmd.Flags().Int64Var(&threadType, "thread-type", 1, "regular Messenger thread type")
@@ -286,7 +307,7 @@ func newMessengerReadCommand(opts *options) *cobra.Command {
 		if err := client.Messenger.Read(cmd.Context(), model.ID(args[0]), at); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"read": true, "watermark": watermark}, "thread marked read")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"read": true, "watermark": watermark}, "thread marked read")
 	}}
 	cmd.Flags().Int64Var(&watermark, "watermark", 0, "last read watermark in Unix milliseconds (default now)")
 	return cmd
@@ -339,7 +360,7 @@ func newMediaUploadCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return writeValue(cmd.OutOrStdout(), opts.json, result, result.MessageID.String())
+			return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, result, result.MessageID.String())
 		}
 		if kind != "" || caption != "" {
 			return fmt.Errorf("%w: --kind and --caption require --e2ee", fberrors.ErrInvalidInput)
@@ -348,7 +369,7 @@ func newMediaUploadCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, result, result.ID.String())
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, result, result.ID.String())
 	}}
 	cmd.Flags().BoolVar(&voice, "voice", false, "mark audio upload as a voice message")
 	cmd.Flags().BoolVar(&e2ee, "e2ee", false, "upload and send through E2EE Messenger transport")
@@ -405,7 +426,7 @@ func newMediaDownloadCommand(opts *options) *cobra.Command {
 				return err
 			}
 			var ref model.E2EEMediaReference
-			if err := json.Unmarshal(data, &ref); err != nil {
+			if err := decodeJSONInput(data, opts.jqi, &ref); err != nil {
 				return err
 			}
 			r, err := loadRuntime(cmd.Context(), opts)
@@ -440,7 +461,7 @@ func newMediaDownloadCommand(opts *options) *cobra.Command {
 		if closeErr != nil {
 			return closeErr
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"path": output, "bytes": written}, output)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"path": output, "bytes": written}, output)
 	}}
 	cmd.Flags().StringVarP(&output, "output", "o", "", "output path (default stdout)")
 	cmd.Flags().Int64Var(&maxBytes, "max-bytes", 100<<20, "maximum regular media download size")
@@ -464,7 +485,7 @@ func newThemeCommand(opts *options) *cobra.Command {
 			return err
 		}
 		if opts.json {
-			return writeValue(cmd.OutOrStdout(), true, values, "")
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, values, "")
 		}
 		for _, v := range values {
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\n", v.ID, v.Name)
@@ -485,7 +506,7 @@ func newThemeCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, value, value.ID.String()+"\t"+value.Name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, value, value.ID.String()+"\t"+value.Name)
 	}})
 	cmd.AddCommand(&cobra.Command{Use: "set <thread-id> <theme-id>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
 		r, err := loadRuntime(cmd.Context(), opts)
@@ -500,7 +521,7 @@ func newThemeCommand(opts *options) *cobra.Command {
 		if err := c.Messenger.SetTheme(cmd.Context(), model.ID(args[0]), model.ID(args[1])); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]bool{"updated": true}, "theme updated")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"updated": true}, "theme updated")
 	}})
 	return cmd
 }
@@ -522,9 +543,9 @@ func newNoteCommand(opts *options) *cobra.Command {
 			return err
 		}
 		if note == nil {
-			return writeValue(cmd.OutOrStdout(), opts.json, nil, "no active note")
+			return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, nil, "no active note")
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, note, note.Description)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, note, note.Description)
 	}})
 	privacy := "FRIENDS"
 	create := &cobra.Command{Use: "create <text>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
@@ -541,7 +562,7 @@ func newNoteCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, note, note.ID.String())
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, note, note.ID.String())
 	}}
 	create.Flags().StringVar(&privacy, "privacy", "FRIENDS", "note privacy")
 	cmd.AddCommand(create)
@@ -560,7 +581,7 @@ func newNoteCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, note, note.ID.String())
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, note, note.ID.String())
 	}}
 	recreate.Flags().StringVar(&recreatePrivacy, "privacy", "FRIENDS", "note privacy")
 	cmd.AddCommand(recreate)
@@ -577,7 +598,7 @@ func newNoteCommand(opts *options) *cobra.Command {
 		if err := c.Messenger.DeleteNote(cmd.Context(), model.ID(args[0])); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]bool{"deleted": true}, "note deleted")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"deleted": true}, "note deleted")
 	}})
 	return cmd
 }
@@ -598,7 +619,7 @@ func newRequestsCommand(opts *options) *cobra.Command {
 			return err
 		}
 		if opts.json {
-			return writeValue(cmd.OutOrStdout(), true, values, "")
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, values, "")
 		}
 		for _, v := range values {
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\n", v.SenderID, strings.TrimSpace(v.Snippet))
@@ -607,12 +628,41 @@ func newRequestsCommand(opts *options) *cobra.Command {
 	}}
 }
 
-func writeEvent(out io.Writer, asJSON bool, event model.Event) error {
+func writeEvent(out io.Writer, asJSON bool, selector string, event model.Event) error {
 	if asJSON {
-		enc := json.NewEncoder(out)
-		enc.SetEscapeHTML(false)
-		return enc.Encode(event)
+		return writeJSONOutput(out, event, selector)
 	}
-	_, err := fmt.Fprintf(out, "%s\t%v\n", event.Kind, event.Data)
+	_, err := fmt.Fprintf(out, "%s\t%v\n", event.Kind, eventHumanValue(event))
 	return err
+}
+
+func eventHumanValue(event model.Event) any {
+	switch event.Kind {
+	case model.EventReady:
+		return event.IsNewSession
+	case model.EventError:
+		return event.Error
+	case model.EventDisconnected:
+		return event.Transport
+	case model.EventMessage:
+		return event.Message
+	case model.EventMessageEdit:
+		return event.MessageEdit
+	case model.EventMessageUnsend:
+		return event.MessageUnsend
+	case model.EventReaction:
+		return event.Reaction
+	case model.EventTyping:
+		return event.Typing
+	case model.EventReadReceipt:
+		return event.ReadReceipt
+	case model.EventDeliveryReceipt:
+		return event.DeliveryReceipt
+	case model.EventThreadUpdate:
+		return event.ThreadUpdate
+	case model.EventE2EEReceipt:
+		return event.E2EEReceipt
+	default:
+		return nil
+	}
 }

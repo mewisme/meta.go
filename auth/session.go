@@ -33,9 +33,7 @@ type Session struct {
 	BootstrappedAt time.Time
 }
 
-type SessionValidator struct {
-	Logger zerolog.Logger
-}
+type SessionValidator struct{}
 
 func (v SessionValidator) Validate(ctx context.Context, cookies Cookies) (Session, error) {
 	if err := cookies.ValidateRegular(); err != nil {
@@ -47,11 +45,7 @@ func (v SessionValidator) Validate(ctx context.Context, cookies Cookies) (Sessio
 		values[metaCookies.MetaCookieName(key)] = value
 	}
 	jar.UpdateValues(values)
-	logger := v.Logger
-	if logger.GetLevel() == zerolog.NoLevel {
-		logger = zerolog.Nop()
-	}
-	client := messagix.NewClient(jar, logger, &messagix.Config{})
+	client := messagix.NewClient(jar, zerolog.Nop(), &messagix.Config{})
 	user, _, err := client.LoadMessagesPage(ctx)
 	if err != nil {
 		if errors.Is(err, messagix.ErrTokenInvalidated) || errors.Is(err, messagix.ErrCheckpointRequired) {

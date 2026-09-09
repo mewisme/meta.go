@@ -26,7 +26,7 @@ func newProfileCreateCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, profile, profile.Name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, profile, profile.Name)
 	}}
 	cmd.Flags().StringVar(&displayName, "display-name", "", "profile display name")
 	return cmd
@@ -43,7 +43,7 @@ func newProfileListCommand(opts *options) *cobra.Command {
 			return err
 		}
 		if opts.json {
-			return writeValue(cmd.OutOrStdout(), true, profiles, "")
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, profiles, "")
 		}
 		for _, profile := range profiles {
 			marker := " "
@@ -75,7 +75,7 @@ func newProfileShowCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, profile, profile.Name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, profile, profile.Name)
 	}}
 }
 
@@ -93,7 +93,7 @@ func newProfileUseCommand(opts *options) *cobra.Command {
 		if err := config.SaveFile(r.configPath, r.config); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]string{"default_profile": name}, name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]string{"default_profile": name}, name)
 	}}
 }
 
@@ -113,7 +113,7 @@ func newProfileRenameCommand(opts *options) *cobra.Command {
 				return err
 			}
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, profile, profile.Name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, profile, profile.Name)
 	}}
 }
 
@@ -133,6 +133,6 @@ func newProfileRemoveCommand(opts *options) *cobra.Command {
 				return err
 			}
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]string{"removed": name}, name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]string{"removed": name}, name)
 	}}
 }

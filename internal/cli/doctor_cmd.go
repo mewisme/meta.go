@@ -128,7 +128,7 @@ func localE2EEStateCheck(cmd *cobra.Command, r *appRuntime, profile string, prof
 
 func writeDoctor(cmd *cobra.Command, opts *options, report doctorReport) error {
 	if opts.json {
-		return writeValue(cmd.OutOrStdout(), true, report, "")
+		return writeValue(cmd.OutOrStdout(), true, opts.jqo, report, "")
 	}
 	for _, check := range report.Checks {
 		state := "ok"

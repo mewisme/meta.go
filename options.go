@@ -31,13 +31,9 @@ func WithLogger(logger *slog.Logger) Option {
 	}
 }
 
-// WithTimeout changes the default network timeout when timeout is positive.
+// WithTimeout changes the default network timeout.
 func WithTimeout(timeout time.Duration) Option {
-	return func(client *Client) {
-		if timeout > 0 {
-			client.timeout = timeout
-		}
-	}
+	return func(client *Client) { client.timeout = timeout }
 }
 
 func WithCookies(cookies auth.Cookies) Option {
@@ -57,9 +53,5 @@ func WithE2EE(enabled bool) Option {
 }
 
 func WithEventBuffer(size int) Option {
-	return func(client *Client) {
-		if size > 0 {
-			client.eventBuffer = size
-		}
-	}
+	return func(client *Client) { client.eventBuffer = size }
 }

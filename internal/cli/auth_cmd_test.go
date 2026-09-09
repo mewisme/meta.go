@@ -1,82 +1,71 @@
 package cli
 
 import (
-	"bytes"
-	"strings"
+	"errors"
 	"testing"
 
-	"github.com/spf13/cobra"
-	"go.mewis.me/fbgo/auth"
+	fberrors "go.mewis.me/fbgo/errors"
 )
 
-func TestDecodeLoginInputStrict(t *testing.T) {
-	input, err := decodeLoginInput([]byte(`{"email":"user@example.com","password":"secret","totp":"123456"}`))
-	if err != nil {
+func TestLoginInputJSONContract(t *testing.T) {
+	var input loginInput
+	if err := decodeJSONInput([]byte(`{"identifier":"user@example.com","password":"secret","totp":"JBSWY3DPEHPK3PXP"}`), "", &input); err != nil {
 		t.Fatal(err)
 	}
-	if input.Email != "user@example.com" || input.Password != "secret" || input.TOTP != "123456" {
+	if input.Identifier != "user@example.com" || input.Password != "secret" || input.TOTP != "JBSWY3DPEHPK3PXP" {
 		t.Fatalf("unexpected input: %#v", input)
 	}
 	for _, data := range [][]byte{
-		[]byte(`{"credentials":{"email":"user@example.com"}}`),
-		[]byte(`{"email":"user@example.com","unknown":true}`),
-		[]byte(`{"email":"user@example.com"} {"password":"secret"}`),
+		[]byte(`{"email":"user@example.com"}`),
+		[]byte(`{"identifier":"user@example.com","unknown":true}`),
 	} {
-		if _, err := decodeLoginInput(data); err == nil {
+		if err := decodeJSONInput(data, "", &input); err == nil {
 			t.Fatalf("expected strict decode failure for %s", data)
 		}
 	}
 }
 
-func TestResolveLoginFieldUsesPresetCredentials(t *testing.T) {
-	cmd := &cobra.Command{}
-	cmd.SetIn(strings.NewReader("unused\n"))
-	cmd.SetErr(&bytes.Buffer{})
-	preset := loginInput{Email: "user@example.com", Password: "password-value", TOTP: "123456"}
-	tests := []struct {
-		field auth.LoginField
-		want  string
-	}{
-		{auth.LoginField{ID: "email"}, preset.Email},
-		{auth.LoginField{ID: "password", Secret: true}, preset.Password},
-		{auth.LoginField{ID: "two_factor_code", Secret: true}, preset.TOTP},
+func TestLoginInputJQSelector(t *testing.T) {
+	data := []byte(`{"account":{"identifier":"user@example.com","password":"secret","otp":"123456"}}`)
+	var input loginInput
+	if err := decodeJSONInput(data, ".account", &input); err != nil {
+		t.Fatal(err)
 	}
-	for _, test := range tests {
-		got, err := resolveLoginField(cmd, test.field, preset)
-		if err != nil {
+	if input.Identifier != "user@example.com" || input.Password != "secret" || input.OTP != "123456" {
+		t.Fatalf("unexpected jq-selected input: %#v", input)
+	}
+}
+
+func TestValidateLoginInput(t *testing.T) {
+	for _, input := range []loginInput{{OTP: "123456"}, {TOTP: "JBSWY3DPEHPK3PXP"}} {
+		if err := validateLoginInput(input); err != nil {
 			t.Fatal(err)
 		}
-		if got != test.want {
-			t.Fatalf("field %s: got %q want %q", test.field.ID, got, test.want)
+	}
+	for _, input := range []loginInput{{OTP: "12345"}, {OTP: "abcdef"}, {TOTP: "bad!"}, {TOTP: "JBSWY3DPEHPK3PXP", OTP: "123456"}} {
+		if err := validateLoginInput(input); !errors.Is(err, fberrors.ErrInvalidInput) {
+			t.Fatalf("expected invalid input for %#v, got %v", input, err)
 		}
 	}
 }
 
-func TestResolveLoginFieldPrefersAuthenticatorForTOTP(t *testing.T) {
-	cmd := &cobra.Command{}
-	cmd.SetIn(strings.NewReader("unused\n"))
-	cmd.SetErr(&bytes.Buffer{})
-	field := auth.LoginField{ID: "mfatype", Options: []string{"Text message", "Authentication app", "Email"}}
-	got, err := resolveLoginField(cmd, field, loginInput{TOTP: "123456"})
+func TestCLILoginCredentialFlags(t *testing.T) {
+	root := New()
+	cmd, _, err := root.Find([]string{"auth", "login"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != "Authentication app" {
-		t.Fatalf("unexpected MFA method: %q", got)
+	for _, name := range []string{"identifier", "password", "totp", "otp", "input"} {
+		if cmd.Flags().Lookup(name) == nil {
+			t.Fatalf("missing auth login flag --%s", name)
+		}
 	}
-}
-
-func TestCLIExposesNoSecretValueFlags(t *testing.T) {
-	root := New()
-	for _, path := range [][]string{{"auth", "login"}, {"auth", "import"}, {"cookies", "import"}} {
-		cmd, _, err := root.Find(path)
-		if err != nil {
-			t.Fatal(err)
+	for _, name := range []string{"jqi", "jqo"} {
+		if root.PersistentFlags().Lookup(name) == nil {
+			t.Fatalf("missing global --%s flag", name)
 		}
-		for _, name := range []string{"password", "cookie", "cookies", "totp", "otp", "secret"} {
-			if cmd.Flags().Lookup(name) != nil || cmd.PersistentFlags().Lookup(name) != nil {
-				t.Fatalf("%v exposes secret flag --%s", path, name)
-			}
-		}
+	}
+	if root.PersistentFlags().Lookup("jq") != nil {
+		t.Fatal("ambiguous global --jq flag must not be exposed")
 	}
 }

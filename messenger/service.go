@@ -16,6 +16,7 @@ var ErrUnavailable = errors.New("messenger service unavailable")
 
 type Backend interface {
 	Send(context.Context, model.SendRequest) (model.SendResult, error)
+	Forward(context.Context, model.ID, model.ID) (model.SendResult, error)
 	Upload(context.Context, model.UploadInput) (model.UploadResult, error)
 	React(context.Context, model.ID, model.ID, string) error
 	Edit(context.Context, model.ID, string) error
@@ -51,8 +52,21 @@ func (s *Service) Send(ctx context.Context, req model.SendRequest) (model.SendRe
 	if req.ThreadID.Empty() {
 		return model.SendResult{}, invalid("thread ID is required")
 	}
-	if strings.TrimSpace(req.Text) == "" && len(req.Attachments) == 0 {
-		return model.SendResult{}, invalid("message text or attachment is required")
+	if strings.TrimSpace(req.Text) == "" && len(req.Attachments) == 0 && req.StickerID.Empty() && strings.TrimSpace(req.URL) == "" {
+		return model.SendResult{}, invalid("message text, attachment, sticker or URL is required")
+	}
+	contentKinds := 0
+	if len(req.Attachments) > 0 {
+		contentKinds++
+	}
+	if !req.StickerID.Empty() {
+		contentKinds++
+	}
+	if strings.TrimSpace(req.URL) != "" {
+		contentKinds++
+	}
+	if contentKinds > 1 {
+		return model.SendResult{}, invalid("attachments, sticker and external media URL are mutually exclusive")
 	}
 	if req.ReplyTo != nil && req.ReplyTo.MessageID.Empty() {
 		return model.SendResult{}, invalid("reply message ID is required")
@@ -71,6 +85,16 @@ func (s *Service) Send(ctx context.Context, req model.SendRequest) (model.SendRe
 		}
 	}
 	return s.backend.Send(ctx, req)
+}
+
+func (s *Service) Forward(ctx context.Context, threadID, messageID model.ID) (model.SendResult, error) {
+	if err := s.ready(); err != nil {
+		return model.SendResult{}, err
+	}
+	if threadID.Empty() || messageID.Empty() {
+		return model.SendResult{}, invalid("thread ID and message ID are required")
+	}
+	return s.backend.Forward(ctx, threadID, messageID)
 }
 
 func (s *Service) Upload(ctx context.Context, input model.UploadInput) (model.UploadResult, error) {

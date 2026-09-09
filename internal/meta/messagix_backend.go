@@ -155,10 +155,19 @@ func (b *messagixBackend) SendText(ctx context.Context, req SendTextRequest) (mo
 		}
 		attachmentIDs = append(attachmentIDs, id)
 	}
-	if len(attachmentIDs) > 0 {
+	stickerID := int64(0)
+	if !req.StickerID.Empty() {
+		stickerID, err = parsePositiveID(req.StickerID, "sticker")
+		if err != nil {
+			return model.SendResult{}, err
+		}
+		sendType = table.STICKER
+	} else if len(attachmentIDs) > 0 {
 		sendType = table.MEDIA
+	} else if strings.TrimSpace(req.URL) != "" {
+		sendType = table.EXTERNAL_MEDIA
 	}
-	task := &socket.SendMessageTask{ThreadId: threadID, Otid: otid, Text: req.Text, Source: table.MESSENGER_INBOX_IN_THREAD, SendType: sendType, AttachmentFBIds: attachmentIDs, SyncGroup: 1}
+	task := &socket.SendMessageTask{ThreadId: threadID, Otid: otid, Text: req.Text, Source: table.MESSENGER_INBOX_IN_THREAD, SendType: sendType, AttachmentFBIds: attachmentIDs, StickerId: stickerID, Url: strings.TrimSpace(req.URL), SyncGroup: 1}
 	if req.ReplyTo != "" {
 		task.ReplyMetaData = &socket.ReplyMetaData{ReplyMessageId: req.ReplyTo.String(), ReplySourceType: 1}
 	}
@@ -169,6 +178,29 @@ func (b *messagixBackend) SendText(ctx context.Context, req SendTextRequest) (mo
 	if err != nil {
 		return model.SendResult{}, err
 	}
+	return sendResult(tbl, otid), nil
+}
+
+func (b *messagixBackend) Forward(ctx context.Context, threadID, messageID model.ID) (model.SendResult, error) {
+	thread, err := parsePositiveID(threadID, "thread")
+	if err != nil {
+		return model.SendResult{}, err
+	}
+	if messageID.Empty() {
+		return model.SendResult{}, errors.New("message ID is required")
+	}
+	if err := b.client.WaitUntilCanSendMessages(ctx, 10*time.Second); err != nil {
+		return model.SendResult{}, err
+	}
+	otid := time.Now().UnixNano()
+	tbl, err := b.client.ExecuteTasks(ctx, &socket.SendMessageTask{ThreadId: thread, Otid: otid, Source: table.MESSENGER_INBOX_IN_THREAD, SendType: table.FORWARD, ForwardedMsgId: messageID.String(), SyncGroup: 1})
+	if err != nil {
+		return model.SendResult{}, err
+	}
+	return sendResult(tbl, otid), nil
+}
+
+func sendResult(tbl *table.LSTable, otid int64) model.SendResult {
 	messageID := model.ID("mid.$" + strconv.FormatInt(otid, 10))
 	if tbl != nil {
 		otidString := strconv.FormatInt(otid, 10)
@@ -179,7 +211,7 @@ func (b *messagixBackend) SendText(ctx context.Context, req SendTextRequest) (mo
 			}
 		}
 	}
-	return model.SendResult{MessageID: messageID, Timestamp: time.Now()}, nil
+	return model.SendResult{MessageID: messageID, Timestamp: time.Now()}
 }
 
 func (b *messagixBackend) Upload(ctx context.Context, req UploadRequest) (UploadResult, error) {

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -17,6 +16,8 @@ type options struct {
 	config   string
 	timeout  string
 	logLevel string
+	jqi      string
+	jqo      string
 	json     bool
 	noColor  bool
 }
@@ -35,6 +36,8 @@ func New() *cobra.Command {
 	flags.StringVar(&opts.config, "config", "", "config file path")
 	flags.StringVar(&opts.timeout, "timeout", "", "operation timeout")
 	flags.StringVar(&opts.logLevel, "log-level", "", "log level: error, warn, info, debug, trace")
+	flags.StringVar(&opts.jqi, "jqi", "", "filter JSON input before decoding")
+	flags.StringVar(&opts.jqo, "jqo", "", "filter JSON output with jq; implies --json")
 	flags.BoolVar(&opts.json, "json", false, "write machine-readable JSON")
 	flags.BoolVar(&opts.noColor, "no-color", false, "disable color output")
 	root.AddCommand(newVersionCommand(opts), newConfigCommand(opts), newProfileCommand(opts), newAuthCommand(opts), newCookiesCommand(opts), newDoctorCommand(opts), newMessengerCommand(opts), newThreadCommand(opts), newFacebookCommand(opts))
@@ -49,16 +52,14 @@ func newVersionCommand(opts *options) *cobra.Command {
 		Short: "Print build version",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return writeVersion(cmd.OutOrStdout(), opts.json, fbgo.BuildVersion())
+			return writeVersion(cmd.OutOrStdout(), opts.json, opts.jqo, fbgo.BuildVersion())
 		},
 	}
 }
 
-func writeVersion(out io.Writer, asJSON bool, info fbgo.VersionInfo) error {
+func writeVersion(out io.Writer, asJSON bool, selector string, info fbgo.VersionInfo) error {
 	if asJSON {
-		encoder := json.NewEncoder(out)
-		encoder.SetEscapeHTML(false)
-		return encoder.Encode(outputEnvelope{OK: true, Data: info})
+		return writeJSONOutput(out, outputEnvelope{OK: true, Data: info}, selector)
 	}
 	_, err := fmt.Fprintf(out, "fbgo %s (%s) %s\n", info.Version, info.Commit, info.GoVersion)
 	return err
@@ -75,7 +76,15 @@ func validateGlobalOptions(opts *options) error {
 		}
 	}
 	if strings.TrimSpace(opts.logLevel) != "" {
-		return applyGlobalLogLevel(opts.logLevel, "")
+		if err := applyGlobalLogLevel(opts.logLevel, ""); err != nil {
+			return err
+		}
+	}
+	if strings.TrimSpace(opts.jqo) != "" {
+		if _, err := compileJQ(opts.jqo); err != nil {
+			return err
+		}
+		opts.json = true
 	}
 	return nil
 }

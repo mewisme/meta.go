@@ -1,16 +1,15 @@
 package cli
 
 import (
-	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog"
+	"charm.land/huh/v2"
 	"github.com/spf13/cobra"
 	"go.mewis.me/fbgo/auth"
 	fberrors "go.mewis.me/fbgo/errors"
@@ -19,9 +18,10 @@ import (
 )
 
 type loginInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	TOTP     string `json:"totp"`
+	Identifier string `json:"identifier"`
+	Password   string `json:"password"`
+	TOTP       string `json:"totp"`
+	OTP        string `json:"otp"`
 }
 
 func newAuthCommand(opts *options) *cobra.Command {
@@ -62,12 +62,12 @@ func newAuthImportCommand(opts *options) *cobra.Command {
 		if err := r.manager.ImportCookies(cmd.Context(), name, cookies); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"profile": name, "imported": true}, "cookies imported for "+name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"profile": name, "imported": true}, "cookies imported for "+name)
 	}}
 }
 
 func newAuthLoginCommand(opts *options) *cobra.Command {
-	inputPath := ""
+	var inputPath, identifier, password, totp, otp string
 	cmd := &cobra.Command{Use: "login", Short: "Authenticate with credentials", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		r, err := loadRuntime(cmd.Context(), opts)
 		if err != nil {
@@ -79,113 +79,118 @@ func newAuthLoginCommand(opts *options) *cobra.Command {
 		}
 		preset := loginInput{}
 		if inputPath != "" {
-			data, err := os.ReadFile(inputPath)
+			var data []byte
+			if inputPath == "-" {
+				data, err = io.ReadAll(cmd.InOrStdin())
+			} else {
+				data, err = os.ReadFile(inputPath)
+			}
 			if err != nil {
 				return err
 			}
-			preset, err = decodeLoginInput(data)
-			if err != nil {
+			if err := decodeJSONInput(data, opts.jqi, &preset); err != nil {
 				return err
 			}
+		} else if strings.TrimSpace(opts.jqi) != "" {
+			return fmt.Errorf("%w: --jqi requires --input", fberrors.ErrInvalidInput)
 		}
-		login := auth.NewCredentialLogin(zerolog.Nop())
-		responses := map[string]string{}
-		for attempts := 0; attempts < 12; attempts++ {
-			challenge, cookies, err := login.Step(cmd.Context(), responses)
-			if err != nil {
+		if cmd.Flags().Changed("identifier") {
+			preset.Identifier = identifier
+		}
+		if cmd.Flags().Changed("password") {
+			preset.Password = password
+		}
+		if cmd.Flags().Changed("totp") {
+			preset.TOTP, preset.OTP = totp, ""
+		}
+		if cmd.Flags().Changed("otp") {
+			preset.OTP, preset.TOTP = otp, ""
+		}
+		if err := collectBaseCredentials(cmd, &preset); err != nil {
+			return err
+		}
+		if err := validateLoginInput(preset); err != nil {
+			return err
+		}
+		login := auth.NewCredentialLogin()
+		cookies, err := login.Login(cmd.Context(), auth.Credentials{Identifier: preset.Identifier, Password: preset.Password, TOTP: preset.TOTP, OTP: preset.OTP})
+		if errors.Is(err, auth.ErrTwoFactorRequired) && preset.TOTP == "" && preset.OTP == "" && isInteractive(cmd) {
+			if err := promptOTP(cmd, &preset.OTP); err != nil {
 				return err
 			}
-			if cookies != nil {
-				if err := r.manager.ImportCookies(cmd.Context(), name, cookies); err != nil {
-					return err
-				}
-				return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"profile": name, "authenticated": true}, "authenticated as "+name)
-			}
-			if challenge == nil {
-				return errors.New("login returned no challenge")
-			}
-			responses = make(map[string]string, len(challenge.Fields))
-			for _, field := range challenge.Fields {
-				value, err := resolveLoginField(cmd, field, preset)
-				if err != nil {
-					return err
-				}
-				responses[field.ID] = value
-			}
+			cookies, err = login.Login(cmd.Context(), auth.Credentials{Identifier: preset.Identifier, Password: preset.Password, OTP: preset.OTP})
 		}
-		return &fberrors.ProtocolError{Operation: "credential login challenge flow", Cause: fberrors.ErrProtocolChanged}
+		if err != nil {
+			return err
+		}
+		if err := r.manager.ImportCookies(cmd.Context(), name, cookies); err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"profile": name, "authenticated": true}, "authenticated as "+name)
 	}}
-	cmd.Flags().StringVar(&inputPath, "input", "", "read credentials from JSON file instead of prompting")
+	cmd.Flags().StringVar(&inputPath, "input", "", "read credentials from JSON file or - for stdin")
+	cmd.Flags().StringVar(&identifier, "identifier", "", "login email, phone number, or username")
+	cmd.Flags().StringVar(&password, "password", "", "password (visible to shell history/process list; omit to prompt securely)")
+	cmd.Flags().StringVar(&totp, "totp", "", "TOTP secret (visible to shell history/process list; omit to prompt securely)")
+	cmd.Flags().StringVar(&otp, "otp", "", "6-digit one-time password (visible to shell history/process list; omit to prompt securely)")
+	cmd.MarkFlagsMutuallyExclusive("totp", "otp")
 	return cmd
 }
 
-func decodeLoginInput(data []byte) (loginInput, error) {
-	decoder := json.NewDecoder(strings.NewReader(string(data)))
-	decoder.DisallowUnknownFields()
-	var input loginInput
-	if err := decoder.Decode(&input); err != nil {
-		return loginInput{}, fmt.Errorf("%w: invalid login input: %v", fberrors.ErrInvalidInput, err)
+func collectBaseCredentials(cmd *cobra.Command, input *loginInput) error {
+	if input.Identifier != "" && input.Password != "" {
+		return nil
 	}
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return loginInput{}, fmt.Errorf("%w: login input must contain exactly one JSON object", fberrors.ErrInvalidInput)
+	if !isInteractive(cmd) {
+		if input.Identifier == "" {
+			return fmt.Errorf("%w: identifier is required", fberrors.ErrInvalidInput)
 		}
-		return loginInput{}, fmt.Errorf("%w: invalid login input: %v", fberrors.ErrInvalidInput, err)
+		return fmt.Errorf("%w: password is required", fberrors.ErrInvalidInput)
 	}
-	return input, nil
+	fields := make([]huh.Field, 0, 2)
+	if input.Identifier == "" {
+		fields = append(fields, huh.NewInput().Title("Identifier").Value(&input.Identifier).Validate(huh.ValidateNotEmpty()))
+	}
+	if input.Password == "" {
+		fields = append(fields, huh.NewInput().Title("Password").Password(true).Value(&input.Password).Validate(huh.ValidateNotEmpty()))
+	}
+	return huh.NewForm(huh.NewGroup(fields...)).WithInput(cmd.InOrStdin()).WithOutput(cmd.ErrOrStderr()).RunWithContext(cmd.Context())
 }
 
-func resolveLoginField(cmd *cobra.Command, field auth.LoginField, preset loginInput) (string, error) {
-	label := strings.ToLower(field.ID + " " + field.Name + " " + field.Description)
-	switch {
-	case strings.Contains(label, "email"), strings.Contains(label, "username"), strings.Contains(label, "login"):
-		if preset.Email != "" {
-			return preset.Email, nil
+func promptOTP(cmd *cobra.Command, value *string) error {
+	field := huh.NewInput().Title("One-time password").Description("Enter the current 6-digit authentication code").Password(true).Value(value).Validate(func(value string) error {
+		if len(value) != 6 {
+			return errors.New("OTP must be exactly 6 digits")
 		}
-	case strings.Contains(label, "password"):
-		if preset.Password != "" {
-			return preset.Password, nil
-		}
-	case strings.Contains(label, "totp"), strings.Contains(label, "authenticator"), strings.Contains(label, "two_factor"):
-		if preset.TOTP != "" {
-			return auth.ResolveOTP(preset.TOTP, time.Now())
-		}
-	}
-	if preset.TOTP != "" {
-		for _, option := range field.Options {
-			if strings.EqualFold(strings.TrimSpace(option), "Authentication app") {
-				return option, nil
-			}
-		}
-	}
-	if len(field.Options) == 1 {
-		return field.Options[0], nil
-	}
-	return promptField(cmd, field)
+		_, err := strconv.ParseUint(value, 10, 32)
+		return err
+	})
+	return huh.NewForm(huh.NewGroup(field)).WithInput(cmd.InOrStdin()).WithOutput(cmd.ErrOrStderr()).RunWithContext(cmd.Context())
 }
 
-func promptField(cmd *cobra.Command, field auth.LoginField) (string, error) {
-	label := field.Name
-	if label == "" {
-		label = field.ID
+func validateLoginInput(input loginInput) error {
+	if input.TOTP != "" && input.OTP != "" {
+		return fmt.Errorf("%w: totp and otp are mutually exclusive", fberrors.ErrInvalidInput)
 	}
-	if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "%s: ", label); err != nil {
-		return "", err
-	}
-	if field.Secret {
-		if f, ok := cmd.InOrStdin().(*os.File); ok && term.IsTerminal(int(f.Fd())) {
-			data, err := term.ReadPassword(int(f.Fd()))
-			_, _ = fmt.Fprintln(cmd.ErrOrStderr())
-			return string(data), err
+	if input.TOTP != "" {
+		if _, err := auth.TOTP(input.TOTP, time.Now()); err != nil {
+			return fmt.Errorf("%w: invalid TOTP secret", fberrors.ErrInvalidInput)
 		}
 	}
-	reader := bufio.NewReader(cmd.InOrStdin())
-	value, err := reader.ReadString('\n')
-	if err != nil && !errors.Is(err, io.EOF) {
-		return "", err
+	if input.OTP != "" {
+		if len(input.OTP) != 6 {
+			return fmt.Errorf("%w: otp must be exactly 6 digits", fberrors.ErrInvalidInput)
+		}
+		if _, err := strconv.ParseUint(input.OTP, 10, 32); err != nil {
+			return fmt.Errorf("%w: otp must be exactly 6 digits", fberrors.ErrInvalidInput)
+		}
 	}
-	return strings.TrimSpace(value), nil
+	return nil
+}
+
+func isInteractive(cmd *cobra.Command) bool {
+	file, ok := cmd.InOrStdin().(*os.File)
+	return ok && term.IsTerminal(int(file.Fd()))
 }
 
 func newAuthStatusCommand(opts *options) *cobra.Command {
@@ -201,14 +206,14 @@ func newAuthStatusCommand(opts *options) *cobra.Command {
 		}
 		cookies, err := r.manager.LoadCookies(cmd.Context(), name)
 		if errors.Is(err, storage.ErrNotFound) {
-			return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"profile": name, "authenticated": false}, "not authenticated")
+			return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"profile": name, "authenticated": false}, "not authenticated")
 		}
 		if err != nil {
 			return err
 		}
 		data := map[string]any{"profile": name, "authenticated": true, "online": false}
 		if online {
-			session, err := (auth.SessionValidator{Logger: zerolog.Nop()}).Validate(cmd.Context(), cookies)
+			session, err := (auth.SessionValidator{}).Validate(cmd.Context(), cookies)
 			if err != nil {
 				return err
 			}
@@ -216,7 +221,7 @@ func newAuthStatusCommand(opts *options) *cobra.Command {
 			data["account_id"] = session.FBID
 			data["name"] = session.Name
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, data, "authenticated as "+name)
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, data, "authenticated as "+name)
 	}}
 	cmd.Flags().BoolVar(&online, "online", false, "validate the session with Facebook")
 	return cmd
@@ -232,11 +237,11 @@ func newAuthRefreshCommand(opts *options) *cobra.Command {
 		if name == "" {
 			return fmt.Errorf("%w: no profile selected", fberrors.ErrInvalidInput)
 		}
-		session, err := r.manager.Refresh(cmd.Context(), name, auth.SessionValidator{Logger: zerolog.Nop()})
+		session, err := r.manager.Refresh(cmd.Context(), name, auth.SessionValidator{})
 		if err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"profile": name, "account_id": session.FBID, "refreshed": true}, "session refreshed")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"profile": name, "account_id": session.FBID, "refreshed": true}, "session refreshed")
 	}}
 }
 
@@ -254,7 +259,7 @@ func newAuthLogoutCommand(opts *options) *cobra.Command {
 		if err := r.manager.Logout(cmd.Context(), name, auth.LogoutPolicy{RemoveCookies: true, RemoveSession: true, RemoveE2EE: !keepE2EE}); err != nil {
 			return err
 		}
-		return writeValue(cmd.OutOrStdout(), opts.json, map[string]any{"profile": name, "logged_out": true, "e2ee_preserved": keepE2EE}, "logged out")
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"profile": name, "logged_out": true, "e2ee_preserved": keepE2EE}, "logged out")
 	}}
 	cmd.Flags().BoolVar(&keepE2EE, "keep-e2ee", false, "preserve E2EE device state")
 	return cmd

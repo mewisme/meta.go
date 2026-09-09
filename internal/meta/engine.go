@@ -61,6 +61,8 @@ type SendTextRequest struct {
 	ReplyTo       model.ID
 	Mentions      []model.Mention
 	AttachmentIDs []model.ID
+	StickerID     model.ID
+	URL           string
 }
 
 type UploadRequest = model.UploadInput
@@ -72,6 +74,7 @@ type backend interface {
 	Connect(context.Context, context.Context) error
 	Disconnect()
 	SendText(context.Context, SendTextRequest) (model.SendResult, error)
+	Forward(context.Context, model.ID, model.ID) (model.SendResult, error)
 	Upload(context.Context, UploadRequest) (UploadResult, error)
 	React(context.Context, model.ID, model.ID, string) error
 	Edit(context.Context, model.ID, string) error
@@ -86,6 +89,14 @@ type backend interface {
 	DeleteNote(context.Context, model.ID) error
 	ListThreads(context.Context, int) (model.ThreadList, error)
 	GetThread(context.Context, model.ID) (*model.Thread, error)
+	CreatePoll(context.Context, model.ID, string, []string) error
+	VotePoll(context.Context, model.ID, model.ID, []model.ID) error
+	MuteThread(context.Context, model.ID, time.Duration) error
+	SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error
+	DeleteThread(context.Context, model.ID) error
+	CreateDM(context.Context, model.ID) (model.ID, error)
+	SearchMessengerUsers(context.Context, string) ([]model.User, error)
+	GetMessengerContact(context.Context, model.ID) (*model.User, error)
 	SetThreadAdmin(context.Context, model.ID, model.ID, bool) error
 	SetThreadName(context.Context, model.ID, string) error
 	SetThreadEmoji(context.Context, model.ID, string) error
@@ -123,6 +134,7 @@ type Engine struct {
 
 	connectMu sync.Mutex
 	eventMu   sync.RWMutex
+	handlerMu sync.RWMutex
 	closeOnce sync.Once
 	closed    atomic.Bool
 	connected atomic.Bool
@@ -132,7 +144,9 @@ type Engine struct {
 	lastSend  atomic.Int64
 	lastRecv  atomic.Int64
 
-	events chan Event
+	events   chan Event
+	handlers map[uint64]func(Event)
+	nextID   uint64
 }
 
 func newEngine(parent context.Context, transport backend, eventBuffer int) *Engine {
@@ -143,7 +157,7 @@ func newEngine(parent context.Context, transport backend, eventBuffer int) *Engi
 		eventBuffer = 100
 	}
 	ctx, cancel := context.WithCancel(parent)
-	e := &Engine{backend: transport, ctx: ctx, cancel: cancel, events: make(chan Event, eventBuffer)}
+	e := &Engine{backend: transport, ctx: ctx, cancel: cancel, events: make(chan Event, eventBuffer), handlers: map[uint64]func(Event){}}
 	transport.SetEventHandler(e.handleTransportEvent)
 	return e
 }
@@ -198,7 +212,16 @@ func (e *Engine) Send(ctx context.Context, req model.SendRequest) (model.SendRes
 	if req.ReplyTo != nil {
 		replyTo = req.ReplyTo.MessageID
 	}
-	return e.SendText(ctx, SendTextRequest{ThreadID: req.ThreadID, Text: req.Text, ReplyTo: replyTo, Mentions: req.Mentions, AttachmentIDs: attachmentIDs})
+	return e.SendText(ctx, SendTextRequest{ThreadID: req.ThreadID, Text: req.Text, ReplyTo: replyTo, Mentions: req.Mentions, AttachmentIDs: attachmentIDs, StickerID: req.StickerID, URL: req.URL})
+}
+
+func (e *Engine) Forward(ctx context.Context, threadID, messageID model.ID) (model.SendResult, error) {
+	if !e.connected.Load() {
+		return model.SendResult{}, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.Forward(ctx, threadID, messageID)
 }
 
 func (e *Engine) Upload(ctx context.Context, req UploadRequest) (UploadResult, error) {
@@ -359,6 +382,78 @@ func (e *Engine) GetThread(ctx context.Context, threadID model.ID) (*model.Threa
 	ctx, cancel := mergeContext(e.ctx, ctx)
 	defer cancel()
 	return e.backend.GetThread(ctx, threadID)
+}
+
+func (e *Engine) CreatePoll(ctx context.Context, threadID model.ID, question string, options []string) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.CreatePoll(ctx, threadID, question, options)
+}
+
+func (e *Engine) VotePoll(ctx context.Context, threadID, pollID model.ID, optionIDs []model.ID) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.VotePoll(ctx, threadID, pollID, optionIDs)
+}
+
+func (e *Engine) MuteThread(ctx context.Context, threadID model.ID, duration time.Duration) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.MuteThread(ctx, threadID, duration)
+}
+
+func (e *Engine) SetThreadPhoto(ctx context.Context, threadID model.ID, input model.AttachmentInput) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SetThreadPhoto(ctx, threadID, input)
+}
+
+func (e *Engine) DeleteThread(ctx context.Context, threadID model.ID) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.DeleteThread(ctx, threadID)
+}
+
+func (e *Engine) CreateDM(ctx context.Context, userID model.ID) (model.ID, error) {
+	if !e.connected.Load() {
+		return "", ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.CreateDM(ctx, userID)
+}
+
+func (e *Engine) SearchMessengerUsers(ctx context.Context, query string) ([]model.User, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.SearchMessengerUsers(ctx, query)
+}
+
+func (e *Engine) GetMessengerContact(ctx context.Context, userID model.ID) (*model.User, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := mergeContext(e.ctx, ctx)
+	defer cancel()
+	return e.backend.GetMessengerContact(ctx, userID)
 }
 
 func (e *Engine) SetThreadAdmin(ctx context.Context, threadID, userID model.ID, admin bool) error {
@@ -617,6 +712,25 @@ func (e *Engine) Events() <-chan Event { return e.events }
 func (e *Engine) Connected() bool      { return e.connected.Load() && !e.closed.Load() }
 func (e *Engine) E2EEConnected() bool  { return e.e2eeReady.Load() && !e.closed.Load() }
 
+func (e *Engine) On(handler func(Event)) func() {
+	if e == nil || handler == nil || e.closed.Load() {
+		return func() {}
+	}
+	e.handlerMu.Lock()
+	e.nextID++
+	id := e.nextID
+	e.handlers[id] = handler
+	e.handlerMu.Unlock()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			e.handlerMu.Lock()
+			delete(e.handlers, id)
+			e.handlerMu.Unlock()
+		})
+	}
+}
+
 func (e *Engine) Health() model.HealthSnapshot {
 	regular := model.ConnectionDisconnected
 	if e.Connected() {
@@ -653,8 +767,8 @@ func (e *Engine) Close() {
 
 func (e *Engine) emit(event Event) {
 	e.eventMu.RLock()
-	defer e.eventMu.RUnlock()
 	if e.closed.Load() {
+		e.eventMu.RUnlock()
 		return
 	}
 	select {
@@ -670,6 +784,16 @@ func (e *Engine) emit(event Event) {
 		default:
 			e.dropped.Add(1)
 		}
+	}
+	e.eventMu.RUnlock()
+	e.handlerMu.RLock()
+	handlers := make([]func(Event), 0, len(e.handlers))
+	for _, handler := range e.handlers {
+		handlers = append(handlers, handler)
+	}
+	e.handlerMu.RUnlock()
+	for _, handler := range handlers {
+		handler(event)
 	}
 }
 
