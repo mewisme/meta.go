@@ -16,6 +16,8 @@ const (
 	secretE2EE    = "e2ee_state"
 )
 
+var managedSecretKeys = [...]string{secretCookies, secretSession, secretE2EE}
+
 type ProfileManager struct {
 	Profiles storage.ProfileStore
 	Secrets  storage.SecretStore
@@ -26,7 +28,7 @@ func (m ProfileManager) Create(ctx context.Context, name, displayName string) (s
 		return storage.Profile{}, errors.New("profile manager stores are required")
 	}
 	name = strings.TrimSpace(name)
-	if name == "" {
+	if name == "" || strings.ContainsRune(name, '\x00') {
 		return storage.Profile{}, errors.New("profile name is required")
 	}
 	profile := storage.Profile{Name: name, DisplayName: displayName}
@@ -167,8 +169,11 @@ func (m ProfileManager) ImportLegacyE2EEState(ctx context.Context, profile strin
 
 func (m ProfileManager) Rename(ctx context.Context, oldName, newName string) (storage.Profile, error) {
 	oldName, newName = strings.TrimSpace(oldName), strings.TrimSpace(newName)
-	if oldName == "" || newName == "" {
+	if oldName == "" || newName == "" || strings.ContainsRune(oldName, '\x00') || strings.ContainsRune(newName, '\x00') {
 		return storage.Profile{}, errors.New("profile names are required")
+	}
+	if oldName == newName {
+		return m.Profiles.Get(ctx, oldName)
 	}
 	if _, err := m.Profiles.Get(ctx, newName); err == nil {
 		return storage.Profile{}, errors.New("destination profile already exists")
@@ -179,12 +184,13 @@ func (m ProfileManager) Rename(ctx context.Context, oldName, newName string) (st
 	if err != nil {
 		return storage.Profile{}, err
 	}
-	profile.Name = newName
-	if err := m.Profiles.Put(ctx, profile); err != nil {
-		return storage.Profile{}, err
-	}
-	moved := make([]string, 0, 3)
-	for _, key := range []string{secretCookies, secretSession, secretE2EE} {
+	values := make(map[string][]byte, len(managedSecretKeys))
+	for _, key := range managedSecretKeys {
+		if _, err := m.Secrets.Get(ctx, newName, key); err == nil {
+			return storage.Profile{}, fmt.Errorf("destination profile secret %q already exists", key)
+		} else if !errors.Is(err, storage.ErrNotFound) {
+			return storage.Profile{}, err
+		}
 		value, err := m.Secrets.Get(ctx, oldName, key)
 		if errors.Is(err, storage.ErrNotFound) {
 			continue
@@ -192,16 +198,67 @@ func (m ProfileManager) Rename(ctx context.Context, oldName, newName string) (st
 		if err != nil {
 			return storage.Profile{}, err
 		}
-		if err := m.Secrets.Put(ctx, newName, key, value); err != nil {
-			return storage.Profile{}, err
-		}
-		moved = append(moved, key)
+		values[key] = value
 	}
-	if err := m.Profiles.Delete(ctx, oldName); err != nil {
+	original := profile
+	profile.Name = newName
+	if err := m.Profiles.Put(ctx, profile); err != nil {
 		return storage.Profile{}, err
 	}
-	for _, key := range moved {
-		_ = m.Secrets.Delete(ctx, oldName, key)
+	created := make([]string, 0, len(values))
+	rollbackNew := func(cause error) error {
+		rollbackCtx := context.WithoutCancel(ctx)
+		var rollback []error
+		for _, key := range created {
+			if err := m.Secrets.Delete(rollbackCtx, newName, key); err != nil && !errors.Is(err, storage.ErrNotFound) {
+				rollback = append(rollback, err)
+			}
+		}
+		if err := m.Profiles.Delete(rollbackCtx, newName); err != nil && !errors.Is(err, storage.ErrNotFound) {
+			rollback = append(rollback, err)
+		}
+		return errors.Join(cause, errors.Join(rollback...))
+	}
+	for _, key := range managedSecretKeys {
+		value, ok := values[key]
+		if !ok {
+			continue
+		}
+		if err := m.Secrets.Put(ctx, newName, key, value); err != nil {
+			return storage.Profile{}, rollbackNew(err)
+		}
+		created = append(created, key)
+	}
+	if err := m.Profiles.Delete(ctx, oldName); err != nil {
+		return storage.Profile{}, rollbackNew(err)
+	}
+	deleted := make([]string, 0, len(values))
+	for _, key := range managedSecretKeys {
+		if _, ok := values[key]; !ok {
+			continue
+		}
+		if err := m.Secrets.Delete(ctx, oldName, key); err != nil {
+			rollbackCtx := context.WithoutCancel(ctx)
+			var rollback []error
+			if restoreErr := m.Profiles.Put(rollbackCtx, original); restoreErr != nil {
+				rollback = append(rollback, restoreErr)
+			}
+			for _, restoreKey := range deleted {
+				if restoreErr := m.Secrets.Put(rollbackCtx, oldName, restoreKey, values[restoreKey]); restoreErr != nil {
+					rollback = append(rollback, restoreErr)
+				}
+			}
+			for _, newKey := range created {
+				if removeErr := m.Secrets.Delete(rollbackCtx, newName, newKey); removeErr != nil && !errors.Is(removeErr, storage.ErrNotFound) {
+					rollback = append(rollback, removeErr)
+				}
+			}
+			if removeErr := m.Profiles.Delete(rollbackCtx, newName); removeErr != nil && !errors.Is(removeErr, storage.ErrNotFound) {
+				rollback = append(rollback, removeErr)
+			}
+			return storage.Profile{}, errors.Join(err, errors.Join(rollback...))
+		}
+		deleted = append(deleted, key)
 	}
 	return profile, nil
 }

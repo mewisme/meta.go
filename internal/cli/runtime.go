@@ -115,7 +115,11 @@ func loadMasterKey(configPath string) ([]byte, error) {
 	if raw := strings.TrimSpace(os.Getenv("FBGO_MASTER_KEY")); raw != "" {
 		return decodeMasterKey(raw)
 	}
-	identity := sha256.Sum256([]byte(filepath.Clean(configPath)))
+	canonical, err := canonicalConfigPath(configPath)
+	if err != nil {
+		return nil, err
+	}
+	identity := sha256.Sum256([]byte(canonical))
 	user := hex.EncodeToString(identity[:16])
 	raw, err := keyring.Get("fbgo", user)
 	if err == nil {
@@ -132,6 +136,22 @@ func loadMasterKey(configPath string) ([]byte, error) {
 		return nil, fmt.Errorf("store fbgo master key: %w", err)
 	}
 	return key, nil
+}
+
+func canonicalConfigPath(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("resolve config path: %w", err)
+	}
+	abs = filepath.Clean(abs)
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err == nil {
+		return resolved, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return abs, nil
+	}
+	return "", fmt.Errorf("resolve config symlinks: %w", err)
 }
 
 func decodeMasterKey(raw string) ([]byte, error) {

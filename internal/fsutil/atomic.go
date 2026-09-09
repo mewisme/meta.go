@@ -1,6 +1,8 @@
 package fsutil
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,42 +17,48 @@ func EnsurePrivateDir(path string) error {
 }
 
 func AtomicWriteFile(path string, data []byte, mode os.FileMode) error {
+	_, err := AtomicWriteReader(path, bytes.NewReader(data), mode)
+	return err
+}
+
+func AtomicWriteReader(path string, reader io.Reader, mode os.FileMode) (int64, error) {
+	if reader == nil {
+		return 0, errors.New("nil reader")
+	}
 	dir := filepath.Dir(path)
 	if err := EnsurePrivateDir(dir); err != nil {
-		return fmt.Errorf("create private directory: %w", err)
+		return 0, fmt.Errorf("create private directory: %w", err)
 	}
 	f, err := os.CreateTemp(dir, "."+filepath.Base(path)+".*.tmp")
 	if err != nil {
-		return fmt.Errorf("create temporary file: %w", err)
+		return 0, fmt.Errorf("create temporary file: %w", err)
 	}
 	tmp := f.Name()
 	defer os.Remove(tmp)
 	if err := f.Chmod(mode); err != nil {
 		f.Close()
-		return err
+		return 0, err
 	}
-	if n, err := f.Write(data); err != nil {
+	written, err := io.Copy(f, reader)
+	if err != nil {
 		f.Close()
-		return err
-	} else if n != len(data) {
-		f.Close()
-		return io.ErrShortWrite
+		return written, err
 	}
 	if err := f.Sync(); err != nil {
 		f.Close()
-		return err
+		return written, err
 	}
 	if err := f.Close(); err != nil {
-		return err
+		return written, err
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		return err
+		return written, err
 	}
 	if d, err := os.Open(dir); err == nil {
 		defer d.Close()
 		_ = d.Sync()
 	}
-	return nil
+	return written, nil
 }
 
 func ExclusiveWriteFile(path string, data []byte, mode os.FileMode) error {

@@ -163,3 +163,11 @@ func TestLegacyDeviceStateImport(t *testing.T) {
 		t.Fatalf("legacy session did not import: %q %v", session, err)
 	}
 }
+
+func TestLoadDeviceStoreRejectsCorruption(t *testing.T) {
+	for _, data := range [][]byte{[]byte("{"), []byte(`{"version":99}`), []byte(`{"version":1}`)} {
+		if _, err := LoadDeviceStore(data); err == nil {
+			t.Fatalf("expected corrupt state rejection for %q", data)
+		}
+	}
+}

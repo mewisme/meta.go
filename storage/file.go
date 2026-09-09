@@ -42,7 +42,8 @@ func (s *FileProfileStore) Put(ctx context.Context, profile Profile) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if strings.TrimSpace(profile.Name) == "" {
+	profile.Name = strings.TrimSpace(profile.Name)
+	if profile.Name == "" || strings.ContainsRune(profile.Name, '\x00') {
 		return ErrInvalidProfile
 	}
 	s.mu.Lock()

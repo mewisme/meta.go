@@ -13,11 +13,13 @@ import (
 // Option configures a Client.
 type Option func(*Client)
 
-// WithHTTPClient replaces the HTTP client used by fbgo.
+// WithHTTPClient supplies the HTTP transport used by fbgo. Client-level cookie
+// and redirect policies are intentionally managed by fbgo and are not reused.
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(client *Client) {
 		if httpClient != nil {
-			client.httpClient = httpClient
+			clone := *httpClient
+			client.httpClient = &clone
 		}
 	}
 }

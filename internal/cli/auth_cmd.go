@@ -69,6 +69,9 @@ func newAuthImportCommand(opts *options) *cobra.Command {
 func newAuthLoginCommand(opts *options) *cobra.Command {
 	var inputPath, identifier, password, totp, otp string
 	cmd := &cobra.Command{Use: "login", Short: "Authenticate with credentials", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		defer func() {
+			password, totp, otp = "", "", ""
+		}()
 		r, err := loadRuntime(cmd.Context(), opts)
 		if err != nil {
 			return err
@@ -78,8 +81,12 @@ func newAuthLoginCommand(opts *options) *cobra.Command {
 			return fmt.Errorf("%w: no profile selected", fberrors.ErrInvalidInput)
 		}
 		preset := loginInput{}
+		defer func() {
+			preset.Password, preset.TOTP, preset.OTP = "", "", ""
+		}()
 		if inputPath != "" {
 			var data []byte
+			defer func() { clear(data) }()
 			if inputPath == "-" {
 				data, err = io.ReadAll(cmd.InOrStdin())
 			} else {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ import (
 	"go.mau.fi/mautrix-meta/pkg/messagix/socket"
 	"go.mau.fi/mautrix-meta/pkg/messagix/table"
 	metaTypes "go.mau.fi/mautrix-meta/pkg/messagix/types"
+	"go.mau.fi/util/exhttp"
 	"go.mau.fi/whatsmeow"
 	"go.mewis.me/fbgo/internal/webapi"
 	"go.mewis.me/fbgo/model"
@@ -29,6 +31,8 @@ type Config struct {
 	Logger      zerolog.Logger
 	EventBuffer int
 	DeviceStore *DeviceStore
+	HTTPClient  *http.Client
+	Timeout     time.Duration
 }
 
 type messagixBackend struct {
@@ -53,7 +57,15 @@ func New(parent context.Context, cfg Config) (*Engine, error) {
 		values[cookies.MetaCookieName(key)] = value
 	}
 	jar.UpdateValues(values)
-	client := messagix.NewClient(jar, cfg.Logger, &messagix.Config{})
+	settings := exhttp.ClientSettings{}
+	if cfg.HTTPClient != nil {
+		transport := cfg.HTTPClient.Transport
+		if transport == nil {
+			transport = http.DefaultTransport
+		}
+		settings.TransportOverride = func(exhttp.ClientSettings) http.RoundTripper { return transport }
+	}
+	client := messagix.NewClient(jar, cfg.Logger, &messagix.Config{ClientSettings: settings})
 	deviceStore := cfg.DeviceStore
 	if deviceStore == nil {
 		var err error
@@ -63,7 +75,9 @@ func New(parent context.Context, cfg Config) (*Engine, error) {
 		}
 	}
 	client.SetDevice(deviceStore.Device())
-	return newEngine(parent, &messagixBackend{client: client, deviceStore: deviceStore}, cfg.EventBuffer), nil
+	engine := newEngine(parent, &messagixBackend{client: client, deviceStore: deviceStore}, cfg.EventBuffer)
+	engine.requestTimeout = cfg.Timeout
+	return engine, nil
 }
 
 func (b *messagixBackend) SetEventHandler(handler func(context.Context, any)) {

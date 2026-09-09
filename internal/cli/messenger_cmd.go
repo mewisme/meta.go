@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 	fberrors "go.mewis.me/fbgo/errors"
+	"go.mewis.me/fbgo/internal/fsutil"
 	"go.mewis.me/fbgo/messenger"
 	"go.mewis.me/fbgo/model"
 )
@@ -449,17 +450,9 @@ func newMediaDownloadCommand(opts *options) *cobra.Command {
 			_, err := io.Copy(cmd.OutOrStdout(), reader)
 			return err
 		}
-		file, err := os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+		written, err := fsutil.AtomicWriteReader(output, reader, 0o600)
 		if err != nil {
 			return err
-		}
-		written, copyErr := io.Copy(file, reader)
-		closeErr := file.Close()
-		if copyErr != nil {
-			return copyErr
-		}
-		if closeErr != nil {
-			return closeErr
 		}
 		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"path": output, "bytes": written}, output)
 	}}

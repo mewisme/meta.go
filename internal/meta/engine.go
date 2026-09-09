@@ -132,17 +132,21 @@ type Engine struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	connectMu sync.Mutex
-	eventMu   sync.RWMutex
-	handlerMu sync.RWMutex
-	closeOnce sync.Once
-	closed    atomic.Bool
-	connected atomic.Bool
-	e2eeReady atomic.Bool
-	reconnect atomic.Uint64
-	dropped   atomic.Uint64
-	lastSend  atomic.Int64
-	lastRecv  atomic.Int64
+	connectMu      sync.Mutex
+	eventMu        sync.RWMutex
+	handlerMu      sync.RWMutex
+	closeOnce      sync.Once
+	closed         atomic.Bool
+	connected      atomic.Bool
+	e2eeReady      atomic.Bool
+	reconnect      atomic.Uint64
+	dropped        atomic.Uint64
+	lastSend       atomic.Int64
+	lastRecv       atomic.Int64
+	requestTimeout time.Duration
+	regularState   atomic.Value
+	e2eeState      atomic.Value
+	lastError      atomic.Value
 
 	events   chan Event
 	handlers map[uint64]func(Event)
@@ -158,6 +162,9 @@ func newEngine(parent context.Context, transport backend, eventBuffer int) *Engi
 	}
 	ctx, cancel := context.WithCancel(parent)
 	e := &Engine{backend: transport, ctx: ctx, cancel: cancel, events: make(chan Event, eventBuffer), handlers: map[uint64]func(Event){}}
+	e.regularState.Store(model.ConnectionDisconnected)
+	e.e2eeState.Store(model.ConnectionDisconnected)
+	e.lastError.Store("")
 	transport.SetEventHandler(e.handleTransportEvent)
 	return e
 }
@@ -168,16 +175,22 @@ func (e *Engine) Connect(ctx context.Context) (Account, error) {
 	if e.closed.Load() {
 		return Account{}, ErrClosed
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	e.regularState.Store(model.ConnectionConnecting)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	account, err := e.backend.Bootstrap(ctx)
 	if err != nil {
+		e.regularState.Store(model.ConnectionFailed)
+		e.recordError(err)
 		return Account{}, err
 	}
 	if err := e.backend.Connect(e.ctx, ctx); err != nil {
+		e.regularState.Store(model.ConnectionFailed)
+		e.recordError(err)
 		return Account{}, err
 	}
 	e.connected.Store(true)
+	e.regularState.Store(model.ConnectionConnected)
 	return account, nil
 }
 
@@ -185,9 +198,15 @@ func (e *Engine) SendText(ctx context.Context, req SendTextRequest) (model.SendR
 	if !e.connected.Load() {
 		return model.SendResult{}, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
-	return e.backend.SendText(ctx, req)
+	result, err := e.backend.SendText(ctx, req)
+	if err == nil {
+		e.recordSend(result.Timestamp)
+	} else {
+		e.recordError(err)
+	}
+	return result, err
 }
 
 func (e *Engine) Send(ctx context.Context, req model.SendRequest) (model.SendResult, error) {
@@ -219,16 +238,22 @@ func (e *Engine) Forward(ctx context.Context, threadID, messageID model.ID) (mod
 	if !e.connected.Load() {
 		return model.SendResult{}, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
-	return e.backend.Forward(ctx, threadID, messageID)
+	result, err := e.backend.Forward(ctx, threadID, messageID)
+	if err == nil {
+		e.recordSend(result.Timestamp)
+	} else {
+		e.recordError(err)
+	}
+	return result, err
 }
 
 func (e *Engine) Upload(ctx context.Context, req UploadRequest) (UploadResult, error) {
 	if !e.connected.Load() {
 		return UploadResult{}, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.Upload(ctx, req)
 }
@@ -237,7 +262,7 @@ func (e *Engine) React(ctx context.Context, threadID, messageID model.ID, reacti
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.React(ctx, threadID, messageID, reaction)
 }
@@ -246,7 +271,7 @@ func (e *Engine) Edit(ctx context.Context, messageID model.ID, text string) erro
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.Edit(ctx, messageID, text)
 }
@@ -255,7 +280,7 @@ func (e *Engine) Unsend(ctx context.Context, messageID model.ID) error {
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.Unsend(ctx, messageID)
 }
@@ -264,7 +289,7 @@ func (e *Engine) Typing(ctx context.Context, threadID model.ID, typing, group bo
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.Typing(ctx, threadID, typing, group, threadType)
 }
@@ -273,7 +298,7 @@ func (e *Engine) Read(ctx context.Context, threadID model.ID, watermark time.Tim
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.Read(ctx, threadID, watermark)
 }
@@ -282,7 +307,7 @@ func (e *Engine) ListMessageRequests(ctx context.Context) ([]MessageRequest, err
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.ListMessageRequests(ctx)
 }
@@ -291,7 +316,7 @@ func (e *Engine) ListThemes(ctx context.Context) ([]Theme, error) {
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.ListThemes(ctx)
 }
@@ -327,7 +352,7 @@ func (e *Engine) SetTheme(ctx context.Context, threadID, themeID model.ID) error
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetTheme(ctx, threadID, themeID)
 }
@@ -336,7 +361,7 @@ func (e *Engine) CurrentNote(ctx context.Context) (*Note, error) {
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.CurrentNote(ctx)
 }
@@ -345,7 +370,7 @@ func (e *Engine) CreateNote(ctx context.Context, text, privacy string) (*Note, e
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.CreateNote(ctx, text, privacy)
 }
@@ -354,7 +379,7 @@ func (e *Engine) DeleteNote(ctx context.Context, noteID model.ID) error {
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.DeleteNote(ctx, noteID)
 }
@@ -370,7 +395,7 @@ func (e *Engine) ListThreads(ctx context.Context, limit int) (model.ThreadList, 
 	if !e.connected.Load() {
 		return model.ThreadList{}, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.ListThreads(ctx, limit)
 }
@@ -379,7 +404,7 @@ func (e *Engine) GetThread(ctx context.Context, threadID model.ID) (*model.Threa
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.GetThread(ctx, threadID)
 }
@@ -388,7 +413,7 @@ func (e *Engine) CreatePoll(ctx context.Context, threadID model.ID, question str
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.CreatePoll(ctx, threadID, question, options)
 }
@@ -397,7 +422,7 @@ func (e *Engine) VotePoll(ctx context.Context, threadID, pollID model.ID, option
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.VotePoll(ctx, threadID, pollID, optionIDs)
 }
@@ -406,7 +431,7 @@ func (e *Engine) MuteThread(ctx context.Context, threadID model.ID, duration tim
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.MuteThread(ctx, threadID, duration)
 }
@@ -415,7 +440,7 @@ func (e *Engine) SetThreadPhoto(ctx context.Context, threadID model.ID, input mo
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetThreadPhoto(ctx, threadID, input)
 }
@@ -424,7 +449,7 @@ func (e *Engine) DeleteThread(ctx context.Context, threadID model.ID) error {
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.DeleteThread(ctx, threadID)
 }
@@ -433,7 +458,7 @@ func (e *Engine) CreateDM(ctx context.Context, userID model.ID) (model.ID, error
 	if !e.connected.Load() {
 		return "", ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.CreateDM(ctx, userID)
 }
@@ -442,7 +467,7 @@ func (e *Engine) SearchMessengerUsers(ctx context.Context, query string) ([]mode
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SearchMessengerUsers(ctx, query)
 }
@@ -451,7 +476,7 @@ func (e *Engine) GetMessengerContact(ctx context.Context, userID model.ID) (*mod
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.GetMessengerContact(ctx, userID)
 }
@@ -460,7 +485,7 @@ func (e *Engine) SetThreadAdmin(ctx context.Context, threadID, userID model.ID, 
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetThreadAdmin(ctx, threadID, userID, admin)
 }
@@ -469,7 +494,7 @@ func (e *Engine) SetThreadName(ctx context.Context, threadID model.ID, name stri
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetThreadName(ctx, threadID, name)
 }
@@ -478,7 +503,7 @@ func (e *Engine) SetThreadEmoji(ctx context.Context, threadID model.ID, emoji st
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetThreadEmoji(ctx, threadID, emoji)
 }
@@ -487,7 +512,7 @@ func (e *Engine) SetThreadNickname(ctx context.Context, threadID, userID model.I
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetThreadNickname(ctx, threadID, userID, nickname)
 }
@@ -496,7 +521,7 @@ func (e *Engine) GetFacebookUser(ctx context.Context, userID model.ID) (*model.F
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.GetFacebookUser(ctx, userID)
 }
@@ -505,7 +530,7 @@ func (e *Engine) SearchFacebook(ctx context.Context, query string, limit int) ([
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SearchFacebook(ctx, query, limit)
 }
@@ -514,7 +539,7 @@ func (e *Engine) ListNotifications(ctx context.Context, limit int) ([]model.Noti
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.ListNotifications(ctx, limit)
 }
@@ -523,7 +548,7 @@ func (e *Engine) SetFacebookBio(ctx context.Context, bio string, publish bool) e
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetFacebookBio(ctx, bio, publish)
 }
@@ -532,7 +557,7 @@ func (e *Engine) CreateAdditionalProfile(ctx context.Context, name, username str
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.CreateAdditionalProfile(ctx, name, username)
 }
@@ -541,7 +566,7 @@ func (e *Engine) UnfriendFacebookUser(ctx context.Context, userID model.ID) erro
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.UnfriendFacebookUser(ctx, userID)
 }
@@ -550,7 +575,7 @@ func (e *Engine) SetFacebookBlocked(ctx context.Context, userID model.ID, blocke
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetFacebookBlocked(ctx, userID, blocked)
 }
@@ -559,7 +584,7 @@ func (e *Engine) CreateFacebookPost(ctx context.Context, text string) (*model.Po
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.CreateFacebookPost(ctx, text)
 }
@@ -568,7 +593,7 @@ func (e *Engine) ArchiveFacebookPost(ctx context.Context, postID model.ID, owner
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.ArchiveFacebookPost(ctx, postID, ownership)
 }
@@ -577,7 +602,7 @@ func (e *Engine) DeleteFacebookPost(ctx context.Context, postID model.ID, owners
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.DeleteFacebookPost(ctx, postID, ownership)
 }
@@ -586,7 +611,7 @@ func (e *Engine) CreateMarketplaceListing(ctx context.Context, input model.Marke
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.CreateMarketplaceListing(ctx, input)
 }
@@ -595,7 +620,7 @@ func (e *Engine) GetMarketplaceListing(ctx context.Context, listingID model.ID) 
 	if !e.connected.Load() {
 		return nil, ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.GetMarketplaceListing(ctx, listingID)
 }
@@ -604,7 +629,7 @@ func (e *Engine) SetProfessionalMode(ctx context.Context, enabled bool) error {
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.SetProfessionalMode(ctx, enabled)
 }
@@ -613,11 +638,13 @@ func (e *Engine) SendE2EE(ctx context.Context, req model.E2EESendRequest) (model
 	if !e.E2EEConnected() {
 		return model.SendResult{}, ErrE2EENotReady
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	result, err := e.backend.SendE2EE(ctx, req)
 	if err == nil {
-		e.lastSend.Store(result.Timestamp.UnixMilli())
+		e.recordSend(result.Timestamp)
+	} else {
+		e.recordError(err)
 	}
 	return result, err
 }
@@ -626,11 +653,13 @@ func (e *Engine) SendE2EEMedia(ctx context.Context, req model.E2EEMediaInput) (m
 	if !e.E2EEConnected() {
 		return model.SendResult{}, ErrE2EENotReady
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	result, err := e.backend.SendE2EEMedia(ctx, req)
 	if err == nil {
-		e.lastSend.Store(result.Timestamp.UnixMilli())
+		e.recordSend(result.Timestamp)
+	} else {
+		e.recordError(err)
 	}
 	return result, err
 }
@@ -639,7 +668,7 @@ func (e *Engine) DownloadE2EEMedia(ctx context.Context, req model.E2EEMediaDownl
 	if !e.E2EEConnected() {
 		return nil, ErrE2EENotReady
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.DownloadE2EEMedia(ctx, req)
 }
@@ -648,7 +677,7 @@ func (e *Engine) ReactE2EE(ctx context.Context, req model.E2EEReactionRequest) e
 	if !e.E2EEConnected() {
 		return ErrE2EENotReady
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.ReactE2EE(ctx, req)
 }
@@ -657,7 +686,7 @@ func (e *Engine) EditE2EE(ctx context.Context, chatJID string, messageID model.I
 	if !e.E2EEConnected() {
 		return ErrE2EENotReady
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.EditE2EE(ctx, chatJID, messageID, text)
 }
@@ -666,7 +695,7 @@ func (e *Engine) UnsendE2EE(ctx context.Context, chatJID string, messageID model
 	if !e.E2EEConnected() {
 		return ErrE2EENotReady
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.UnsendE2EE(ctx, chatJID, messageID)
 }
@@ -675,7 +704,7 @@ func (e *Engine) TypingE2EE(ctx context.Context, chatJID string, typing bool) er
 	if !e.E2EEConnected() {
 		return ErrE2EENotReady
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.TypingE2EE(ctx, chatJID, typing)
 }
@@ -684,7 +713,7 @@ func (e *Engine) ReadE2EE(ctx context.Context, req model.E2EEReadRequest) error 
 	if !e.E2EEConnected() {
 		return ErrE2EENotReady
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.ReadE2EE(ctx, req)
 }
@@ -698,13 +727,21 @@ func (e *Engine) ConnectE2EE(ctx context.Context, accountID model.ID) error {
 	if !e.connected.Load() {
 		return ErrNotConnected
 	}
-	ctx, cancel := mergeContext(e.ctx, ctx)
+	e.e2eeState.Store(model.ConnectionConnecting)
+	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	if err := e.backend.ConnectE2EE(ctx, accountID); err != nil {
 		e.e2eeReady.Store(false)
+		e.e2eeState.Store(model.ConnectionFailed)
+		e.recordError(err)
 		return err
 	}
 	e.e2eeReady.Store(e.backend.E2EEConnected())
+	if e.e2eeReady.Load() {
+		e.e2eeState.Store(model.ConnectionConnected)
+	} else {
+		e.e2eeState.Store(model.ConnectionConnecting)
+	}
 	return nil
 }
 
@@ -732,13 +769,13 @@ func (e *Engine) On(handler func(Event)) func() {
 }
 
 func (e *Engine) Health() model.HealthSnapshot {
-	regular := model.ConnectionDisconnected
-	if e.Connected() {
-		regular = model.ConnectionConnected
+	regular, _ := e.regularState.Load().(model.ConnectionState)
+	e2ee, _ := e.e2eeState.Load().(model.ConnectionState)
+	if regular == "" {
+		regular = model.ConnectionDisconnected
 	}
-	e2ee := model.ConnectionDisconnected
-	if e.E2EEConnected() {
-		e2ee = model.ConnectionConnected
+	if e2ee == "" {
+		e2ee = model.ConnectionDisconnected
 	}
 	snapshot := model.HealthSnapshot{Regular: regular, E2EE: e2ee, ReconnectCount: e.reconnect.Load(), DroppedEventCount: e.dropped.Load()}
 	if unixMilli := e.lastSend.Load(); unixMilli > 0 {
@@ -746,6 +783,9 @@ func (e *Engine) Health() model.HealthSnapshot {
 	}
 	if unixMilli := e.lastRecv.Load(); unixMilli > 0 {
 		snapshot.LastReceive = time.UnixMilli(unixMilli)
+	}
+	if category, _ := e.lastError.Load().(string); category != "" {
+		snapshot.LastErrorCategory = category
 	}
 	return snapshot
 }
@@ -755,6 +795,8 @@ func (e *Engine) Close() {
 		e.closed.Store(true)
 		e.connected.Store(false)
 		e.e2eeReady.Store(false)
+		e.regularState.Store(model.ConnectionDisconnected)
+		e.e2eeState.Store(model.ConnectionDisconnected)
 		e.cancel()
 		e.connectMu.Lock()
 		e.backend.Disconnect()
@@ -763,6 +805,20 @@ func (e *Engine) Close() {
 		close(e.events)
 		e.eventMu.Unlock()
 	})
+}
+
+func (e *Engine) recordSend(timestamp time.Time) {
+	if timestamp.IsZero() {
+		timestamp = time.Now()
+	}
+	e.lastSend.Store(timestamp.UnixMilli())
+}
+
+func (e *Engine) recordError(err error) {
+	if err == nil {
+		return
+	}
+	e.lastError.Store(string(fberrors.Classify(err)))
 }
 
 func (e *Engine) emit(event Event) {
@@ -794,6 +850,21 @@ func (e *Engine) emit(event Event) {
 	e.handlerMu.RUnlock()
 	for _, handler := range handlers {
 		handler(event)
+	}
+}
+
+func (e *Engine) requestContext(request context.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := mergeContext(e.ctx, request)
+	if e.requestTimeout <= 0 {
+		return ctx, cancel
+	}
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, cancel
+	}
+	timed, timeoutCancel := context.WithTimeout(ctx, e.requestTimeout)
+	return timed, func() {
+		timeoutCancel()
+		cancel()
 	}
 }
 

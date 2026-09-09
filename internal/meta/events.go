@@ -19,16 +19,22 @@ func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 	switch evt := event.(type) {
 	case *messagix.Event_Ready:
 		e.connected.Store(true)
+		e.regularState.Store(model.ConnectionConnected)
 		e.emit(Event{Kind: EventReady, IsNewSession: evt.IsNewSession})
 	case *messagix.Event_Reconnected:
 		e.connected.Store(true)
+		e.regularState.Store(model.ConnectionConnected)
 		e.reconnect.Add(1)
 		e.emit(Event{Kind: EventReconnected})
 	case *messagix.Event_SocketError:
 		e.connected.Store(false)
+		e.regularState.Store(model.ConnectionFailed)
+		e.recordError(evt.Err)
 		e.emit(Event{Kind: EventError, Error: evt.Err})
 	case *messagix.Event_PermanentError:
 		e.connected.Store(false)
+		e.regularState.Store(model.ConnectionFailed)
+		e.recordError(evt.Err)
 		e.emit(Event{Kind: EventError, Error: evt.Err})
 	case *messagix.Event_PublishResponse:
 		if evt.Table != nil {
@@ -36,9 +42,11 @@ func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 		}
 	case *waEvents.Connected:
 		e.e2eeReady.Store(true)
+		e.e2eeState.Store(model.ConnectionConnected)
 		e.emit(Event{Kind: EventE2EEReady})
 	case *waEvents.Disconnected:
 		e.e2eeReady.Store(false)
+		e.e2eeState.Store(model.ConnectionDisconnected)
 		e.emit(Event{Kind: EventDisconnected, Transport: model.TransportE2EE})
 	case *waEvents.FBMessage:
 		e.emitE2EEMessage(evt)
@@ -51,7 +59,9 @@ func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 		e.emit(Event{Kind: EventE2EEReceipt, E2EEReceipt: &model.E2EEReceiptEvent{Type: string(evt.Type), ChatJID: evt.Chat.String(), SenderJID: evt.Sender.String(), MessageIDs: ids}})
 	case *waEvents.UndecryptableMessage:
 		e.lastRecv.Store(time.Now().UnixMilli())
-		e.emit(Event{Kind: EventError, Error: fmt.Errorf("E2EE message %s could not be decrypted", evt.Info.ID)})
+		err := fmt.Errorf("E2EE message %s could not be decrypted", evt.Info.ID)
+		e.recordError(err)
+		e.emit(Event{Kind: EventError, Error: err})
 	}
 }
 

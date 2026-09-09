@@ -110,31 +110,42 @@ func (c *Client) Connect(ctx context.Context) error {
 	}
 	deviceStore, err := c.deviceStore(ctx, profile, secrets)
 	if err != nil {
+		c.logger.WarnContext(ctx, "connect failed", "category", string(fberrors.Classify(err)))
 		return err
 	}
-	engine, err := meta.New(c.ctx, meta.Config{Cookies: map[string]string(cookies), Platform: "facebook", Logger: zerolog.Nop(), EventBuffer: c.eventBuffer, DeviceStore: deviceStore})
+	c.logger.DebugContext(ctx, "connecting", "e2ee", c.e2ee)
+	engine, err := meta.New(c.ctx, meta.Config{Cookies: map[string]string(cookies), Platform: "facebook", Logger: zerolog.Nop(), EventBuffer: c.eventBuffer, DeviceStore: deviceStore, HTTPClient: c.httpClient, Timeout: c.timeout})
 	if err != nil {
+		c.logger.WarnContext(ctx, "connect failed", "category", string(fberrors.Classify(err)))
 		return err
 	}
 	engine.On(c.dispatchEvent)
 	account, err := engine.Connect(ctx)
 	if err != nil {
 		engine.Close()
+		c.logger.WarnContext(ctx, "connect failed", "category", string(fberrors.Classify(err)))
 		return err
 	}
 	if c.e2ee {
 		if err := engine.ConnectE2EE(ctx, account.ID); err != nil {
 			engine.Close()
+			c.logger.WarnContext(ctx, "E2EE connect failed", "category", string(fberrors.Classify(err)))
 			return err
 		}
 	}
 	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		engine.Close()
+		return errors.New("fbgo client is closed")
+	}
 	c.engine = engine
 	c.account = model.User{ID: account.ID, Name: account.Name, Username: account.Username}
 	c.Messenger = messenger.NewService(engine)
 	c.Threads = threadservice.NewService(engine)
 	c.Facebook = facebookservice.NewService(engine)
 	c.mu.Unlock()
+	c.logger.DebugContext(ctx, "connected", "e2ee", c.e2ee)
 	return nil
 }
 
@@ -167,24 +178,35 @@ func (c *Client) Close() error {
 	if c == nil {
 		return nil
 	}
-	c.connectMu.Lock()
-	defer c.connectMu.Unlock()
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
 		return nil
 	}
 	c.closed = true
+	c.cancel()
 	engine := c.engine
 	c.engine = nil
+	c.cookies = nil
+	c.profile = storage.Profile{}
+	c.secrets = nil
+	c.account = model.User{}
 	c.Messenger = nil
 	c.Threads = nil
 	c.Facebook = nil
 	c.mu.Unlock()
-	c.cancel()
+	c.handlerMu.Lock()
+	clear(c.handlers)
+	c.handlerMu.Unlock()
 	if engine != nil {
 		engine.Close()
 	}
+	// Wait for a concurrent Connect to observe cancellation and finish before
+	// returning. Cancellation happens before taking this lock to avoid making
+	// Close wait on a network operation it could have interrupted.
+	c.connectMu.Lock()
+	c.connectMu.Unlock()
+	c.logger.Debug("client closed")
 	return nil
 }
 

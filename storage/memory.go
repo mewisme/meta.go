@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -25,18 +26,19 @@ func (s *MemoryProfileStore) Get(ctx context.Context, name string) (Profile, err
 	if !ok {
 		return Profile{}, ErrNotFound
 	}
-	return p, nil
+	return cloneProfile(p), nil
 }
 
 func (s *MemoryProfileStore) Put(ctx context.Context, profile Profile) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if profile.Name == "" {
-		return ErrNotFound
+	profile.Name = strings.TrimSpace(profile.Name)
+	if profile.Name == "" || strings.ContainsRune(profile.Name, '\x00') {
+		return ErrInvalidProfile
 	}
 	s.mu.Lock()
-	s.profiles[profile.Name] = profile
+	s.profiles[profile.Name] = cloneProfile(profile)
 	s.mu.Unlock()
 	return nil
 }
@@ -61,7 +63,7 @@ func (s *MemoryProfileStore) List(ctx context.Context) ([]Profile, error) {
 	s.mu.RLock()
 	result := make([]Profile, 0, len(s.profiles))
 	for _, profile := range s.profiles {
-		result = append(result, profile)
+		result = append(result, cloneProfile(profile))
 	}
 	s.mu.RUnlock()
 	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
@@ -80,6 +82,9 @@ func NewMemorySecretStore() *MemorySecretStore {
 func secretKey(profile, key string) string { return profile + "\x00" + key }
 
 func (s *MemorySecretStore) Get(ctx context.Context, profile, key string) ([]byte, error) {
+	if err := validateSecretKey(profile, key); err != nil {
+		return nil, err
+	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -93,6 +98,9 @@ func (s *MemorySecretStore) Get(ctx context.Context, profile, key string) ([]byt
 }
 
 func (s *MemorySecretStore) Put(ctx context.Context, profile, key string, value []byte) error {
+	if err := validateSecretKey(profile, key); err != nil {
+		return err
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -103,6 +111,9 @@ func (s *MemorySecretStore) Put(ctx context.Context, profile, key string, value 
 }
 
 func (s *MemorySecretStore) Delete(ctx context.Context, profile, key string) error {
+	if err := validateSecretKey(profile, key); err != nil {
+		return err
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}

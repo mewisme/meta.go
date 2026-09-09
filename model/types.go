@@ -50,6 +50,7 @@ type HealthSnapshot struct {
 	DroppedEventCount  uint64          `json:"droppedEventCount"`
 	LastSuccessfulSend time.Time       `json:"lastSuccessfulSend,omitempty"`
 	LastReceive        time.Time       `json:"lastReceive,omitempty"`
+	LastErrorCategory  string          `json:"lastErrorCategory,omitempty"`
 }
 
 type User struct {

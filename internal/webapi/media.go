@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -28,8 +27,12 @@ func ValidateMediaURL(ctx context.Context, resolver *net.Resolver, rawURL string
 	if err != nil {
 		return fmt.Errorf("%w: invalid URL", ErrUnsafeMediaURL)
 	}
-	if parsed.Scheme != "https" && parsed.Scheme != "http" {
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "https" && scheme != "http" {
 		return fmt.Errorf("%w: unsupported scheme", ErrUnsafeMediaURL)
+	}
+	if parsed.User != nil {
+		return fmt.Errorf("%w: embedded credentials are not allowed", ErrUnsafeMediaURL)
 	}
 	host := parsed.Hostname()
 	if host == "" || strings.EqualFold(host, "localhost") {
@@ -67,8 +70,42 @@ func DownloadMedia(ctx context.Context, rawURL string, maxBytes int64) (*MediaDo
 	if err := ValidateMediaURL(ctx, resolver, rawURL); err != nil {
 		return nil, err
 	}
+	client := newMediaHTTPClient(resolver)
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return errors.New("too many redirects")
+		}
+		return ValidateMediaURL(req.Context(), resolver, req.URL.String())
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		resp.Body.Close()
+		return nil, fmt.Errorf("media download HTTP %d", resp.StatusCode)
+	}
+	if resp.ContentLength > maxBytes {
+		resp.Body.Close()
+		return nil, fmt.Errorf("media exceeds %d-byte limit", maxBytes)
+	}
+	return &MediaDownload{Body: &limitReadCloser{reader: io.LimitReader(resp.Body, maxBytes+1), closer: resp.Body, remaining: maxBytes}, ContentType: resp.Header.Get("Content-Type"), ContentLength: resp.ContentLength}, nil
+}
+
+func newMediaHTTPClient(resolver *net.Resolver) *http.Client {
+	if resolver == nil {
+		resolver = net.DefaultResolver
+	}
 	dialer := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// Secure media fetches intentionally ignore HTTP(S)_PROXY. A proxy would
+	// resolve the hostname outside this process and bypass the pinned-IP SSRF
+	// check performed by DialContext.
+	transport.Proxy = nil
 	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
 		host, port, err := net.SplitHostPort(address)
 		if err != nil {
@@ -96,30 +133,7 @@ func DownloadMedia(ctx context.Context, rawURL string, maxBytes int64) (*MediaDo
 		}
 		return nil, lastErr
 	}
-	client := &http.Client{Transport: transport, Timeout: 0}
-	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		if len(via) >= 10 {
-			return errors.New("too many redirects")
-		}
-		return ValidateMediaURL(req.Context(), resolver, req.URL.String())
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		resp.Body.Close()
-		return nil, fmt.Errorf("media download HTTP %d", resp.StatusCode)
-	}
-	if resp.ContentLength > maxBytes {
-		resp.Body.Close()
-		return nil, fmt.Errorf("media exceeds %d-byte limit", maxBytes)
-	}
-	return &MediaDownload{Body: &limitReadCloser{reader: io.LimitReader(resp.Body, maxBytes+1), closer: resp.Body, remaining: maxBytes}, ContentType: resp.Header.Get("Content-Type"), ContentLength: resp.ContentLength}, nil
+	return &http.Client{Transport: transport}
 }
 
 type limitReadCloser struct {
@@ -158,7 +172,7 @@ func isPublicIP(ip net.IP) bool {
 	}
 	if ipv4 := ip.To4(); ipv4 != nil {
 		first, second := ipv4[0], ipv4[1]
-		if first == 0 || first == 127 || first >= 224 || first == 169 && second == 254 || first == 100 && second >= 64 && second <= 127 || first == 192 && second == 0 && ipv4[2] == 0 || first == 192 && second == 0 && ipv4[2] == 2 || first == 198 && second == 51 && ipv4[2] == 100 || first == 203 && second == 0 && ipv4[2] == 113 {
+		if first == 0 || first == 127 || first >= 224 || first == 169 && second == 254 || first == 100 && second >= 64 && second <= 127 || first == 192 && second == 0 && ipv4[2] == 0 || first == 192 && second == 0 && ipv4[2] == 2 || first == 198 && (second == 18 || second == 19) || first == 198 && second == 51 && ipv4[2] == 100 || first == 203 && second == 0 && ipv4[2] == 113 {
 			return false
 		}
 		return true
@@ -169,14 +183,4 @@ func isPublicIP(ip net.IP) bool {
 		return false
 	}
 	return true
-}
-
-func parsePort(parsed *url.URL) string {
-	if parsed.Port() != "" {
-		return parsed.Port()
-	}
-	if parsed.Scheme == "https" {
-		return strconv.Itoa(443)
-	}
-	return strconv.Itoa(80)
 }

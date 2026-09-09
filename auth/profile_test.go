@@ -94,3 +94,56 @@ func TestProfileRenameMovesSecrets(t *testing.T) {
 		t.Fatalf("new secret missing: %#v %v", cookies, err)
 	}
 }
+
+func TestProfileRenameRollsBackPartialSecretCopy(t *testing.T) {
+	profiles := storage.NewMemoryProfileStore()
+	backend := storage.NewMemorySecretStore()
+	secrets := &failingSecretStore{backend: backend, failProfile: "new", failName: secretSession}
+	manager := ProfileManager{Profiles: profiles, Secrets: secrets}
+	ctx := context.Background()
+	if _, err := manager.Create(ctx, "old", "Old"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.ImportCookies(ctx, "old", Cookies{"c_user": "1", "xs": "x"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.SaveSession(ctx, "old", Session{FBID: "1", DTSG: "d", Jazoest: "j", SessionID: "s"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Rename(ctx, "old", "new"); err == nil {
+		t.Fatal("expected rename failure")
+	}
+	if profile, err := profiles.Get(ctx, "old"); err != nil || profile.Name != "old" {
+		t.Fatalf("old profile was not preserved: %#v %v", profile, err)
+	}
+	if _, err := profiles.Get(ctx, "new"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("new profile leaked after rollback: %v", err)
+	}
+	if cookies, err := manager.LoadCookies(ctx, "old"); err != nil || cookies["c_user"] != "1" {
+		t.Fatalf("old cookies were not preserved: %#v %v", cookies, err)
+	}
+	if _, err := backend.Get(ctx, "new", secretCookies); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("new cookies leaked after rollback: %v", err)
+	}
+}
+
+type failingSecretStore struct {
+	backend     storage.SecretStore
+	failProfile string
+	failName    string
+}
+
+func (s *failingSecretStore) Get(ctx context.Context, profile, name string) ([]byte, error) {
+	return s.backend.Get(ctx, profile, name)
+}
+
+func (s *failingSecretStore) Put(ctx context.Context, profile, name string, value []byte) error {
+	if profile == s.failProfile && name == s.failName {
+		return errors.New("injected secret-store failure")
+	}
+	return s.backend.Put(ctx, profile, name, value)
+}
+
+func (s *failingSecretStore) Delete(ctx context.Context, profile, name string) error {
+	return s.backend.Delete(ctx, profile, name)
+}

@@ -315,6 +315,18 @@ func (s *DeviceStore) snapshotLocked() ([]byte, error) {
 }
 
 func (s *DeviceStore) restoreLocked(state persistedDeviceState) error {
+	if state.RegistrationID < 1 || state.RegistrationID > maxRegistrationID {
+		return fmt.Errorf("invalid device registration ID %d", state.RegistrationID)
+	}
+	if zeroKey(state.NoisePrivate) || zeroKey(state.IdentityPrivate) || zeroKey(state.SignedPreKey.Private) {
+		return errors.New("device state contains empty key material")
+	}
+	if len(state.AdvSecretKey) != 32 {
+		return fmt.Errorf("invalid device ADV secret key length %d", len(state.AdvSecretKey))
+	}
+	if state.FacebookUUID == "" {
+		return errors.New("device state is missing Facebook UUID")
+	}
 	noise := keys.NewKeyPairFromPrivateKey(state.NoisePrivate)
 	identity := keys.NewKeyPairFromPrivateKey(state.IdentityPrivate)
 	signed := &keys.PreKey{KeyPair: *keys.NewKeyPairFromPrivateKey(state.SignedPreKey.Private), KeyID: state.SignedPreKey.ID, Signature: state.SignedPreKey.Signature}
@@ -373,6 +385,15 @@ func (s *DeviceStore) restoreLocked(state persistedDeviceState) error {
 	device.LIDs = s
 	device.Container = s
 	return nil
+}
+
+func zeroKey(key [32]byte) bool {
+	for _, value := range key {
+		if value != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func cloneBytesMap(values map[string][]byte) map[string][]byte {

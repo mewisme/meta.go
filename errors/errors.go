@@ -1,8 +1,10 @@
 package fberrors
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net"
 )
 
 var (
@@ -27,6 +29,54 @@ type ProtocolError struct {
 	StatusCode int
 	Retryable  bool
 	Cause      error
+}
+
+type ErrorCategory string
+
+const (
+	ErrorCategoryUnknown    ErrorCategory = "unknown"
+	ErrorCategoryAuth       ErrorCategory = "auth"
+	ErrorCategoryCheckpoint ErrorCategory = "checkpoint"
+	ErrorCategoryRateLimit  ErrorCategory = "rate_limit"
+	ErrorCategoryInput      ErrorCategory = "invalid_input"
+	ErrorCategoryConnection ErrorCategory = "connection"
+	ErrorCategoryE2EE       ErrorCategory = "e2ee"
+	ErrorCategoryProtocol   ErrorCategory = "protocol"
+	ErrorCategoryPermission ErrorCategory = "permission"
+	ErrorCategoryNetwork    ErrorCategory = "network"
+	ErrorCategoryCanceled   ErrorCategory = "canceled"
+)
+
+// Classify returns a stable, low-cardinality category suitable for health and metrics labels.
+func Classify(err error) ErrorCategory {
+	if err == nil {
+		return ErrorCategoryUnknown
+	}
+	var netErr net.Error
+	switch {
+	case errors.Is(err, context.Canceled):
+		return ErrorCategoryCanceled
+	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &netErr):
+		return ErrorCategoryNetwork
+	case errors.Is(err, ErrCheckpointRequired):
+		return ErrorCategoryCheckpoint
+	case errors.Is(err, ErrUnauthorized), errors.Is(err, ErrSessionExpired):
+		return ErrorCategoryAuth
+	case errors.Is(err, ErrRateLimited):
+		return ErrorCategoryRateLimit
+	case errors.Is(err, ErrInvalidInput):
+		return ErrorCategoryInput
+	case errors.Is(err, ErrNotConnected):
+		return ErrorCategoryConnection
+	case errors.Is(err, ErrE2EENotReady):
+		return ErrorCategoryE2EE
+	case errors.Is(err, ErrProtocolChanged), errors.Is(err, ErrUnsupported):
+		return ErrorCategoryProtocol
+	case errors.Is(err, ErrPermissionDenied):
+		return ErrorCategoryPermission
+	default:
+		return ErrorCategoryUnknown
+	}
 }
 
 func (e *ProtocolError) Error() string {

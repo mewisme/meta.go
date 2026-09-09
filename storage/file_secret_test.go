@@ -36,3 +36,12 @@ func TestFileSecretStoreLifecycle(t *testing.T) {
 		t.Fatalf("expected not found, got %v", err)
 	}
 }
+
+func TestFileSecretStoreRejectsInvalidKeys(t *testing.T) {
+	store := NewFileSecretStore(filepath.Join(t.TempDir(), "secrets.json"))
+	for _, test := range []struct{ profile, name string }{{"", "cookies"}, {"default", ""}, {"bad\x00profile", "cookies"}, {"default", "bad\x00name"}} {
+		if err := store.Put(context.Background(), test.profile, test.name, []byte("x")); !errors.Is(err, ErrInvalidSecretKey) {
+			t.Fatalf("expected invalid secret key for %q/%q, got %v", test.profile, test.name, err)
+		}
+	}
+}
