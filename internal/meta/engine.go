@@ -27,15 +27,19 @@ type Account struct {
 type EventKind string
 
 const (
-	EventReady        EventKind = "ready"
-	EventReconnected  EventKind = "reconnected"
-	EventDisconnected EventKind = "disconnected"
-	EventError        EventKind = "error"
-	EventMessage      EventKind = "message"
-	EventReaction     EventKind = "reaction"
-	EventTyping       EventKind = "typing"
-	EventReadReceipt  EventKind = "readReceipt"
-	EventE2EEReady    EventKind = "e2eeReady"
+	EventReady           EventKind = "ready"
+	EventReconnected     EventKind = "reconnected"
+	EventDisconnected    EventKind = "disconnected"
+	EventError           EventKind = "error"
+	EventMessage         EventKind = "message"
+	EventReaction        EventKind = "reaction"
+	EventTyping          EventKind = "typing"
+	EventReadReceipt     EventKind = "readReceipt"
+	EventDeliveryReceipt EventKind = "deliveryReceipt"
+	EventMessageEdit     EventKind = "messageEdit"
+	EventMessageUnsend   EventKind = "messageUnsend"
+	EventThreadUpdate    EventKind = "threadUpdate"
+	EventE2EEReady       EventKind = "e2eeReady"
 )
 
 type Event struct {
@@ -62,6 +66,29 @@ type ReadReceiptEvent struct {
 	Watermark time.Time
 }
 
+type DeliveryReceiptEvent struct {
+	ThreadID    model.ID
+	RecipientID model.ID
+	Watermark   time.Time
+}
+
+type MessageEditEvent struct {
+	MessageID model.ID
+	Text      string
+	EditCount int64
+}
+
+type MessageUnsendEvent struct {
+	MessageID model.ID
+	ThreadID  model.ID
+}
+
+type ThreadUpdateEvent struct {
+	ThreadID model.ID
+	Field    string
+	Value    string
+}
+
 type SendTextRequest struct {
 	ThreadID model.ID
 	Text     string
@@ -86,7 +113,7 @@ type UploadResult struct {
 type backend interface {
 	SetEventHandler(func(context.Context, any))
 	Bootstrap(context.Context) (Account, error)
-	Connect(context.Context) error
+	Connect(context.Context, context.Context) error
 	Disconnect()
 	SendText(context.Context, SendTextRequest) (model.SendResult, error)
 	Upload(context.Context, UploadRequest) (UploadResult, error)
@@ -106,6 +133,9 @@ type Engine struct {
 	closed    atomic.Bool
 	connected atomic.Bool
 	e2eeReady atomic.Bool
+	reconnect atomic.Uint64
+	dropped   atomic.Uint64
+	lastRecv  atomic.Int64
 
 	events chan Event
 }
@@ -135,7 +165,7 @@ func (e *Engine) Connect(ctx context.Context) (Account, error) {
 	if err != nil {
 		return Account{}, err
 	}
-	if err := e.backend.Connect(ctx); err != nil {
+	if err := e.backend.Connect(e.ctx, ctx); err != nil {
 		return Account{}, err
 	}
 	e.connected.Store(true)
@@ -183,6 +213,22 @@ func (e *Engine) Events() <-chan Event { return e.events }
 func (e *Engine) Connected() bool      { return e.connected.Load() && !e.closed.Load() }
 func (e *Engine) E2EEConnected() bool  { return e.e2eeReady.Load() && !e.closed.Load() }
 
+func (e *Engine) Health() model.HealthSnapshot {
+	regular := model.ConnectionDisconnected
+	if e.Connected() {
+		regular = model.ConnectionConnected
+	}
+	e2ee := model.ConnectionDisconnected
+	if e.E2EEConnected() {
+		e2ee = model.ConnectionConnected
+	}
+	snapshot := model.HealthSnapshot{Regular: regular, E2EE: e2ee, ReconnectCount: e.reconnect.Load(), DroppedEventCount: e.dropped.Load()}
+	if unixMilli := e.lastRecv.Load(); unixMilli > 0 {
+		snapshot.LastReceive = time.UnixMilli(unixMilli)
+	}
+	return snapshot
+}
+
 func (e *Engine) Close() {
 	e.closeOnce.Do(func() {
 		e.closed.Store(true)
@@ -209,11 +255,13 @@ func (e *Engine) emit(event Event) {
 	default:
 		select {
 		case <-e.events:
+			e.dropped.Add(1)
 		default:
 		}
 		select {
 		case e.events <- event:
 		default:
+			e.dropped.Add(1)
 		}
 	}
 }

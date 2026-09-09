@@ -72,7 +72,16 @@ func (b *messagixBackend) Bootstrap(ctx context.Context) (Account, error) {
 	return Account{ID: id64(user.GetFBID()), Name: user.GetName(), Username: user.GetUsername()}, nil
 }
 
-func (b *messagixBackend) Connect(ctx context.Context) error { return b.client.Connect(ctx) }
+func (b *messagixBackend) Connect(lifetimeCtx, startupCtx context.Context) error {
+	if err := b.client.Connect(lifetimeCtx); err != nil {
+		return err
+	}
+	if err := b.client.WaitUntilCanSendMessages(startupCtx, 30*time.Second); err != nil {
+		b.client.Disconnect()
+		return err
+	}
+	return nil
+}
 func (b *messagixBackend) Disconnect() {
 	if b.e2ee != nil && b.e2ee.IsConnected() {
 		b.e2ee.Disconnect()

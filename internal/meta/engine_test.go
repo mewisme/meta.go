@@ -23,7 +23,7 @@ func (f *fakeBackend) SetEventHandler(handler func(context.Context, any)) { f.ha
 func (f *fakeBackend) Bootstrap(context.Context) (Account, error) {
 	return Account{ID: "1", Name: "Test"}, nil
 }
-func (f *fakeBackend) Connect(context.Context) error {
+func (f *fakeBackend) Connect(context.Context, context.Context) error {
 	f.mu.Lock()
 	f.connected = true
 	f.mu.Unlock()
@@ -158,8 +158,8 @@ func (b *blockingBackend) Bootstrap(ctx context.Context) (Account, error) {
 		return Account{}, nil
 	}
 }
-func (b *blockingBackend) Connect(context.Context) error { return nil }
-func (b *blockingBackend) Disconnect()                   {}
+func (b *blockingBackend) Connect(context.Context, context.Context) error { return nil }
+func (b *blockingBackend) Disconnect()                                    {}
 func (b *blockingBackend) SendText(context.Context, SendTextRequest) (model.SendResult, error) {
 	return model.SendResult{}, nil
 }
