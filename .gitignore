@@ -2,6 +2,7 @@
 *baseline*
 
 /fbgo
+/dist/
 /coverage.out
 *.test
 
