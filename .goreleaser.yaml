@@ -23,24 +23,6 @@ builds:
     goarch:
       - amd64
       - arm64
-  - id: meta-runtime
-    main: ./cmd/meta-runtime
-    binary: meta-runtime
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -trimpath
-    ldflags:
-      - -s -w -X go.mewis.me/meta.go.Version={{ .Version }} -X go.mewis.me/meta.go.Commit={{ .Commit }}
-    mod_timestamp: "{{ .CommitTimestamp }}"
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-
 archives:
   - id: meta
     ids:
@@ -58,13 +40,6 @@ archives:
       - CHANGELOG.md
       - THIRD_PARTY_LICENSES.md
       - docs/*
-  - id: meta-runtime
-    ids:
-      - meta-runtime
-    formats:
-      - binary
-    name_template: "meta-runtime_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-
 checksum:
   name_template: "meta_{{ .Version }}_checksums.txt"
   algorithm: sha256
