@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package meta.v1;
+
+import "google/protobuf/timestamp.proto";
+import "meta/v1/common.proto";
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+message Event {
+  string session_id = 1;
+  uint64 sequence = 2;
+  google.protobuf.Timestamp emitted_at = 3;
+
+  oneof payload {
+    ReadyEvent ready = 10;
+    ReconnectedEvent reconnected = 11;
+    DisconnectedEvent disconnected = 12;
+    ErrorEvent error = 13;
+    MessageEvent message = 14;
+    ReactionEvent reaction = 15;
+    TypingEvent typing = 16;
+    ReadReceiptEvent read_receipt = 17;
+    DeliveryReceiptEvent delivery_receipt = 18;
+    MessageEditEvent message_edit = 19;
+    MessageUnsendEvent message_unsend = 20;
+    ThreadUpdateEvent thread_update = 21;
+    E2EEReadyEvent e2ee_ready = 22;
+    E2EEReceiptEvent e2ee_receipt = 23;
+    ThreadSystemEvent thread_system = 24;
+  }
+}
+
+message ReadyEvent {
+  bool is_new_session = 1;
+}
+
+message ReconnectedEvent {}
+
+message DisconnectedEvent {
+  TransportKind transport = 1;
+}
+
+message ErrorEvent {
+  ErrorDetail error = 1;
+}
+
+message MessageEvent {
+  Message message = 1;
+}
+
+message ReactionEvent {
+  string message_id = 1;
+  string thread_id = 2;
+  string actor_id = 3;
+  string reaction = 4;
+}
+
+message TypingEvent {
+  string thread_id = 1;
+  string sender_id = 2;
+  bool typing = 3;
+}
+
+message ReadReceiptEvent {
+  string thread_id = 1;
+  string reader_id = 2;
+  google.protobuf.Timestamp watermark = 3;
+}
+
+message DeliveryReceiptEvent {
+  string thread_id = 1;
+  string recipient_id = 2;
+  google.protobuf.Timestamp watermark = 3;
+}
+
+message MessageEditEvent {
+  string message_id = 1;
+  string text = 2;
+  int64 edit_count = 3;
+}
+
+message MessageUnsendEvent {
+  string message_id = 1;
+  string thread_id = 2;
+}
+
+message ThreadUpdateEvent {
+  string thread_id = 1;
+  string field = 2;
+  string value = 3;
+}
+
+enum ThreadSystemKind {
+  THREAD_SYSTEM_KIND_UNSPECIFIED = 0;
+  THREAD_SYSTEM_KIND_NICKNAME_UPDATED = 1;
+  THREAD_SYSTEM_KIND_EMOJI_UPDATED = 2;
+  THREAD_SYSTEM_KIND_APPROVAL_MODE_UPDATED = 3;
+  THREAD_SYSTEM_KIND_THEME_UPDATED = 4;
+  THREAD_SYSTEM_KIND_MEMBER_ADDED = 5;
+  THREAD_SYSTEM_KIND_MEMBER_REMOVED = 6;
+  THREAD_SYSTEM_KIND_PARTICIPANT_ADMIN_UPDATED = 7;
+  THREAD_SYSTEM_KIND_MESSAGE_PIN_UPDATED = 8;
+  THREAD_SYSTEM_KIND_POLL_UPDATED = 9;
+}
+
+message ThreadSystemEvent {
+  ThreadSystemKind kind = 1;
+  string thread_id = 2;
+  string participant_id = 3;
+  string message_id = 4;
+  string poll_id = 5;
+  string nickname = 6;
+  string emoji = 7;
+  bool enabled = 8;
+  bool pinned = 9;
+  bool is_admin = 10;
+}
+
+message E2EEReadyEvent {}
+
+message E2EEReceiptEvent {
+  string type = 1;
+  string chat_jid = 2;
+  string sender_jid = 3;
+  repeated string message_ids = 4;
+}

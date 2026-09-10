@@ -19,13 +19,21 @@ func grpcError(err error) error {
 	}
 	category := fberrors.Classify(err)
 	code := grpcCode(err, category)
-	detail := &metav1.ErrorDetail{Category: protoErrorCategory(category), Code: stableErrorCode(err), Message: err.Error(), Retryable: retryable(err, category)}
+	detail := errorDetail(err)
 	st := status.New(code, err.Error())
 	withDetails, detailErr := st.WithDetails(detail)
 	if detailErr != nil {
 		return st.Err()
 	}
 	return withDetails.Err()
+}
+
+func errorDetail(err error) *metav1.ErrorDetail {
+	if err == nil {
+		return nil
+	}
+	category := fberrors.Classify(err)
+	return &metav1.ErrorDetail{Category: protoErrorCategory(category), Code: stableErrorCode(err), Message: err.Error(), Retryable: retryable(err, category)}
 }
 
 func grpcCode(err error, category fberrors.ErrorCategory) codes.Code {

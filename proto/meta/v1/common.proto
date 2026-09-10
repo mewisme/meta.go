@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package meta.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
 
 message ProtocolVersion {
@@ -44,4 +46,64 @@ message Account {
   string id = 1;
   string name = 2;
   string username = 3;
+}
+
+enum TransportKind {
+  TRANSPORT_KIND_UNSPECIFIED = 0;
+  TRANSPORT_KIND_MESSENGER = 1;
+  TRANSPORT_KIND_E2EE = 2;
+}
+
+enum EncryptionKind {
+  ENCRYPTION_KIND_UNSPECIFIED = 0;
+  ENCRYPTION_KIND_NONE = 1;
+  ENCRYPTION_KIND_E2EE = 2;
+}
+
+message ReplyReference {
+  string message_id = 1;
+  string sender_id = 2;
+}
+
+message Mention {
+  string user_id = 1;
+  int32 offset = 2;
+  int32 length = 3;
+}
+
+message E2EEMediaReference {
+  string kind = 1;
+  string direct_path = 2;
+  bytes media_key = 3;
+  bytes file_sha256 = 4;
+  bytes file_enc_sha256 = 5;
+  string content_type = 6;
+  int64 size = 7;
+}
+
+message Attachment {
+  string id = 1;
+  string type = 2;
+  string url = 3;
+  string preview_url = 4;
+  string file_name = 5;
+  string content_type = 6;
+  int64 size = 7;
+  int32 width = 8;
+  int32 height = 9;
+  int32 duration = 10;
+  E2EEMediaReference e2ee = 11;
+}
+
+message Message {
+  string id = 1;
+  string thread_id = 2;
+  string sender_id = 3;
+  string text = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  ReplyReference reply_to = 6;
+  repeated Mention mentions = 7;
+  repeated Attachment attachments = 8;
+  EncryptionKind encryption = 9;
+  TransportKind transport = 10;
 }

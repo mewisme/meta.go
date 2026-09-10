@@ -13,6 +13,7 @@ import (
 
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -96,6 +97,104 @@ func (x ErrorCategory) Number() protoreflect.EnumNumber {
 // Deprecated: Use ErrorCategory.Descriptor instead.
 func (ErrorCategory) EnumDescriptor() ([]byte, []int) {
 	return file_meta_v1_common_proto_rawDescGZIP(), []int{0}
+}
+
+type TransportKind int32
+
+const (
+	TransportKind_TRANSPORT_KIND_UNSPECIFIED TransportKind = 0
+	TransportKind_TRANSPORT_KIND_MESSENGER   TransportKind = 1
+	TransportKind_TRANSPORT_KIND_E2EE        TransportKind = 2
+)
+
+// Enum value maps for TransportKind.
+var (
+	TransportKind_name = map[int32]string{
+		0: "TRANSPORT_KIND_UNSPECIFIED",
+		1: "TRANSPORT_KIND_MESSENGER",
+		2: "TRANSPORT_KIND_E2EE",
+	}
+	TransportKind_value = map[string]int32{
+		"TRANSPORT_KIND_UNSPECIFIED": 0,
+		"TRANSPORT_KIND_MESSENGER":   1,
+		"TRANSPORT_KIND_E2EE":        2,
+	}
+)
+
+func (x TransportKind) Enum() *TransportKind {
+	p := new(TransportKind)
+	*p = x
+	return p
+}
+
+func (x TransportKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TransportKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_meta_v1_common_proto_enumTypes[1].Descriptor()
+}
+
+func (TransportKind) Type() protoreflect.EnumType {
+	return &file_meta_v1_common_proto_enumTypes[1]
+}
+
+func (x TransportKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TransportKind.Descriptor instead.
+func (TransportKind) EnumDescriptor() ([]byte, []int) {
+	return file_meta_v1_common_proto_rawDescGZIP(), []int{1}
+}
+
+type EncryptionKind int32
+
+const (
+	EncryptionKind_ENCRYPTION_KIND_UNSPECIFIED EncryptionKind = 0
+	EncryptionKind_ENCRYPTION_KIND_NONE        EncryptionKind = 1
+	EncryptionKind_ENCRYPTION_KIND_E2EE        EncryptionKind = 2
+)
+
+// Enum value maps for EncryptionKind.
+var (
+	EncryptionKind_name = map[int32]string{
+		0: "ENCRYPTION_KIND_UNSPECIFIED",
+		1: "ENCRYPTION_KIND_NONE",
+		2: "ENCRYPTION_KIND_E2EE",
+	}
+	EncryptionKind_value = map[string]int32{
+		"ENCRYPTION_KIND_UNSPECIFIED": 0,
+		"ENCRYPTION_KIND_NONE":        1,
+		"ENCRYPTION_KIND_E2EE":        2,
+	}
+)
+
+func (x EncryptionKind) Enum() *EncryptionKind {
+	p := new(EncryptionKind)
+	*p = x
+	return p
+}
+
+func (x EncryptionKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EncryptionKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_meta_v1_common_proto_enumTypes[2].Descriptor()
+}
+
+func (EncryptionKind) Type() protoreflect.EnumType {
+	return &file_meta_v1_common_proto_enumTypes[2]
+}
+
+func (x EncryptionKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EncryptionKind.Descriptor instead.
+func (EncryptionKind) EnumDescriptor() ([]byte, []int) {
+	return file_meta_v1_common_proto_rawDescGZIP(), []int{2}
 }
 
 type ProtocolVersion struct {
@@ -362,11 +461,455 @@ func (x *Account) GetUsername() string {
 	return ""
 }
 
+type ReplyReference struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	SenderId      string                 `protobuf:"bytes,2,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplyReference) Reset() {
+	*x = ReplyReference{}
+	mi := &file_meta_v1_common_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplyReference) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplyReference) ProtoMessage() {}
+
+func (x *ReplyReference) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_common_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplyReference.ProtoReflect.Descriptor instead.
+func (*ReplyReference) Descriptor() ([]byte, []int) {
+	return file_meta_v1_common_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ReplyReference) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *ReplyReference) GetSenderId() string {
+	if x != nil {
+		return x.SenderId
+	}
+	return ""
+}
+
+type Mention struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Offset        int32                  `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	Length        int32                  `protobuf:"varint,3,opt,name=length,proto3" json:"length,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Mention) Reset() {
+	*x = Mention{}
+	mi := &file_meta_v1_common_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Mention) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Mention) ProtoMessage() {}
+
+func (x *Mention) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_common_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Mention.ProtoReflect.Descriptor instead.
+func (*Mention) Descriptor() ([]byte, []int) {
+	return file_meta_v1_common_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Mention) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Mention) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *Mention) GetLength() int32 {
+	if x != nil {
+		return x.Length
+	}
+	return 0
+}
+
+type E2EEMediaReference struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	DirectPath    string                 `protobuf:"bytes,2,opt,name=direct_path,json=directPath,proto3" json:"direct_path,omitempty"`
+	MediaKey      []byte                 `protobuf:"bytes,3,opt,name=media_key,json=mediaKey,proto3" json:"media_key,omitempty"`
+	FileSha256    []byte                 `protobuf:"bytes,4,opt,name=file_sha256,json=fileSha256,proto3" json:"file_sha256,omitempty"`
+	FileEncSha256 []byte                 `protobuf:"bytes,5,opt,name=file_enc_sha256,json=fileEncSha256,proto3" json:"file_enc_sha256,omitempty"`
+	ContentType   string                 `protobuf:"bytes,6,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Size          int64                  `protobuf:"varint,7,opt,name=size,proto3" json:"size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *E2EEMediaReference) Reset() {
+	*x = E2EEMediaReference{}
+	mi := &file_meta_v1_common_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *E2EEMediaReference) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*E2EEMediaReference) ProtoMessage() {}
+
+func (x *E2EEMediaReference) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_common_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use E2EEMediaReference.ProtoReflect.Descriptor instead.
+func (*E2EEMediaReference) Descriptor() ([]byte, []int) {
+	return file_meta_v1_common_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *E2EEMediaReference) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *E2EEMediaReference) GetDirectPath() string {
+	if x != nil {
+		return x.DirectPath
+	}
+	return ""
+}
+
+func (x *E2EEMediaReference) GetMediaKey() []byte {
+	if x != nil {
+		return x.MediaKey
+	}
+	return nil
+}
+
+func (x *E2EEMediaReference) GetFileSha256() []byte {
+	if x != nil {
+		return x.FileSha256
+	}
+	return nil
+}
+
+func (x *E2EEMediaReference) GetFileEncSha256() []byte {
+	if x != nil {
+		return x.FileEncSha256
+	}
+	return nil
+}
+
+func (x *E2EEMediaReference) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *E2EEMediaReference) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+type Attachment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Url           string                 `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
+	PreviewUrl    string                 `protobuf:"bytes,4,opt,name=preview_url,json=previewUrl,proto3" json:"preview_url,omitempty"`
+	FileName      string                 `protobuf:"bytes,5,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	ContentType   string                 `protobuf:"bytes,6,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Size          int64                  `protobuf:"varint,7,opt,name=size,proto3" json:"size,omitempty"`
+	Width         int32                  `protobuf:"varint,8,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32                  `protobuf:"varint,9,opt,name=height,proto3" json:"height,omitempty"`
+	Duration      int32                  `protobuf:"varint,10,opt,name=duration,proto3" json:"duration,omitempty"`
+	E2Ee          *E2EEMediaReference    `protobuf:"bytes,11,opt,name=e2ee,proto3" json:"e2ee,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Attachment) Reset() {
+	*x = Attachment{}
+	mi := &file_meta_v1_common_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Attachment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Attachment) ProtoMessage() {}
+
+func (x *Attachment) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_common_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Attachment.ProtoReflect.Descriptor instead.
+func (*Attachment) Descriptor() ([]byte, []int) {
+	return file_meta_v1_common_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *Attachment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Attachment) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *Attachment) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *Attachment) GetPreviewUrl() string {
+	if x != nil {
+		return x.PreviewUrl
+	}
+	return ""
+}
+
+func (x *Attachment) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+func (x *Attachment) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *Attachment) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *Attachment) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *Attachment) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *Attachment) GetDuration() int32 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+func (x *Attachment) GetE2Ee() *E2EEMediaReference {
+	if x != nil {
+		return x.E2Ee
+	}
+	return nil
+}
+
+type Message struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ThreadId      string                 `protobuf:"bytes,2,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	SenderId      string                 `protobuf:"bytes,3,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	Text          string                 `protobuf:"bytes,4,opt,name=text,proto3" json:"text,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	ReplyTo       *ReplyReference        `protobuf:"bytes,6,opt,name=reply_to,json=replyTo,proto3" json:"reply_to,omitempty"`
+	Mentions      []*Mention             `protobuf:"bytes,7,rep,name=mentions,proto3" json:"mentions,omitempty"`
+	Attachments   []*Attachment          `protobuf:"bytes,8,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	Encryption    EncryptionKind         `protobuf:"varint,9,opt,name=encryption,proto3,enum=meta.v1.EncryptionKind" json:"encryption,omitempty"`
+	Transport     TransportKind          `protobuf:"varint,10,opt,name=transport,proto3,enum=meta.v1.TransportKind" json:"transport,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Message) Reset() {
+	*x = Message{}
+	mi := &file_meta_v1_common_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Message) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Message) ProtoMessage() {}
+
+func (x *Message) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_common_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Message.ProtoReflect.Descriptor instead.
+func (*Message) Descriptor() ([]byte, []int) {
+	return file_meta_v1_common_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *Message) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Message) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+func (x *Message) GetSenderId() string {
+	if x != nil {
+		return x.SenderId
+	}
+	return ""
+}
+
+func (x *Message) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *Message) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *Message) GetReplyTo() *ReplyReference {
+	if x != nil {
+		return x.ReplyTo
+	}
+	return nil
+}
+
+func (x *Message) GetMentions() []*Mention {
+	if x != nil {
+		return x.Mentions
+	}
+	return nil
+}
+
+func (x *Message) GetAttachments() []*Attachment {
+	if x != nil {
+		return x.Attachments
+	}
+	return nil
+}
+
+func (x *Message) GetEncryption() EncryptionKind {
+	if x != nil {
+		return x.Encryption
+	}
+	return EncryptionKind_ENCRYPTION_KIND_UNSPECIFIED
+}
+
+func (x *Message) GetTransport() TransportKind {
+	if x != nil {
+		return x.Transport
+	}
+	return TransportKind_TRANSPORT_KIND_UNSPECIFIED
+}
+
 var File_meta_v1_common_proto protoreflect.FileDescriptor
 
 const file_meta_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x14meta/v1/common.proto\x12\ameta.v1\"=\n" +
+	"\x14meta/v1/common.proto\x12\ameta.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"=\n" +
 	"\x0fProtocolVersion\x12\x14\n" +
 	"\x05major\x18\x01 \x01(\rR\x05major\x12\x14\n" +
 	"\x05minor\x18\x02 \x01(\rR\x05minor\"\x80\x01\n" +
@@ -389,7 +932,54 @@ const file_meta_v1_common_proto_rawDesc = "" +
 	"\aAccount\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername*\xf1\x02\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"L\n" +
+	"\x0eReplyReference\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x1b\n" +
+	"\tsender_id\x18\x02 \x01(\tR\bsenderId\"R\n" +
+	"\aMention\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x05R\x06offset\x12\x16\n" +
+	"\x06length\x18\x03 \x01(\x05R\x06length\"\xe6\x01\n" +
+	"\x12E2EEMediaReference\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x1f\n" +
+	"\vdirect_path\x18\x02 \x01(\tR\n" +
+	"directPath\x12\x1b\n" +
+	"\tmedia_key\x18\x03 \x01(\fR\bmediaKey\x12\x1f\n" +
+	"\vfile_sha256\x18\x04 \x01(\fR\n" +
+	"fileSha256\x12&\n" +
+	"\x0ffile_enc_sha256\x18\x05 \x01(\fR\rfileEncSha256\x12!\n" +
+	"\fcontent_type\x18\x06 \x01(\tR\vcontentType\x12\x12\n" +
+	"\x04size\x18\a \x01(\x03R\x04size\"\xb2\x02\n" +
+	"\n" +
+	"Attachment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12\x10\n" +
+	"\x03url\x18\x03 \x01(\tR\x03url\x12\x1f\n" +
+	"\vpreview_url\x18\x04 \x01(\tR\n" +
+	"previewUrl\x12\x1b\n" +
+	"\tfile_name\x18\x05 \x01(\tR\bfileName\x12!\n" +
+	"\fcontent_type\x18\x06 \x01(\tR\vcontentType\x12\x12\n" +
+	"\x04size\x18\a \x01(\x03R\x04size\x12\x14\n" +
+	"\x05width\x18\b \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\t \x01(\x05R\x06height\x12\x1a\n" +
+	"\bduration\x18\n" +
+	" \x01(\x05R\bduration\x12/\n" +
+	"\x04e2ee\x18\v \x01(\v2\x1b.meta.v1.E2EEMediaReferenceR\x04e2ee\"\xa9\x03\n" +
+	"\aMessage\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tthread_id\x18\x02 \x01(\tR\bthreadId\x12\x1b\n" +
+	"\tsender_id\x18\x03 \x01(\tR\bsenderId\x12\x12\n" +
+	"\x04text\x18\x04 \x01(\tR\x04text\x128\n" +
+	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x122\n" +
+	"\breply_to\x18\x06 \x01(\v2\x17.meta.v1.ReplyReferenceR\areplyTo\x12,\n" +
+	"\bmentions\x18\a \x03(\v2\x10.meta.v1.MentionR\bmentions\x125\n" +
+	"\vattachments\x18\b \x03(\v2\x13.meta.v1.AttachmentR\vattachments\x127\n" +
+	"\n" +
+	"encryption\x18\t \x01(\x0e2\x17.meta.v1.EncryptionKindR\n" +
+	"encryption\x124\n" +
+	"\ttransport\x18\n" +
+	" \x01(\x0e2\x16.meta.v1.TransportKindR\ttransport*\xf1\x02\n" +
 	"\rErrorCategory\x12\x1e\n" +
 	"\x1aERROR_CATEGORY_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16ERROR_CATEGORY_UNKNOWN\x10\x01\x12\x17\n" +
@@ -403,7 +993,15 @@ const file_meta_v1_common_proto_rawDesc = "" +
 	"\x19ERROR_CATEGORY_PERMISSION\x10\t\x12\x1a\n" +
 	"\x16ERROR_CATEGORY_NETWORK\x10\n" +
 	"\x12\x1b\n" +
-	"\x17ERROR_CATEGORY_CANCELED\x10\vB+Z)go.mewis.me/meta.go/gen/go/meta/v1;metav1b\x06proto3"
+	"\x17ERROR_CATEGORY_CANCELED\x10\v*f\n" +
+	"\rTransportKind\x12\x1e\n" +
+	"\x1aTRANSPORT_KIND_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18TRANSPORT_KIND_MESSENGER\x10\x01\x12\x17\n" +
+	"\x13TRANSPORT_KIND_E2EE\x10\x02*e\n" +
+	"\x0eEncryptionKind\x12\x1f\n" +
+	"\x1bENCRYPTION_KIND_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14ENCRYPTION_KIND_NONE\x10\x01\x12\x18\n" +
+	"\x14ENCRYPTION_KIND_E2EE\x10\x02B+Z)go.mewis.me/meta.go/gen/go/meta/v1;metav1b\x06proto3"
 
 var (
 	file_meta_v1_common_proto_rawDescOnce sync.Once
@@ -417,24 +1015,39 @@ func file_meta_v1_common_proto_rawDescGZIP() []byte {
 	return file_meta_v1_common_proto_rawDescData
 }
 
-var file_meta_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_meta_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_meta_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_meta_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_meta_v1_common_proto_goTypes = []any{
-	(ErrorCategory)(0),      // 0: meta.v1.ErrorCategory
-	(*ProtocolVersion)(nil), // 1: meta.v1.ProtocolVersion
-	(*BuildInfo)(nil),       // 2: meta.v1.BuildInfo
-	(*ErrorDetail)(nil),     // 3: meta.v1.ErrorDetail
-	(*Account)(nil),         // 4: meta.v1.Account
-	nil,                     // 5: meta.v1.ErrorDetail.DetailsEntry
+	(ErrorCategory)(0),            // 0: meta.v1.ErrorCategory
+	(TransportKind)(0),            // 1: meta.v1.TransportKind
+	(EncryptionKind)(0),           // 2: meta.v1.EncryptionKind
+	(*ProtocolVersion)(nil),       // 3: meta.v1.ProtocolVersion
+	(*BuildInfo)(nil),             // 4: meta.v1.BuildInfo
+	(*ErrorDetail)(nil),           // 5: meta.v1.ErrorDetail
+	(*Account)(nil),               // 6: meta.v1.Account
+	(*ReplyReference)(nil),        // 7: meta.v1.ReplyReference
+	(*Mention)(nil),               // 8: meta.v1.Mention
+	(*E2EEMediaReference)(nil),    // 9: meta.v1.E2EEMediaReference
+	(*Attachment)(nil),            // 10: meta.v1.Attachment
+	(*Message)(nil),               // 11: meta.v1.Message
+	nil,                           // 12: meta.v1.ErrorDetail.DetailsEntry
+	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
 }
 var file_meta_v1_common_proto_depIdxs = []int32{
-	0, // 0: meta.v1.ErrorDetail.category:type_name -> meta.v1.ErrorCategory
-	5, // 1: meta.v1.ErrorDetail.details:type_name -> meta.v1.ErrorDetail.DetailsEntry
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0,  // 0: meta.v1.ErrorDetail.category:type_name -> meta.v1.ErrorCategory
+	12, // 1: meta.v1.ErrorDetail.details:type_name -> meta.v1.ErrorDetail.DetailsEntry
+	9,  // 2: meta.v1.Attachment.e2ee:type_name -> meta.v1.E2EEMediaReference
+	13, // 3: meta.v1.Message.timestamp:type_name -> google.protobuf.Timestamp
+	7,  // 4: meta.v1.Message.reply_to:type_name -> meta.v1.ReplyReference
+	8,  // 5: meta.v1.Message.mentions:type_name -> meta.v1.Mention
+	10, // 6: meta.v1.Message.attachments:type_name -> meta.v1.Attachment
+	2,  // 7: meta.v1.Message.encryption:type_name -> meta.v1.EncryptionKind
+	1,  // 8: meta.v1.Message.transport:type_name -> meta.v1.TransportKind
+	9,  // [9:9] is the sub-list for method output_type
+	9,  // [9:9] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_meta_v1_common_proto_init() }
@@ -447,8 +1060,8 @@ func file_meta_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meta_v1_common_proto_rawDesc), len(file_meta_v1_common_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   5,
+			NumEnums:      3,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

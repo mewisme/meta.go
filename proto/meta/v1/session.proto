@@ -4,6 +4,7 @@ package meta.v1;
 
 import "google/protobuf/duration.proto";
 import "meta/v1/common.proto";
+import "meta/v1/events.proto";
 import "meta/v1/health.proto";
 
 option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
@@ -13,6 +14,7 @@ service SessionService {
   rpc Connect(ConnectRequest) returns (ConnectResponse);
   rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse);
   rpc GetHealth(GetHealthRequest) returns (GetHealthResponse);
+  rpc SubscribeEvents(SubscribeEventsRequest) returns (stream SubscribeEventsResponse);
 }
 
 message CreateSessionRequest {
@@ -46,4 +48,13 @@ message GetHealthRequest {
 
 message GetHealthResponse {
   HealthSnapshot health = 1;
+}
+
+message SubscribeEventsRequest {
+  string session_id = 1;
+  uint32 buffer = 2;
+}
+
+message SubscribeEventsResponse {
+  Event event = 1;
 }

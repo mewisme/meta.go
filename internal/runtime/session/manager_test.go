@@ -12,10 +12,12 @@ import (
 )
 
 type fakeClient struct {
-	account  model.User
-	health   model.HealthSnapshot
-	connects int
-	closes   int
+	account      model.User
+	health       model.HealthSnapshot
+	connects     int
+	closes       int
+	unsubscribes int
+	handler      func(model.Event)
 }
 
 func (f *fakeClient) Connect(context.Context) error {
@@ -33,7 +35,12 @@ func (f *fakeClient) Account() model.User                  { return f.account }
 func (f *fakeClient) MessengerService() *messenger.Service { return nil }
 func (f *fakeClient) ThreadService() *thread.Service       { return nil }
 func (f *fakeClient) FacebookService() *facebook.Service   { return nil }
-func (f *fakeClient) Subscribe(func(model.Event)) func()   { return func() {} }
+func (f *fakeClient) Subscribe(handler func(model.Event)) func() {
+	f.handler = handler
+	return func() { f.unsubscribes++ }
+}
+
+func (f *fakeClient) emit(event model.Event) { f.handler(event) }
 
 func TestManagerLifecycle(t *testing.T) {
 	fake := &fakeClient{account: model.User{ID: "42", Name: "Mew"}, health: model.HealthSnapshot{Regular: model.ConnectionConnected}}
@@ -66,11 +73,50 @@ func TestManagerLifecycle(t *testing.T) {
 	if fake.closes != 1 || manager.Len() != 0 {
 		t.Fatalf("unexpected close state: closes=%d len=%d", fake.closes, manager.Len())
 	}
+	if fake.unsubscribes != 1 {
+		t.Fatalf("unexpected engine unsubscribe count: %d", fake.unsubscribes)
+	}
 	if _, err := manager.Get(created.ID()); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected not found, got %v", err)
 	}
 	if err := manager.Close(created.ID()); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected second close to be not found, got %v", err)
+	}
+}
+
+func TestSessionEventFanoutAndDrops(t *testing.T) {
+	fake := &fakeClient{}
+	manager := NewManager(func(Config) (Client, error) { return fake, nil })
+	sess, err := manager.Create(Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := sess.Subscribe(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer first.Close()
+	second, err := sess.Subscribe(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	fake.emit(model.Event{Kind: model.EventReady, IsNewSession: true})
+	fake.emit(model.Event{Kind: model.EventReconnected})
+	firstOne := <-first.Events
+	firstTwo := <-first.Events
+	if firstOne.Sequence != 1 || firstTwo.Sequence != 2 || firstOne.SessionID != sess.ID() || firstOne.Payload.Kind != model.EventReady || firstTwo.Payload.Kind != model.EventReconnected {
+		t.Fatalf("unexpected ordered events: %#v %#v", firstOne, firstTwo)
+	}
+	secondEvent := <-second.Events
+	if secondEvent.Sequence != 2 || second.Dropped() != 1 || sess.SubscriberDropped() != 1 {
+		t.Fatalf("unexpected slow subscriber state: event=%#v dropped=%d total=%d", secondEvent, second.Dropped(), sess.SubscriberDropped())
+	}
+	if err := manager.Close(sess.ID()); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := <-first.Events; ok {
+		t.Fatal("expected first subscriber channel to close")
 	}
 }
 

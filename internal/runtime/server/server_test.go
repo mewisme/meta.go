@@ -27,6 +27,7 @@ type runtimeFakeClient struct {
 	health   model.HealthSnapshot
 	connects int
 	closes   int
+	handler  func(model.Event)
 }
 
 func (f *runtimeFakeClient) Connect(context.Context) error {
@@ -44,7 +45,16 @@ func (f *runtimeFakeClient) Account() model.User                  { return f.acc
 func (f *runtimeFakeClient) MessengerService() *messenger.Service { return nil }
 func (f *runtimeFakeClient) ThreadService() *thread.Service       { return nil }
 func (f *runtimeFakeClient) FacebookService() *facebook.Service   { return nil }
-func (f *runtimeFakeClient) Subscribe(func(model.Event)) func()   { return func() {} }
+func (f *runtimeFakeClient) Subscribe(handler func(model.Event)) func() {
+	f.handler = handler
+	return func() { f.handler = nil }
+}
+
+func (f *runtimeFakeClient) emit(event model.Event) {
+	if f.handler != nil {
+		f.handler(event)
+	}
+}
 
 func TestRuntimeSessionLifecycle(t *testing.T) {
 	listener, err := Listen("127.0.0.1:0")
@@ -102,6 +112,34 @@ func TestRuntimeSessionLifecycle(t *testing.T) {
 	}
 	if connected.Account.GetId() != "42" || connected.Account.GetUsername() != "mew" || fake.connects != 1 {
 		t.Fatalf("unexpected connect response: %#v connects=%d", connected, fake.connects)
+	}
+	stream, err := sessions.SubscribeEvents(ctx, &metav1.SubscribeEventsRequest{SessionId: created.SessionId, Buffer: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sess, err := manager.Get(created.SessionId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for sess.SubscriberCount() != 1 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if sess.SubscriberCount() != 1 {
+		t.Fatal("event stream did not register subscriber")
+	}
+	fake.emit(model.Event{Kind: model.EventReady, IsNewSession: true})
+	fake.emit(model.Event{Kind: model.EventReaction, Reaction: &model.ReactionEvent{MessageID: "m1", ThreadID: "t1", ActorID: "42", Reaction: "+1"}})
+	firstEvent, err := stream.Recv()
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondEvent, err := stream.Recv()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstEvent.Event.GetSequence() != 1 || !firstEvent.Event.GetReady().GetIsNewSession() || secondEvent.Event.GetSequence() != 2 || secondEvent.Event.GetReaction().GetMessageId() != "m1" {
+		t.Fatalf("unexpected streamed events: %#v %#v", firstEvent, secondEvent)
 	}
 	health, err := sessions.GetHealth(ctx, &metav1.GetHealthRequest{SessionId: created.SessionId})
 	if err != nil {

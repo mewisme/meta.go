@@ -20,10 +20,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SessionService_CreateSession_FullMethodName = "/meta.v1.SessionService/CreateSession"
-	SessionService_Connect_FullMethodName       = "/meta.v1.SessionService/Connect"
-	SessionService_CloseSession_FullMethodName  = "/meta.v1.SessionService/CloseSession"
-	SessionService_GetHealth_FullMethodName     = "/meta.v1.SessionService/GetHealth"
+	SessionService_CreateSession_FullMethodName   = "/meta.v1.SessionService/CreateSession"
+	SessionService_Connect_FullMethodName         = "/meta.v1.SessionService/Connect"
+	SessionService_CloseSession_FullMethodName    = "/meta.v1.SessionService/CloseSession"
+	SessionService_GetHealth_FullMethodName       = "/meta.v1.SessionService/GetHealth"
+	SessionService_SubscribeEvents_FullMethodName = "/meta.v1.SessionService/SubscribeEvents"
 )
 
 // SessionServiceClient is the client API for SessionService service.
@@ -34,6 +35,7 @@ type SessionServiceClient interface {
 	Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (*ConnectResponse, error)
 	CloseSession(ctx context.Context, in *CloseSessionRequest, opts ...grpc.CallOption) (*CloseSessionResponse, error)
 	GetHealth(ctx context.Context, in *GetHealthRequest, opts ...grpc.CallOption) (*GetHealthResponse, error)
+	SubscribeEvents(ctx context.Context, in *SubscribeEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeEventsResponse], error)
 }
 
 type sessionServiceClient struct {
@@ -84,6 +86,25 @@ func (c *sessionServiceClient) GetHealth(ctx context.Context, in *GetHealthReque
 	return out, nil
 }
 
+func (c *sessionServiceClient) SubscribeEvents(ctx context.Context, in *SubscribeEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeEventsResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &SessionService_ServiceDesc.Streams[0], SessionService_SubscribeEvents_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeEventsRequest, SubscribeEventsResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type SessionService_SubscribeEventsClient = grpc.ServerStreamingClient[SubscribeEventsResponse]
+
 // SessionServiceServer is the server API for SessionService service.
 // All implementations must embed UnimplementedSessionServiceServer
 // for forward compatibility.
@@ -92,6 +113,7 @@ type SessionServiceServer interface {
 	Connect(context.Context, *ConnectRequest) (*ConnectResponse, error)
 	CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error)
 	GetHealth(context.Context, *GetHealthRequest) (*GetHealthResponse, error)
+	SubscribeEvents(*SubscribeEventsRequest, grpc.ServerStreamingServer[SubscribeEventsResponse]) error
 	mustEmbedUnimplementedSessionServiceServer()
 }
 
@@ -113,6 +135,9 @@ func (UnimplementedSessionServiceServer) CloseSession(context.Context, *CloseSes
 }
 func (UnimplementedSessionServiceServer) GetHealth(context.Context, *GetHealthRequest) (*GetHealthResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetHealth not implemented")
+}
+func (UnimplementedSessionServiceServer) SubscribeEvents(*SubscribeEventsRequest, grpc.ServerStreamingServer[SubscribeEventsResponse]) error {
+	return status.Error(codes.Unimplemented, "method SubscribeEvents not implemented")
 }
 func (UnimplementedSessionServiceServer) mustEmbedUnimplementedSessionServiceServer() {}
 func (UnimplementedSessionServiceServer) testEmbeddedByValue()                        {}
@@ -207,6 +232,17 @@ func _SessionService_GetHealth_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SessionService_SubscribeEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeEventsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SessionServiceServer).SubscribeEvents(m, &grpc.GenericServerStream[SubscribeEventsRequest, SubscribeEventsResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type SessionService_SubscribeEventsServer = grpc.ServerStreamingServer[SubscribeEventsResponse]
+
 // SessionService_ServiceDesc is the grpc.ServiceDesc for SessionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -231,6 +267,12 @@ var SessionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SessionService_GetHealth_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeEvents",
+			Handler:       _SessionService_SubscribeEvents_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "meta/v1/session.proto",
 }

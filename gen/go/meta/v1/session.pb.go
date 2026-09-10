@@ -391,11 +391,107 @@ func (x *GetHealthResponse) GetHealth() *HealthSnapshot {
 	return nil
 }
 
+type SubscribeEventsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Buffer        uint32                 `protobuf:"varint,2,opt,name=buffer,proto3" json:"buffer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubscribeEventsRequest) Reset() {
+	*x = SubscribeEventsRequest{}
+	mi := &file_meta_v1_session_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeEventsRequest) ProtoMessage() {}
+
+func (x *SubscribeEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeEventsRequest.ProtoReflect.Descriptor instead.
+func (*SubscribeEventsRequest) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SubscribeEventsRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SubscribeEventsRequest) GetBuffer() uint32 {
+	if x != nil {
+		return x.Buffer
+	}
+	return 0
+}
+
+type SubscribeEventsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Event         *Event                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubscribeEventsResponse) Reset() {
+	*x = SubscribeEventsResponse{}
+	mi := &file_meta_v1_session_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeEventsResponse) ProtoMessage() {}
+
+func (x *SubscribeEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeEventsResponse.ProtoReflect.Descriptor instead.
+func (*SubscribeEventsResponse) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SubscribeEventsResponse) GetEvent() *Event {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
 var File_meta_v1_session_proto protoreflect.FileDescriptor
 
 const file_meta_v1_session_proto_rawDesc = "" +
 	"\n" +
-	"\x15meta/v1/session.proto\x12\ameta.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x14meta/v1/common.proto\x1a\x14meta/v1/health.proto\"\x84\x02\n" +
+	"\x15meta/v1/session.proto\x12\ameta.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x14meta/v1/common.proto\x1a\x14meta/v1/events.proto\x1a\x14meta/v1/health.proto\"\x84\x02\n" +
 	"\x14CreateSessionRequest\x12D\n" +
 	"\acookies\x18\x01 \x03(\v2*.meta.v1.CreateSessionRequest.CookiesEntryR\acookies\x12\x12\n" +
 	"\x04e2ee\x18\x02 \x01(\bR\x04e2ee\x12!\n" +
@@ -420,12 +516,19 @@ const file_meta_v1_session_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\"D\n" +
 	"\x11GetHealthResponse\x12/\n" +
-	"\x06health\x18\x01 \x01(\v2\x17.meta.v1.HealthSnapshotR\x06health2\xaf\x02\n" +
+	"\x06health\x18\x01 \x01(\v2\x17.meta.v1.HealthSnapshotR\x06health\"O\n" +
+	"\x16SubscribeEventsRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +
+	"\x06buffer\x18\x02 \x01(\rR\x06buffer\"?\n" +
+	"\x17SubscribeEventsResponse\x12$\n" +
+	"\x05event\x18\x01 \x01(\v2\x0e.meta.v1.EventR\x05event2\x87\x03\n" +
 	"\x0eSessionService\x12N\n" +
 	"\rCreateSession\x12\x1d.meta.v1.CreateSessionRequest\x1a\x1e.meta.v1.CreateSessionResponse\x12<\n" +
 	"\aConnect\x12\x17.meta.v1.ConnectRequest\x1a\x18.meta.v1.ConnectResponse\x12K\n" +
 	"\fCloseSession\x12\x1c.meta.v1.CloseSessionRequest\x1a\x1d.meta.v1.CloseSessionResponse\x12B\n" +
-	"\tGetHealth\x12\x19.meta.v1.GetHealthRequest\x1a\x1a.meta.v1.GetHealthResponseB+Z)go.mewis.me/meta.go/gen/go/meta/v1;metav1b\x06proto3"
+	"\tGetHealth\x12\x19.meta.v1.GetHealthRequest\x1a\x1a.meta.v1.GetHealthResponse\x12V\n" +
+	"\x0fSubscribeEvents\x12\x1f.meta.v1.SubscribeEventsRequest\x1a .meta.v1.SubscribeEventsResponse0\x01B+Z)go.mewis.me/meta.go/gen/go/meta/v1;metav1b\x06proto3"
 
 var (
 	file_meta_v1_session_proto_rawDescOnce sync.Once
@@ -439,39 +542,45 @@ func file_meta_v1_session_proto_rawDescGZIP() []byte {
 	return file_meta_v1_session_proto_rawDescData
 }
 
-var file_meta_v1_session_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_meta_v1_session_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_meta_v1_session_proto_goTypes = []any{
-	(*CreateSessionRequest)(nil),  // 0: meta.v1.CreateSessionRequest
-	(*CreateSessionResponse)(nil), // 1: meta.v1.CreateSessionResponse
-	(*ConnectRequest)(nil),        // 2: meta.v1.ConnectRequest
-	(*ConnectResponse)(nil),       // 3: meta.v1.ConnectResponse
-	(*CloseSessionRequest)(nil),   // 4: meta.v1.CloseSessionRequest
-	(*CloseSessionResponse)(nil),  // 5: meta.v1.CloseSessionResponse
-	(*GetHealthRequest)(nil),      // 6: meta.v1.GetHealthRequest
-	(*GetHealthResponse)(nil),     // 7: meta.v1.GetHealthResponse
-	nil,                           // 8: meta.v1.CreateSessionRequest.CookiesEntry
-	(*durationpb.Duration)(nil),   // 9: google.protobuf.Duration
-	(*Account)(nil),               // 10: meta.v1.Account
-	(*HealthSnapshot)(nil),        // 11: meta.v1.HealthSnapshot
+	(*CreateSessionRequest)(nil),    // 0: meta.v1.CreateSessionRequest
+	(*CreateSessionResponse)(nil),   // 1: meta.v1.CreateSessionResponse
+	(*ConnectRequest)(nil),          // 2: meta.v1.ConnectRequest
+	(*ConnectResponse)(nil),         // 3: meta.v1.ConnectResponse
+	(*CloseSessionRequest)(nil),     // 4: meta.v1.CloseSessionRequest
+	(*CloseSessionResponse)(nil),    // 5: meta.v1.CloseSessionResponse
+	(*GetHealthRequest)(nil),        // 6: meta.v1.GetHealthRequest
+	(*GetHealthResponse)(nil),       // 7: meta.v1.GetHealthResponse
+	(*SubscribeEventsRequest)(nil),  // 8: meta.v1.SubscribeEventsRequest
+	(*SubscribeEventsResponse)(nil), // 9: meta.v1.SubscribeEventsResponse
+	nil,                             // 10: meta.v1.CreateSessionRequest.CookiesEntry
+	(*durationpb.Duration)(nil),     // 11: google.protobuf.Duration
+	(*Account)(nil),                 // 12: meta.v1.Account
+	(*HealthSnapshot)(nil),          // 13: meta.v1.HealthSnapshot
+	(*Event)(nil),                   // 14: meta.v1.Event
 }
 var file_meta_v1_session_proto_depIdxs = []int32{
-	8,  // 0: meta.v1.CreateSessionRequest.cookies:type_name -> meta.v1.CreateSessionRequest.CookiesEntry
-	9,  // 1: meta.v1.CreateSessionRequest.timeout:type_name -> google.protobuf.Duration
-	10, // 2: meta.v1.ConnectResponse.account:type_name -> meta.v1.Account
-	11, // 3: meta.v1.GetHealthResponse.health:type_name -> meta.v1.HealthSnapshot
-	0,  // 4: meta.v1.SessionService.CreateSession:input_type -> meta.v1.CreateSessionRequest
-	2,  // 5: meta.v1.SessionService.Connect:input_type -> meta.v1.ConnectRequest
-	4,  // 6: meta.v1.SessionService.CloseSession:input_type -> meta.v1.CloseSessionRequest
-	6,  // 7: meta.v1.SessionService.GetHealth:input_type -> meta.v1.GetHealthRequest
-	1,  // 8: meta.v1.SessionService.CreateSession:output_type -> meta.v1.CreateSessionResponse
-	3,  // 9: meta.v1.SessionService.Connect:output_type -> meta.v1.ConnectResponse
-	5,  // 10: meta.v1.SessionService.CloseSession:output_type -> meta.v1.CloseSessionResponse
-	7,  // 11: meta.v1.SessionService.GetHealth:output_type -> meta.v1.GetHealthResponse
-	8,  // [8:12] is the sub-list for method output_type
-	4,  // [4:8] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	10, // 0: meta.v1.CreateSessionRequest.cookies:type_name -> meta.v1.CreateSessionRequest.CookiesEntry
+	11, // 1: meta.v1.CreateSessionRequest.timeout:type_name -> google.protobuf.Duration
+	12, // 2: meta.v1.ConnectResponse.account:type_name -> meta.v1.Account
+	13, // 3: meta.v1.GetHealthResponse.health:type_name -> meta.v1.HealthSnapshot
+	14, // 4: meta.v1.SubscribeEventsResponse.event:type_name -> meta.v1.Event
+	0,  // 5: meta.v1.SessionService.CreateSession:input_type -> meta.v1.CreateSessionRequest
+	2,  // 6: meta.v1.SessionService.Connect:input_type -> meta.v1.ConnectRequest
+	4,  // 7: meta.v1.SessionService.CloseSession:input_type -> meta.v1.CloseSessionRequest
+	6,  // 8: meta.v1.SessionService.GetHealth:input_type -> meta.v1.GetHealthRequest
+	8,  // 9: meta.v1.SessionService.SubscribeEvents:input_type -> meta.v1.SubscribeEventsRequest
+	1,  // 10: meta.v1.SessionService.CreateSession:output_type -> meta.v1.CreateSessionResponse
+	3,  // 11: meta.v1.SessionService.Connect:output_type -> meta.v1.ConnectResponse
+	5,  // 12: meta.v1.SessionService.CloseSession:output_type -> meta.v1.CloseSessionResponse
+	7,  // 13: meta.v1.SessionService.GetHealth:output_type -> meta.v1.GetHealthResponse
+	9,  // 14: meta.v1.SessionService.SubscribeEvents:output_type -> meta.v1.SubscribeEventsResponse
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_meta_v1_session_proto_init() }
@@ -480,6 +589,7 @@ func file_meta_v1_session_proto_init() {
 		return
 	}
 	file_meta_v1_common_proto_init()
+	file_meta_v1_events_proto_init()
 	file_meta_v1_health_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -487,7 +597,7 @@ func file_meta_v1_session_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meta_v1_session_proto_rawDesc), len(file_meta_v1_session_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

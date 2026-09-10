@@ -71,9 +71,15 @@ func (c *managedClient) Subscribe(handler func(model.Event)) func() {
 }
 
 type Session struct {
-	id     string
-	client Client
-	closed atomic.Bool
+	id                string
+	client            Client
+	closed            atomic.Bool
+	eventMu           sync.Mutex
+	subscribers       map[uint64]*subscriber
+	nextSubscriberID  uint64
+	sequence          uint64
+	subscriberDropped atomic.Uint64
+	unsubscribe       func()
 }
 
 func (s *Session) ID() string { return s.id }
@@ -101,6 +107,10 @@ func (s *Session) Close() error {
 	if s == nil || !s.closed.CompareAndSwap(false, true) {
 		return nil
 	}
+	if s.unsubscribe != nil {
+		s.unsubscribe()
+	}
+	s.closeSubscribers()
 	return s.client.Close()
 }
 
@@ -122,7 +132,11 @@ func (m *Manager) Create(config Config) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Session{id: uuid.NewString(), client: client}
+	s := &Session{id: uuid.NewString(), client: client, subscribers: make(map[uint64]*subscriber)}
+	s.unsubscribe = client.Subscribe(s.publish)
+	if s.unsubscribe == nil {
+		s.unsubscribe = func() {}
+	}
 	m.mu.Lock()
 	m.sessions[s.id] = s
 	m.mu.Unlock()
