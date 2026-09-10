@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
-from meewmeew_meta import EventBufferOverflowError, EventStream
 from meta.v1 import events_pb2, session_pb2
+from mewisme_meta import EventBufferOverflowError, EventStream
 
 
 def ready(sequence: int = 1) -> events_pb2.Event:

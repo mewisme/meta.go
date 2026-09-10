@@ -1,14 +1,22 @@
 import {Metadata, createChannel, createClientFactory, type Channel} from "nice-grpc"
-import {errorMiddleware, ProtocolMismatchError, UnsupportedCapabilityError} from "./errors.js"
+import {errorMiddleware, MetaError, ProtocolMismatchError, UnsupportedCapabilityError} from "./errors.js"
 import {EventStream} from "./events.js"
 import {E2EEServiceDefinition, type E2EEServiceClient} from "./gen/meta/v1/e2ee.js"
 import {FacebookServiceDefinition, type FacebookServiceClient} from "./gen/meta/v1/facebook.js"
 import {MessengerServiceDefinition, type MessengerServiceClient} from "./gen/meta/v1/messenger.js"
 import {RuntimeServiceDefinition, type GetInfoResponse, type RuntimeServiceClient} from "./gen/meta/v1/runtime.js"
-import {SessionServiceDefinition, type ConnectResponse, type CreateSessionResponse, type GetHealthResponse, type SessionServiceClient} from "./gen/meta/v1/session.js"
+import {SessionServiceDefinition, type AuthSnapshot as ProtoAuthSnapshot, type ConnectResponse, type CreateSessionResponse, type GetHealthResponse, type SessionAuth as ProtoSessionAuth, type SessionServiceClient} from "./gen/meta/v1/session.js"
 import {ManagedRuntime, PROTOCOL_MAJOR, type ManagedRuntimeOptions} from "./runtime.js"
 
 export type RuntimeOptions = {mode: "external"; endpoint: string; token: string} | ({mode: "managed"} & ManagedRuntimeOptions)
+export type Credentials = {identifier: string; password: string} & ({totp: string; otp?: never} | {otp: string; totp?: never})
+export interface AppStateCookie { key: string; value: string; domain?: string; path?: string; hostOnly?: boolean; secure?: boolean; httpOnly?: boolean }
+export type SessionAuth =
+  | {cookies: Record<string, string>; appState?: never; credentials?: never}
+  | {appState: AppStateCookie[]; cookies?: never; credentials?: never}
+  | {credentials: Credentials; cookies?: never; appState?: never}
+export interface FacebookSession { accountId: string; name: string; username: string; dtsg: string; jazoest: string; lsd: string; sessionId: string; clientRevision: bigint; refreshedAt?: Date }
+export interface AuthSnapshot { cookies: Record<string, string>; appState: AppStateCookie[]; session?: FacebookSession }
 export interface CreateSessionOptions { e2ee?: boolean; eventBuffer?: number; timeoutMs?: number }
 export interface EventOptions { buffer?: number; iteratorBuffer?: number }
 
@@ -64,8 +72,27 @@ export class MetaClient {
     if (!this.hasCapability(capability)) throw new UnsupportedCapabilityError(capability)
   }
 
-  createSession(cookies: Record<string, string>, options: CreateSessionOptions = {}): Promise<CreateSessionResponse> {
-    return this.sessions.createSession({cookies, e2ee: options.e2ee ?? false, eventBuffer: options.eventBuffer ?? 0, timeout: options.timeoutMs === undefined ? undefined : durationFromMilliseconds(options.timeoutMs)})
+  createSession(auth: SessionAuth, options: CreateSessionOptions = {}): Promise<CreateSessionResponse> {
+    this.requireAuthCapability(auth)
+    return this.sessions.createSession({auth: sessionAuthToProto(auth), e2ee: options.e2ee ?? false, eventBuffer: options.eventBuffer ?? 0, timeout: options.timeoutMs === undefined ? undefined : durationFromMilliseconds(options.timeoutMs), cookies: {}})
+  }
+
+  async refreshAuth(sessionId: string, auth?: SessionAuth): Promise<AuthSnapshot> {
+    this.requireCapability("session.auth.refresh")
+    if (auth) this.requireAuthCapability(auth)
+    const response = await this.sessions.refreshAuth({sessionId, auth: auth ? sessionAuthToProto(auth) : undefined})
+    return authSnapshotFromProto(response.snapshot)
+  }
+
+  async authSnapshot(sessionId: string): Promise<AuthSnapshot> {
+    this.requireCapability("session.auth.refresh")
+    const response = await this.sessions.getAuthSnapshot({sessionId})
+    return authSnapshotFromProto(response.snapshot)
+  }
+
+  private requireAuthCapability(auth: SessionAuth): void {
+    if (auth.appState !== undefined) this.requireCapability("session.auth.app_state")
+    if (auth.credentials !== undefined) this.requireCapability("session.auth.credentials")
   }
 
   connectSession(sessionId: string): Promise<ConnectResponse> { return this.sessions.connect({sessionId}) }
@@ -87,6 +114,36 @@ export class MetaClient {
     this.eventStreams.clear()
     this.channel.close()
     await this.managed?.stop()
+  }
+}
+
+function sessionAuthToProto(auth: SessionAuth): ProtoSessionAuth {
+  if (auth.cookies !== undefined) return {source: {$case: "cookies", value: {values: {...auth.cookies}}}}
+  if (auth.appState !== undefined) {
+    if (auth.appState.length === 0) throw new TypeError("appState must contain at least one cookie")
+    const cookies = auth.appState.map(cookie => {
+      if (cookie.key.trim() === "" || cookie.value === "") throw new TypeError("appState cookies require key and value")
+      return {key: cookie.key, value: cookie.value, domain: cookie.domain ?? "", path: cookie.path ?? "", hostOnly: cookie.hostOnly ?? false, secure: cookie.secure ?? false, httpOnly: cookie.httpOnly ?? false}
+    })
+    return {source: {$case: "appState", value: {cookies}}}
+  }
+  const credentials = auth.credentials
+  if (!credentials) throw new TypeError("exactly one authentication source is required")
+  if (credentials.identifier.trim() === "") throw new TypeError("credentials.identifier is required")
+  if (credentials.password === "") throw new TypeError("credentials.password is required")
+  const hasTotp = typeof credentials.totp === "string" && credentials.totp.trim() !== ""
+  const hasOtp = typeof credentials.otp === "string" && credentials.otp.trim() !== ""
+  if (hasTotp === hasOtp) throw new TypeError("credentials require exactly one of totp or otp")
+  return {source: {$case: "credentials", value: {identifier: credentials.identifier, password: credentials.password, secondFactor: hasTotp ? {$case: "totp", value: credentials.totp!} : {$case: "otp", value: credentials.otp!}}}}
+}
+
+function authSnapshotFromProto(snapshot: ProtoAuthSnapshot | undefined): AuthSnapshot {
+  if (!snapshot) throw new MetaError("runtime returned no authentication snapshot")
+  const session = snapshot.session
+  return {
+    cookies: {...(snapshot.cookies?.values ?? {})},
+    appState: (snapshot.appState?.cookies ?? []).map(cookie => ({key: cookie.key, value: cookie.value, domain: cookie.domain || undefined, path: cookie.path || undefined, hostOnly: cookie.hostOnly, secure: cookie.secure, httpOnly: cookie.httpOnly})),
+    session: session ? {accountId: session.accountId, name: session.name, username: session.username, dtsg: session.dtsg, jazoest: session.jazoest, lsd: session.lsd, sessionId: session.sessionId, clientRevision: session.clientRevision, refreshedAt: session.refreshedAt} : undefined,
   }
 }
 

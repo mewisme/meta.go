@@ -237,7 +237,7 @@ wheels = [
 ]
 
 [[package]]
-name = "meewmeew-meta"
+name = "mewisme-meta"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [

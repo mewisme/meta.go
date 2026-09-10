@@ -17,7 +17,8 @@ from meta.v1 import (
     session_pb2_grpc,
 )
 
-from .errors import ProtocolMismatchError, UnsupportedCapabilityError, map_rpc_error
+from .auth import AuthSnapshot, SessionAuth, _auth_capability, _auth_snapshot_from_proto, _session_auth_to_proto
+from .errors import MetaError, ProtocolMismatchError, UnsupportedCapabilityError, map_rpc_error
 from .events import EventStream
 from .runtime import PROTOCOL_MAJOR, ManagedRuntime, ManagedRuntimeOptions
 
@@ -158,7 +159,7 @@ class MetaClient:
 
     async def create_session(
         self,
-        cookies: dict[str, str],
+        auth: SessionAuth,
         *,
         e2ee: bool = False,
         event_buffer: int = 0,
@@ -170,12 +171,45 @@ class MetaClient:
                 raise ValueError("timeout_ms must be positive")
             timeout = duration_pb2.Duration()
             timeout.FromMilliseconds(timeout_ms)
+        capability = _auth_capability(auth)
+        if capability is not None:
+            self.require_capability(capability)
         return cast(
             session_pb2.CreateSessionResponse,
             await self.sessions.CreateSession(
-                session_pb2.CreateSessionRequest(cookies=cookies, e2ee=e2ee, event_buffer=event_buffer, timeout=timeout)
+                session_pb2.CreateSessionRequest(
+                    auth=_session_auth_to_proto(auth), e2ee=e2ee, event_buffer=event_buffer, timeout=timeout
+                )
             ),
         )
+
+    async def refresh_auth(self, session_id: str, auth: SessionAuth | None = None) -> AuthSnapshot:
+        self.require_capability("session.auth.refresh")
+        if auth is not None:
+            capability = _auth_capability(auth)
+            if capability is not None:
+                self.require_capability(capability)
+        response = cast(
+            session_pb2.RefreshAuthResponse,
+            await self.sessions.RefreshAuth(
+                session_pb2.RefreshAuthRequest(
+                    session_id=session_id, auth=_session_auth_to_proto(auth) if auth is not None else None
+                )
+            ),
+        )
+        if not response.HasField("snapshot"):
+            raise MetaError("runtime returned no authentication snapshot")
+        return _auth_snapshot_from_proto(response.snapshot)
+
+    async def auth_snapshot(self, session_id: str) -> AuthSnapshot:
+        self.require_capability("session.auth.refresh")
+        response = cast(
+            session_pb2.GetAuthSnapshotResponse,
+            await self.sessions.GetAuthSnapshot(session_pb2.GetAuthSnapshotRequest(session_id=session_id)),
+        )
+        if not response.HasField("snapshot"):
+            raise MetaError("runtime returned no authentication snapshot")
+        return _auth_snapshot_from_proto(response.snapshot)
 
     async def connect_session(self, session_id: str) -> session_pb2.ConnectResponse:
         return cast(

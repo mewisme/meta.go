@@ -95,7 +95,7 @@ def _runtime_target() -> RuntimeTarget:
 
 def _package_version() -> str:
     try:
-        return package_version("meewmeew-meta")
+        return package_version("mewisme-meta")
     except PackageNotFoundError:
         return "0.0.0"
 

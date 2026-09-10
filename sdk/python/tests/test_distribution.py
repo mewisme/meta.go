@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from meewmeew_meta import RuntimeDistributionOptions, RuntimeLaunchError, resolve_runtime_path
-from meewmeew_meta.distribution import _runtime_target
+from mewisme_meta import RuntimeDistributionOptions, RuntimeLaunchError, resolve_runtime_path
+from mewisme_meta.distribution import _runtime_target
 
 
 def test_resolve_runtime_path_downloads_verifies_and_reuses_cache(tmp_path: Path) -> None:

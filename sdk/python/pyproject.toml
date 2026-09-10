@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
 
 [project]
-name = "meewmeew-meta"
+name = "mewisme-meta"
 version = "0.0.0"
 description = "Async Python SDK for the meta.go runtime"
 readme = "README.md"
@@ -29,7 +29,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/meewmeew_meta", "src/meta"]
+packages = ["src/mewisme_meta", "src/meta"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src", "README.md", "LICENSE", "pyproject.toml"]
@@ -48,5 +48,5 @@ select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
-packages = ["meewmeew_meta"]
+packages = ["mewisme_meta"]
 mypy_path = "src"
