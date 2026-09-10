@@ -1,0 +1,30 @@
+name: pypi-bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.10"
+      - name: Build bootstrap SDK
+        run: |
+          test "$(python3 -c 'import tomllib; print(tomllib.load(open("sdk/python/pyproject.toml", "rb"))["project"]["name"])')" = "mewisme-meta"
+          test "$(python3 -c 'import tomllib; print(tomllib.load(open("sdk/python/pyproject.toml", "rb"))["project"]["version"])')" = "0.0.0"
+          uv build --directory sdk/python --wheel --out-dir "$GITHUB_WORKSPACE/dist"
+          test "$(find dist -maxdepth 1 -type f -name 'mewisme_meta-0.0.0-*.whl' | wc -l)" -eq 1
+      - name: Publish bootstrap SDK
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
