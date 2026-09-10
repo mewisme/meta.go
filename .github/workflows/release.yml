@@ -286,7 +286,7 @@ jobs:
           pattern: node-runtime-*
           path: dist
           merge-multiple: true
-      - run: for package in dist/*.tgz; do npm publish "$package" --access public --provenance; done
+      - run: for package in ./dist/*.tgz; do npm publish "$package" --access public --provenance; done
 
   publish-python-runtime:
     needs: validate-python-runtime-artifacts
@@ -322,10 +322,10 @@ jobs:
         with:
           name: node-sdk
           path: dist
-      - run: npm publish "$(find dist -name '*.tgz' -print -quit)" --access public --provenance
+      - run: npm publish "./$(find dist -name '*.tgz' -print -quit)" --access public --provenance
 
   publish-python-sdk:
-    needs: [publish-python-runtime, package-python-sdk]
+    needs: [validate, package-python-sdk]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
