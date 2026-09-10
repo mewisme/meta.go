@@ -41,6 +41,7 @@ func (f *fakeBackend) SendText(_ context.Context, req SendTextRequest) (model.Se
 	}
 	return model.SendResult{MessageID: "mid.1", Timestamp: time.Unix(1, 0)}, nil
 }
+func (f *fakeBackend) ShareContact(context.Context, model.ID, model.ID, string) error { return nil }
 func (f *fakeBackend) Forward(context.Context, model.ID, model.ID) (model.SendResult, error) {
 	return model.SendResult{MessageID: "mid.forward"}, nil
 }
@@ -62,6 +63,8 @@ func (f *fakeBackend) SetTheme(context.Context, model.ID, model.ID) error       
 func (f *fakeBackend) CurrentNote(context.Context) (*Note, error)                    { return nil, nil }
 func (f *fakeBackend) CreateNote(context.Context, string, string) (*Note, error)     { return nil, nil }
 func (f *fakeBackend) DeleteNote(context.Context, model.ID) error                    { return nil }
+func (f *fakeBackend) SetRestricted(context.Context, model.ID, bool) error           { return nil }
+func (f *fakeBackend) SetMessageBlocked(context.Context, model.ID, bool) error       { return nil }
 func (f *fakeBackend) ListThreads(context.Context, int) (model.ThreadList, error) {
 	return model.ThreadList{Threads: []model.Thread{{ID: "10"}}, SyncSequenceID: 1}, nil
 }
@@ -260,6 +263,7 @@ func (b *blockingBackend) Disconnect()                                    {}
 func (b *blockingBackend) SendText(context.Context, SendTextRequest) (model.SendResult, error) {
 	return model.SendResult{}, nil
 }
+func (b *blockingBackend) ShareContact(context.Context, model.ID, model.ID, string) error { return nil }
 func (b *blockingBackend) Forward(context.Context, model.ID, model.ID) (model.SendResult, error) {
 	return model.SendResult{}, nil
 }
@@ -279,6 +283,8 @@ func (b *blockingBackend) SetTheme(context.Context, model.ID, model.ID) error   
 func (b *blockingBackend) CurrentNote(context.Context) (*Note, error)                { return nil, nil }
 func (b *blockingBackend) CreateNote(context.Context, string, string) (*Note, error) { return nil, nil }
 func (b *blockingBackend) DeleteNote(context.Context, model.ID) error                { return nil }
+func (b *blockingBackend) SetRestricted(context.Context, model.ID, bool) error       { return nil }
+func (b *blockingBackend) SetMessageBlocked(context.Context, model.ID, bool) error   { return nil }
 func (b *blockingBackend) ListThreads(context.Context, int) (model.ThreadList, error) {
 	return model.ThreadList{}, nil
 }

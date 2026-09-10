@@ -29,6 +29,20 @@ func TestMessengerGenderNormalization(t *testing.T) {
 	}
 }
 
+func TestMessengerBlockStatusNormalization(t *testing.T) {
+	tests := map[table.BlockedByViewerStatus]model.MessengerBlockStatus{
+		table.BlockedByViewerStatusUnblocked:      model.MessengerBlockUnblocked,
+		table.BlockedByViewerStatusMessageBlocked: model.MessengerBlockMessageBlocked,
+		table.BlockedByViewerStatusFullyBlocked:   model.MessengerBlockFullyBlocked,
+		table.BlockedByViewerStatus(99):           model.MessengerBlockUnknown,
+	}
+	for status, want := range tests {
+		if got := messengerBlockStatus(status); got != want {
+			t.Fatalf("status %d: got %q want %q", status, got, want)
+		}
+	}
+}
+
 func TestNormalizePollDetails(t *testing.T) {
 	details := normalizePollDetails(&messagix.PollDetails{ID: 2, ThreadKey: 1, Title: "Question", LastUpdateMessageID: "mid.1", LastUpdateMessageTimestampMS: 1700000000123, Options: []messagix.PollOption{{ID: 3, Text: "A", SortKeyCreationTimestamp: 1700000000000}}, Votes: []messagix.PollVote{{OptionID: 3, ContactID: 4, TimestampMS: 1700000000100, ThreadKey: 1, MessageID: "mid.2"}}})
 	if details == nil || details.ID != "2" || details.ThreadID != "1" || details.LastUpdateMessageID != "mid.1" || len(details.Options) != 1 || len(details.Votes) != 1 {

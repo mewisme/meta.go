@@ -50,6 +50,15 @@ func TestMessengerForwardCommandExists(t *testing.T) {
 	}
 }
 
+func TestMessengerRichContactCommandsExist(t *testing.T) {
+	root := New()
+	for _, path := range [][]string{{"messenger", "share-contact"}, {"messenger", "restrict"}, {"messenger", "message-block"}} {
+		if _, _, err := root.Find(path); err != nil {
+			t.Fatalf("missing command %v: %v", path, err)
+		}
+	}
+}
+
 func TestResolveE2EEMediaKind(t *testing.T) {
 	tests := []struct {
 		value string

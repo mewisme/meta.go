@@ -16,6 +16,7 @@ var ErrUnavailable = errors.New("messenger service unavailable")
 
 type Backend interface {
 	Send(context.Context, model.SendRequest) (model.SendResult, error)
+	ShareContact(context.Context, model.ID, model.ID, string) error
 	Forward(context.Context, model.ID, model.ID) (model.SendResult, error)
 	Upload(context.Context, model.UploadInput) (model.UploadResult, error)
 	React(context.Context, model.ID, model.ID, string) error
@@ -31,6 +32,8 @@ type Backend interface {
 	CreateNote(context.Context, string, string) (*model.Note, error)
 	DeleteNote(context.Context, model.ID) error
 	RecreateNote(context.Context, model.ID, string, string) (*model.Note, error)
+	SetRestricted(context.Context, model.ID, bool) error
+	SetMessageBlocked(context.Context, model.ID, bool) error
 	SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error)
 	SendE2EEMedia(context.Context, model.E2EEMediaInput) (model.SendResult, error)
 	DownloadE2EEMedia(context.Context, model.E2EEMediaDownload) ([]byte, error)
@@ -95,6 +98,16 @@ func (s *Service) Forward(ctx context.Context, threadID, messageID model.ID) (mo
 		return model.SendResult{}, invalid("thread ID and message ID are required")
 	}
 	return s.backend.Forward(ctx, threadID, messageID)
+}
+
+func (s *Service) ShareContact(ctx context.Context, threadID, contactID model.ID, text string) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() || contactID.Empty() {
+		return invalid("thread ID and contact ID are required")
+	}
+	return s.backend.ShareContact(ctx, threadID, contactID, text)
 }
 
 func (s *Service) Upload(ctx context.Context, input model.UploadInput) (model.UploadResult, error) {
@@ -239,6 +252,26 @@ func (s *Service) RecreateNote(ctx context.Context, oldNoteID model.ID, text, pr
 		return nil, invalid("old note ID and new note text are required")
 	}
 	return s.backend.RecreateNote(ctx, oldNoteID, text, privacy)
+}
+
+func (s *Service) SetRestricted(ctx context.Context, userID model.ID, restricted bool) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if userID.Empty() {
+		return invalid("user ID is required")
+	}
+	return s.backend.SetRestricted(ctx, userID, restricted)
+}
+
+func (s *Service) SetMessageBlocked(ctx context.Context, userID model.ID, blocked bool) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if userID.Empty() {
+		return invalid("user ID is required")
+	}
+	return s.backend.SetMessageBlocked(ctx, userID, blocked)
 }
 
 func (s *Service) SendE2EE(ctx context.Context, req model.E2EESendRequest) (model.SendResult, error) {

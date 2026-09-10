@@ -53,17 +53,28 @@ type HealthSnapshot struct {
 	LastErrorCategory  string          `json:"lastErrorCategory,omitempty"`
 }
 
+type MessengerBlockStatus string
+
+const (
+	MessengerBlockUnknown        MessengerBlockStatus = "unknown"
+	MessengerBlockUnblocked      MessengerBlockStatus = "unblocked"
+	MessengerBlockMessageBlocked MessengerBlockStatus = "messageBlocked"
+	MessengerBlockFullyBlocked   MessengerBlockStatus = "fullyBlocked"
+)
+
 type User struct {
-	ID               ID     `json:"id"`
-	Name             string `json:"name"`
-	FirstName        string `json:"firstName,omitempty"`
-	Username         string `json:"username,omitempty"`
-	ProfileURL       string `json:"profileUrl,omitempty"`
-	AvatarURL        string `json:"avatarUrl,omitempty"`
-	Gender           string `json:"gender,omitempty"`
-	IsMessengerUser  bool   `json:"isMessengerUser,omitempty"`
-	IsVerified       bool   `json:"isVerified,omitempty"`
-	CanViewerMessage bool   `json:"canViewerMessage,omitempty"`
+	ID                   ID                   `json:"id"`
+	Name                 string               `json:"name"`
+	FirstName            string               `json:"firstName,omitempty"`
+	Username             string               `json:"username,omitempty"`
+	ProfileURL           string               `json:"profileUrl,omitempty"`
+	AvatarURL            string               `json:"avatarUrl,omitempty"`
+	Gender               string               `json:"gender,omitempty"`
+	IsMessengerUser      bool                 `json:"isMessengerUser,omitempty"`
+	IsVerified           bool                 `json:"isVerified,omitempty"`
+	CanViewerMessage     bool                 `json:"canViewerMessage,omitempty"`
+	MessengerRestricted  bool                 `json:"messengerRestricted,omitempty"`
+	MessengerBlockStatus MessengerBlockStatus `json:"messengerBlockStatus,omitempty"`
 }
 
 type FacebookUser struct {

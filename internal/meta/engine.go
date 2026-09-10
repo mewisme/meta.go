@@ -74,6 +74,7 @@ type backend interface {
 	Connect(context.Context, context.Context) error
 	Disconnect()
 	SendText(context.Context, SendTextRequest) (model.SendResult, error)
+	ShareContact(context.Context, model.ID, model.ID, string) error
 	Forward(context.Context, model.ID, model.ID) (model.SendResult, error)
 	Upload(context.Context, UploadRequest) (UploadResult, error)
 	React(context.Context, model.ID, model.ID, string) error
@@ -87,6 +88,8 @@ type backend interface {
 	CurrentNote(context.Context) (*Note, error)
 	CreateNote(context.Context, string, string) (*Note, error)
 	DeleteNote(context.Context, model.ID) error
+	SetRestricted(context.Context, model.ID, bool) error
+	SetMessageBlocked(context.Context, model.ID, bool) error
 	ListThreads(context.Context, int) (model.ThreadList, error)
 	GetThread(context.Context, model.ID) (*model.Thread, error)
 	CreatePoll(context.Context, model.ID, string, []string) error
@@ -214,6 +217,19 @@ func (e *Engine) SendText(ctx context.Context, req SendTextRequest) (model.SendR
 		e.recordError(err)
 	}
 	return result, err
+}
+
+func (e *Engine) ShareContact(ctx context.Context, threadID, contactID model.ID, text string) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	err := e.backend.ShareContact(ctx, threadID, contactID, text)
+	if err != nil {
+		e.recordError(err)
+	}
+	return err
 }
 
 func (e *Engine) Send(ctx context.Context, req model.SendRequest) (model.SendResult, error) {
@@ -389,6 +405,24 @@ func (e *Engine) DeleteNote(ctx context.Context, noteID model.ID) error {
 	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.DeleteNote(ctx, noteID)
+}
+
+func (e *Engine) SetRestricted(ctx context.Context, userID model.ID, restricted bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.SetRestricted(ctx, userID, restricted)
+}
+
+func (e *Engine) SetMessageBlocked(ctx context.Context, userID model.ID, blocked bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.SetMessageBlocked(ctx, userID, blocked)
 }
 
 func (e *Engine) RecreateNote(ctx context.Context, oldNoteID model.ID, text, privacy string) (*Note, error) {

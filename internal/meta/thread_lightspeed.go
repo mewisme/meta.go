@@ -279,7 +279,7 @@ func (b *messagixBackend) SearchMessengerUsers(ctx context.Context, query string
 		if result == nil || strings.TrimSpace(result.ResultId) == "" {
 			continue
 		}
-		users = append(users, model.User{ID: model.ID(result.ResultId), Name: result.DisplayName, AvatarURL: result.ProfilePicUrl, IsVerified: result.IsVerified, CanViewerMessage: result.CanViewerMessage})
+		users = append(users, model.User{ID: model.ID(result.ResultId), Name: result.DisplayName, AvatarURL: result.ProfilePicUrl, IsVerified: result.IsVerified, CanViewerMessage: result.CanViewerMessage, MessengerRestricted: result.IsRestrictedByViewer, MessengerBlockStatus: messengerBlockStatus(table.BlockedByViewerStatus(result.BlockedByViewerStatus))})
 	}
 	return users, nil
 }
@@ -296,11 +296,24 @@ func (b *messagixBackend) GetMessengerContact(ctx context.Context, userID model.
 	if tbl != nil {
 		for _, contact := range tbl.LSDeleteThenInsertContact {
 			if contact != nil && contact.Id == user {
-				return &model.User{ID: id64(contact.Id), Name: contact.Name, FirstName: contact.FirstName, Username: contact.Username, AvatarURL: contact.GetAvatarURL(), Gender: messengerGender(contact.Gender), IsMessengerUser: contact.IsMessengerUser, CanViewerMessage: contact.CanViewerMessage}, nil
+				return &model.User{ID: id64(contact.Id), Name: contact.Name, FirstName: contact.FirstName, Username: contact.Username, AvatarURL: contact.GetAvatarURL(), Gender: messengerGender(contact.Gender), IsMessengerUser: contact.IsMessengerUser, CanViewerMessage: contact.CanViewerMessage, MessengerRestricted: contact.IsMessengerRestricted(), MessengerBlockStatus: messengerBlockStatus(contact.BlockedByViewerStatus)}, nil
 			}
 		}
 	}
 	return nil, fmt.Errorf("messenger contact %s not found", userID)
+}
+
+func messengerBlockStatus(status table.BlockedByViewerStatus) model.MessengerBlockStatus {
+	switch status {
+	case table.BlockedByViewerStatusUnblocked:
+		return model.MessengerBlockUnblocked
+	case table.BlockedByViewerStatusMessageBlocked:
+		return model.MessengerBlockMessageBlocked
+	case table.BlockedByViewerStatusFullyBlocked:
+		return model.MessengerBlockFullyBlocked
+	default:
+		return model.MessengerBlockUnknown
+	}
 }
 
 func messengerGender(gender table.Gender) string {

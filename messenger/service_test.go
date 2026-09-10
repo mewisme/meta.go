@@ -12,14 +12,17 @@ import (
 )
 
 type fakeBackend struct {
-	lastSend model.SendRequest
-	reaction string
+	lastSend       model.SendRequest
+	reaction       string
+	restricted     bool
+	messageBlocked bool
 }
 
 func (f *fakeBackend) Send(_ context.Context, req model.SendRequest) (model.SendResult, error) {
 	f.lastSend = req
 	return model.SendResult{MessageID: "mid.1"}, nil
 }
+func (f *fakeBackend) ShareContact(context.Context, model.ID, model.ID, string) error { return nil }
 func (f *fakeBackend) Forward(context.Context, model.ID, model.ID) (model.SendResult, error) {
 	return model.SendResult{MessageID: "mid.forward"}, nil
 }
@@ -51,6 +54,14 @@ func (f *fakeBackend) CreateNote(context.Context, string, string) (*model.Note, 
 func (f *fakeBackend) DeleteNote(context.Context, model.ID) error { return nil }
 func (f *fakeBackend) RecreateNote(context.Context, model.ID, string, string) (*model.Note, error) {
 	return &model.Note{ID: "2"}, nil
+}
+func (f *fakeBackend) SetRestricted(_ context.Context, _ model.ID, restricted bool) error {
+	f.restricted = restricted
+	return nil
+}
+func (f *fakeBackend) SetMessageBlocked(_ context.Context, _ model.ID, blocked bool) error {
+	f.messageBlocked = blocked
+	return nil
 }
 func (f *fakeBackend) SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error) {
 	return model.SendResult{MessageID: "e2ee.1"}, nil
@@ -93,6 +104,29 @@ func TestServiceForward(t *testing.T) {
 	}
 	if _, err := service.Forward(context.Background(), "", "mid.1"); !errors.Is(err, fberrors.ErrInvalidInput) {
 		t.Fatalf("expected invalid forward target, got %v", err)
+	}
+}
+
+func TestServiceContactShareAndRestriction(t *testing.T) {
+	backend := new(fakeBackend)
+	service := NewService(backend)
+	if err := service.ShareContact(context.Background(), "10", "20", "hello"); err != nil {
+		t.Fatalf("unexpected contact share error: %v", err)
+	}
+	if err := service.SetRestricted(context.Background(), "20", true); err != nil || !backend.restricted {
+		t.Fatalf("restrict failed: restricted=%t err=%v", backend.restricted, err)
+	}
+	if err := service.SetMessageBlocked(context.Background(), "20", true); err != nil || !backend.messageBlocked {
+		t.Fatalf("message block failed: blocked=%t err=%v", backend.messageBlocked, err)
+	}
+	if err := service.ShareContact(context.Background(), "", "20", ""); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid contact share target, got %v", err)
+	}
+	if err := service.SetRestricted(context.Background(), "", true); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid restrict target, got %v", err)
+	}
+	if err := service.SetMessageBlocked(context.Background(), "", true); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid block target, got %v", err)
 	}
 }
 

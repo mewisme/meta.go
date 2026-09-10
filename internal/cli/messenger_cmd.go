@@ -20,8 +20,74 @@ import (
 
 func newMessengerCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{Use: "messenger", Short: "Messenger operations"}
-	cmd.AddCommand(newMessengerListenCommand(opts), newMessengerSendCommand(opts), newMessengerForwardCommand(opts), newMessengerReactCommand(opts), newMessengerEditCommand(opts), newMessengerUnsendCommand(opts), newMessengerTypingCommand(opts), newMessengerReadCommand(opts), newMediaCommand(opts), newThemeCommand(opts), newNoteCommand(opts), newRequestsCommand(opts))
+	cmd.AddCommand(newMessengerListenCommand(opts), newMessengerSendCommand(opts), newMessengerShareContactCommand(opts), newMessengerForwardCommand(opts), newMessengerReactCommand(opts), newMessengerEditCommand(opts), newMessengerUnsendCommand(opts), newMessengerTypingCommand(opts), newMessengerReadCommand(opts), newMessengerRestrictCommand(opts), newMessengerMessageBlockCommand(opts), newMediaCommand(opts), newThemeCommand(opts), newNoteCommand(opts), newRequestsCommand(opts))
 	return cmd
+}
+
+func newMessengerShareContactCommand(opts *options) *cobra.Command {
+	return &cobra.Command{Use: "share-contact <thread-id> <contact-id> [text]", Args: cobra.RangeArgs(2, 3), RunE: func(cmd *cobra.Command, args []string) error {
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		client, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		text := ""
+		if len(args) == 3 {
+			text = args[2]
+		}
+		if err := client.Messenger.ShareContact(cmd.Context(), model.ID(args[0]), model.ID(args[1]), text); err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"shared": true}, "contact shared")
+	}}
+}
+
+func newMessengerRestrictCommand(opts *options) *cobra.Command {
+	return &cobra.Command{Use: "restrict <user-id> <on|off>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		restricted, err := parseOnOff(args[1], "restrict")
+		if err != nil {
+			return err
+		}
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		client, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		if err := client.Messenger.SetRestricted(cmd.Context(), model.ID(args[0]), restricted); err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"user_id": args[0], "restricted": restricted}, "messenger restriction updated")
+	}}
+}
+
+func newMessengerMessageBlockCommand(opts *options) *cobra.Command {
+	return &cobra.Command{Use: "message-block <user-id> <on|off>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		blocked, err := parseOnOff(args[1], "message block")
+		if err != nil {
+			return err
+		}
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		client, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		if err := client.Messenger.SetMessageBlocked(cmd.Context(), model.ID(args[0]), blocked); err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"user_id": args[0], "message_blocked": blocked}, "messenger message block updated")
+	}}
 }
 
 func newMessengerForwardCommand(opts *options) *cobra.Command {
