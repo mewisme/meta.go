@@ -12,7 +12,7 @@ require (
 	github.com/zalando/go-keyring v0.2.8
 	go.mau.fi/util v0.10.1-0.20260820140024-eb612d936fde
 	go.mau.fi/whatsmeow v0.0.0-20260816113502-fb386f152837
-	go.mewis.me/meta-extra v0.2608.1-0.20260910140639-7bfb166864f1
+	go.mewis.me/meta-extra v0.260910.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/term v0.46.0
 	google.golang.org/protobuf v1.36.12
