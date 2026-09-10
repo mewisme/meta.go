@@ -12,4 +12,10 @@
 - [Platform support](support.md)
 - [Maintenance policy](maintenance.md)
 
-Release maintainers should also read [`RELEASING.md`](../RELEASING.md) and contributors should read [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+Community and process:
+
+- [Security policy](../SECURITY.md)
+- [Code of Conduct](../CODE_OF_CONDUCT.md)
+- [Contributing](../CONTRIBUTING.md)
+- [Release process](../RELEASING.md)
+- [Changelog](../CHANGELOG.md)

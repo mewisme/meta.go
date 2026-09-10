@@ -41,4 +41,6 @@ Release gates run `govulncheck` against reachable symbols and maintain a depende
 
 ## Reporting
 
+Report security vulnerabilities privately using the process in [`SECURITY.md`](../SECURITY.md). Do not open public issues for vulnerabilities.
+
 Do not include session cookies, account passwords, TOTP seeds, access tokens or private E2EE state in bug reports or public issue attachments.

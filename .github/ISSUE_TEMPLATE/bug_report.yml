@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible bug in the library or CLI
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do **not** include session cookies, passwords, TOTP seeds, access tokens or private E2EE state.
+        Security vulnerabilities belong in [private advisories](https://github.com/mewisme/meta.go/security/advisories/new), not here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Library API
+        - CLI
+        - Authentication / profiles
+        - Messenger (regular)
+        - Messenger (E2EE)
+        - Threads
+        - Facebook
+        - Storage / secrets
+        - Build / release / CI
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: meta.go version or commit
+      placeholder: v1.0.0 or abc1234
+    validations:
+      required: true
+  - type: input
+    id: go_version
+    attributes:
+      label: Go version
+      placeholder: go1.27.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and architecture
+      placeholder: Linux amd64
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: Expected vs actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Minimal sanitized steps or code. Redact all secrets.
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or error output
+      description: Optional. Strip cookies, tokens and E2EE material before pasting.

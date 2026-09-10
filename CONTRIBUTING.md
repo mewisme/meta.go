@@ -1,18 +1,41 @@
 # Contributing
 
+By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+Report security vulnerabilities privately per [SECURITY.md](SECURITY.md). Do not open public issues for security bugs or attach cookies, passwords, TOTP seeds, tokens or E2EE key material.
+
+Use the [bug](.github/ISSUE_TEMPLATE/bug_report.yml) and [feature](.github/ISSUE_TEMPLATE/feature_request.yml) issue templates when filing issues. Pull requests should follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
+
 ## Development setup
 
 Use the Go version declared in `go.mod`.
 
+A local `go.work` that includes `../meta-extra` is optional for development and is gitignored. CI and release gates run with `GOWORK=off`; verify changes against the module as published, not only against a workspace replace.
+
 ```sh
 go mod verify
+test -z "$(gofmt -l .)"
+go vet ./...
+go run honnef.co/go/tools/cmd/staticcheck@latest ./...
 go test ./...
 go test -race ./...
-go vet ./...
+go mod tidy && git diff --exit-code -- go.mod go.sum
+go install golang.org/x/vuln/cmd/govulncheck@latest
 govulncheck ./...
 ```
 
-Run `gofmt` on changed Go files and keep `go.mod`/`go.sum` tidy.
+These commands match the primary CI job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Run `gofmt` on changed Go files and keep `go.mod`/`go.sum` tidy.
+
+Optional: install [pre-commit](https://pre-commit.com/) and run `pre-commit install` to enable the hooks in [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
+
+## Pull requests
+
+- Keep changes focused; prefer small PRs over mixed refactors.
+- Add or update tests for behavior changes.
+- Pass the local gates above before requesting review.
+- Do not commit secrets, live cookies or private E2EE state.
+- If direct dependencies change, update [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+- If build targets, ldflags or release artifacts change, update [`.goreleaser.yaml`](.goreleaser.yaml) and [RELEASING.md](RELEASING.md).
 
 ## Design rules
 
