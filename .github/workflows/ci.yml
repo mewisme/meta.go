@@ -99,8 +99,8 @@ jobs:
           version: "0.12.10"
       - run: uv sync --directory sdk/python --frozen --all-groups
       - run: ./scripts/proto.sh check-python
-      - run: uv run --directory sdk/python ruff check src/mewisme_meta tests
-      - run: uv run --directory sdk/python ruff format --check src/mewisme_meta tests
+      - run: uv run --directory sdk/python ruff check src/mewisme_meta tests scripts runtime/src
+      - run: uv run --directory sdk/python ruff format --check src/mewisme_meta tests scripts runtime/src
       - run: uv run --directory sdk/python mypy src/mewisme_meta
       - run: uv run --directory sdk/python pytest
       - run: uv build --directory sdk/python

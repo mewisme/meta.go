@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mewisme-meta-runtime"
+version = "0.0.0"
+description = "Platform runtime for mewisme-meta"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-only"
+authors = [{name = "Mew"}]
+
+[project.urls]
+Repository = "https://github.com/mewisme/meta.go"
