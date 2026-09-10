@@ -28,9 +28,12 @@ try {
   await chmod(join(stage, filename), 0o755)
   await copyFile(join(sdkDir, "runtime-packages", "README.md"), join(stage, "README.md"))
   await copyFile(join(repoRoot, "LICENSE"), join(stage, "LICENSE"))
-  const packed = spawnSync("pnpm", ["pack", "--pack-destination", outDir, "--silent"], {cwd: stage, encoding: "utf8"})
-  if (packed.status !== 0) throw new Error(`pnpm pack failed: ${(packed.stderr || packed.stdout).trim()}`)
-  const output = packed.stdout.trim().split(/\r?\n/).at(-1)
+  const command = process.platform === "win32" ? process.env.ComSpec || "cmd.exe" : "pnpm"
+  const commandArgs = process.platform === "win32" ? ["/d", "/s", "/c", "pnpm", "pack", "--pack-destination", outDir, "--silent"] : ["pack", "--pack-destination", outDir, "--silent"]
+  const packed = spawnSync(command, commandArgs, {cwd: stage, encoding: "utf8"})
+  if (packed.error) throw new Error(`pnpm pack failed: ${packed.error.message}`)
+  if (packed.status !== 0) throw new Error(`pnpm pack failed: ${(packed.stderr || packed.stdout || `exit code ${packed.status}`).trim()}`)
+  const output = (packed.stdout || "").trim().split(/\r?\n/).at(-1)
   if (!output) throw new Error("pnpm pack returned no artifact path")
   console.log(isAbsolute(output) ? output : resolve(stage, output))
 } finally {
