@@ -157,10 +157,10 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - name: Install UPX
         if: runner.os != 'macOS'
-        uses: crazy-max/ghaction-upx@v4
-        with:
-          version: v5.2.1
-          install-only: true
+        shell: bash
+        run: |
+          curl -fsSL https://github.com/upx/upx/releases/download/v5.2.1/upx-5.2.1-amd64_linux.tar.xz | tar -xJ -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/upx-5.2.1-amd64_linux" >> "$GITHUB_PATH"
       - name: Build host runtime
         shell: bash
         run: |
