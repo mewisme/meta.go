@@ -103,7 +103,7 @@ jobs:
           output="runtime/meta-runtime_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.ext }}"
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags "-s -w -X go.mewis.me/meta.go.Version=${VERSION} -X go.mewis.me/meta.go.Commit=${GITHUB_SHA}" -o "$output" ./cmd/meta-runtime
           test -s "$output"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: runtime-${{ matrix.id }}
           path: runtime/*
@@ -133,7 +133,7 @@ jobs:
           corepack prepare pnpm@11.25.0 --activate
           binary=$(find runtime -type f -name 'meta-runtime*' -print -quit)
           node sdk/node/scripts/package-runtime.mjs --target "${{ matrix.target }}" --version "$VERSION" --binary "$binary" --out-dir dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: node-runtime-${{ matrix.target }}
           path: dist/*.tgz
@@ -174,7 +174,7 @@ jobs:
         run: |
           binary=$(find runtime -type f -name 'meta-runtime*' -print -quit)
           python3 sdk/python/scripts/package-runtime.py --target "${{ matrix.target }}" --version "$VERSION" --binary "$binary" --out-dir dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: python-runtime-${{ matrix.target }}
           path: dist/*.whl
@@ -200,7 +200,7 @@ jobs:
           mkdir -p dist
           pnpm -C sdk/node pack --pack-destination ../../dist --silent
           python3 scripts/validate-release.py --version "$VERSION" --node-sdk-archive "$(find dist -name '*.tgz' -print -quit)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: node-sdk
           path: dist/*.tgz
@@ -223,7 +223,7 @@ jobs:
           python3 scripts/validate-release.py --version "$VERSION" --python-dir sdk/python
           uv build --directory sdk/python --out-dir "$GITHUB_WORKSPACE/dist"
           python3 scripts/validate-release.py --version "$VERSION" --python-sdk-wheel "$(find dist -name '*.whl' -print -quit)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: python-sdk
           path: dist/*
