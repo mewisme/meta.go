@@ -3,6 +3,9 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
+
+	"google.golang.org/grpc"
 
 	fberrors "go.mewis.me/meta.go/errors"
 	metav1 "go.mewis.me/meta.go/gen/go/meta/v1"
@@ -56,6 +59,42 @@ func (s *messengerService) Send(ctx context.Context, req *metav1.SendRequest) (*
 		return nil, grpcError(err)
 	}
 	return &metav1.SendResponse{MessageId: result.MessageID.String(), Timestamp: timestampOrNil(result.Timestamp)}, nil
+}
+
+func (s *messengerService) Upload(stream grpc.ClientStreamingServer[metav1.UploadRequest, metav1.UploadResponse]) error {
+	first, err := stream.Recv()
+	if err != nil {
+		return grpcError(err)
+	}
+	metadata := first.GetMetadata()
+	if metadata == nil {
+		return grpcError(fmt.Errorf("%w: first upload frame must contain metadata", fberrors.ErrInvalidInput))
+	}
+	service, err := s.messenger(metadata.GetSessionId())
+	if err != nil {
+		return grpcError(err)
+	}
+	recv := func() ([]byte, error) {
+		frame, err := stream.Recv()
+		if err != nil {
+			return nil, err
+		}
+		if frame.GetMetadata() != nil {
+			return nil, fmt.Errorf("%w: upload metadata may only be sent once", fberrors.ErrInvalidInput)
+		}
+		chunk := frame.GetChunk()
+		if chunk == nil {
+			return nil, fmt.Errorf("%w: upload frame must contain a chunk", fberrors.ErrInvalidInput)
+		}
+		return chunk.GetData(), nil
+	}
+	result, hash, err := receiveMedia(stream.Context(), metadata.GetSize(), metadata.GetSha256(), recv, func(reader io.Reader) (model.UploadResult, error) {
+		return service.Upload(stream.Context(), model.UploadInput{ThreadID: model.ID(metadata.GetThreadId()), Name: metadata.GetName(), ContentType: metadata.GetContentType(), Reader: reader, Size: metadata.GetSize(), Voice: metadata.GetVoice()})
+	})
+	if err != nil {
+		return grpcError(err)
+	}
+	return stream.SendAndClose(&metav1.UploadResponse{Id: result.ID.String(), Name: result.Name, ContentType: result.ContentType, Type: result.Type, Sha256: hash})
 }
 
 func (s *messengerService) Forward(ctx context.Context, req *metav1.ForwardRequest) (*metav1.ForwardResponse, error) {
@@ -428,6 +467,43 @@ func (s *messengerService) SetMessagePinned(ctx context.Context, req *metav1.Set
 		return nil, grpcError(mutationErr)
 	}
 	return &metav1.SetMessagePinnedResponse{}, nil
+}
+
+func (s *messengerService) SetThreadPhoto(stream grpc.ClientStreamingServer[metav1.SetThreadPhotoRequest, metav1.SetThreadPhotoResponse]) error {
+	first, err := stream.Recv()
+	if err != nil {
+		return grpcError(err)
+	}
+	metadata := first.GetMetadata()
+	if metadata == nil {
+		return grpcError(fmt.Errorf("%w: first thread photo frame must contain metadata", fberrors.ErrInvalidInput))
+	}
+	service, err := s.threads(metadata.GetSessionId())
+	if err != nil {
+		return grpcError(err)
+	}
+	recv := func() ([]byte, error) {
+		frame, err := stream.Recv()
+		if err != nil {
+			return nil, err
+		}
+		if frame.GetMetadata() != nil {
+			return nil, fmt.Errorf("%w: thread photo metadata may only be sent once", fberrors.ErrInvalidInput)
+		}
+		chunk := frame.GetChunk()
+		if chunk == nil {
+			return nil, fmt.Errorf("%w: thread photo frame must contain a chunk", fberrors.ErrInvalidInput)
+		}
+		return chunk.GetData(), nil
+	}
+	_, hash, err := receiveMedia(stream.Context(), metadata.GetSize(), metadata.GetSha256(), recv, func(reader io.Reader) (struct{}, error) {
+		err := service.SetPhoto(stream.Context(), model.ID(metadata.GetThreadId()), model.AttachmentInput{Name: metadata.GetName(), ContentType: metadata.GetContentType(), Reader: reader, Size: metadata.GetSize()})
+		return struct{}{}, err
+	})
+	if err != nil {
+		return grpcError(err)
+	}
+	return stream.SendAndClose(&metav1.SetThreadPhotoResponse{Sha256: hash})
 }
 
 func (s *messengerService) DeleteThread(ctx context.Context, req *metav1.DeleteThreadRequest) (*metav1.DeleteThreadResponse, error) {

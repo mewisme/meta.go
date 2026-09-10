@@ -241,7 +241,7 @@ func (e *Engine) Send(ctx context.Context, req model.SendRequest) (model.SendRes
 	if req.Encryption == model.EncryptionRequired {
 		return model.SendResult{}, ErrE2EENotReady
 	}
-	attachmentIDs := make([]model.ID, 0, len(req.Attachments))
+	attachmentIDs := append([]model.ID(nil), req.AttachmentIDs...)
 	for _, attachment := range req.Attachments {
 		result, err := e.Upload(ctx, UploadRequest{ThreadID: req.ThreadID, Name: attachment.Name, ContentType: attachment.ContentType, Reader: attachment.Reader, Size: attachment.Size})
 		if err != nil {

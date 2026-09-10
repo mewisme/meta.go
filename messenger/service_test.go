@@ -151,6 +151,15 @@ func TestServiceInputValidation(t *testing.T) {
 	if _, err := service.Send(context.Background(), model.SendRequest{ThreadID: "1", Attachments: []model.AttachmentInput{{Reader: bytes.NewBufferString("x")}}, StickerID: "2"}); !errors.Is(err, fberrors.ErrInvalidInput) {
 		t.Fatalf("expected mutually exclusive send content, got %v", err)
 	}
+	if _, err := service.Send(context.Background(), model.SendRequest{ThreadID: "1", Attachments: []model.AttachmentInput{{Reader: bytes.NewBufferString("x")}}, AttachmentIDs: []model.ID{"2"}}); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected reader and uploaded attachment IDs to be exclusive, got %v", err)
+	}
+	if _, err := service.Send(context.Background(), model.SendRequest{ThreadID: "1", AttachmentIDs: []model.ID{""}}); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected empty uploaded attachment ID to fail, got %v", err)
+	}
+	if _, err := service.Send(context.Background(), model.SendRequest{ThreadID: "1", AttachmentIDs: []model.ID{"2"}}); err != nil {
+		t.Fatalf("uploaded attachment ID send rejected: %v", err)
+	}
 	if _, err := service.Send(context.Background(), model.SendRequest{ThreadID: "1", StickerID: "2"}); err != nil {
 		t.Fatalf("sticker send rejected: %v", err)
 	}

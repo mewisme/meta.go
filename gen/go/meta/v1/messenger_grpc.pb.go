@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	MessengerService_Send_FullMethodName                = "/meta.v1.MessengerService/Send"
+	MessengerService_Upload_FullMethodName              = "/meta.v1.MessengerService/Upload"
 	MessengerService_Forward_FullMethodName             = "/meta.v1.MessengerService/Forward"
 	MessengerService_ShareContact_FullMethodName        = "/meta.v1.MessengerService/ShareContact"
 	MessengerService_React_FullMethodName               = "/meta.v1.MessengerService/React"
@@ -50,6 +51,7 @@ const (
 	MessengerService_SetApprovalMode_FullMethodName     = "/meta.v1.MessengerService/SetApprovalMode"
 	MessengerService_SetArchived_FullMethodName         = "/meta.v1.MessengerService/SetArchived"
 	MessengerService_SetMessagePinned_FullMethodName    = "/meta.v1.MessengerService/SetMessagePinned"
+	MessengerService_SetThreadPhoto_FullMethodName      = "/meta.v1.MessengerService/SetThreadPhoto"
 	MessengerService_DeleteThread_FullMethodName        = "/meta.v1.MessengerService/DeleteThread"
 	MessengerService_CreateDM_FullMethodName            = "/meta.v1.MessengerService/CreateDM"
 	MessengerService_SearchUsers_FullMethodName         = "/meta.v1.MessengerService/SearchUsers"
@@ -65,6 +67,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MessengerServiceClient interface {
 	Send(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error)
+	Upload(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadRequest, UploadResponse], error)
 	Forward(ctx context.Context, in *ForwardRequest, opts ...grpc.CallOption) (*ForwardResponse, error)
 	ShareContact(ctx context.Context, in *ShareContactRequest, opts ...grpc.CallOption) (*ShareContactResponse, error)
 	React(ctx context.Context, in *ReactRequest, opts ...grpc.CallOption) (*ReactResponse, error)
@@ -94,6 +97,7 @@ type MessengerServiceClient interface {
 	SetApprovalMode(ctx context.Context, in *SetApprovalModeRequest, opts ...grpc.CallOption) (*SetApprovalModeResponse, error)
 	SetArchived(ctx context.Context, in *SetArchivedRequest, opts ...grpc.CallOption) (*SetArchivedResponse, error)
 	SetMessagePinned(ctx context.Context, in *SetMessagePinnedRequest, opts ...grpc.CallOption) (*SetMessagePinnedResponse, error)
+	SetThreadPhoto(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[SetThreadPhotoRequest, SetThreadPhotoResponse], error)
 	DeleteThread(ctx context.Context, in *DeleteThreadRequest, opts ...grpc.CallOption) (*DeleteThreadResponse, error)
 	CreateDM(ctx context.Context, in *CreateDMRequest, opts ...grpc.CallOption) (*CreateDMResponse, error)
 	SearchUsers(ctx context.Context, in *SearchUsersRequest, opts ...grpc.CallOption) (*SearchUsersResponse, error)
@@ -121,6 +125,19 @@ func (c *messengerServiceClient) Send(ctx context.Context, in *SendRequest, opts
 	}
 	return out, nil
 }
+
+func (c *messengerServiceClient) Upload(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UploadRequest, UploadResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MessengerService_ServiceDesc.Streams[0], MessengerService_Upload_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[UploadRequest, UploadResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MessengerService_UploadClient = grpc.ClientStreamingClient[UploadRequest, UploadResponse]
 
 func (c *messengerServiceClient) Forward(ctx context.Context, in *ForwardRequest, opts ...grpc.CallOption) (*ForwardResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -412,6 +429,19 @@ func (c *messengerServiceClient) SetMessagePinned(ctx context.Context, in *SetMe
 	return out, nil
 }
 
+func (c *messengerServiceClient) SetThreadPhoto(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[SetThreadPhotoRequest, SetThreadPhotoResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MessengerService_ServiceDesc.Streams[1], MessengerService_SetThreadPhoto_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SetThreadPhotoRequest, SetThreadPhotoResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MessengerService_SetThreadPhotoClient = grpc.ClientStreamingClient[SetThreadPhotoRequest, SetThreadPhotoResponse]
+
 func (c *messengerServiceClient) DeleteThread(ctx context.Context, in *DeleteThreadRequest, opts ...grpc.CallOption) (*DeleteThreadResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteThreadResponse)
@@ -497,6 +527,7 @@ func (c *messengerServiceClient) SetNickname(ctx context.Context, in *SetNicknam
 // for forward compatibility.
 type MessengerServiceServer interface {
 	Send(context.Context, *SendRequest) (*SendResponse, error)
+	Upload(grpc.ClientStreamingServer[UploadRequest, UploadResponse]) error
 	Forward(context.Context, *ForwardRequest) (*ForwardResponse, error)
 	ShareContact(context.Context, *ShareContactRequest) (*ShareContactResponse, error)
 	React(context.Context, *ReactRequest) (*ReactResponse, error)
@@ -526,6 +557,7 @@ type MessengerServiceServer interface {
 	SetApprovalMode(context.Context, *SetApprovalModeRequest) (*SetApprovalModeResponse, error)
 	SetArchived(context.Context, *SetArchivedRequest) (*SetArchivedResponse, error)
 	SetMessagePinned(context.Context, *SetMessagePinnedRequest) (*SetMessagePinnedResponse, error)
+	SetThreadPhoto(grpc.ClientStreamingServer[SetThreadPhotoRequest, SetThreadPhotoResponse]) error
 	DeleteThread(context.Context, *DeleteThreadRequest) (*DeleteThreadResponse, error)
 	CreateDM(context.Context, *CreateDMRequest) (*CreateDMResponse, error)
 	SearchUsers(context.Context, *SearchUsersRequest) (*SearchUsersResponse, error)
@@ -546,6 +578,9 @@ type UnimplementedMessengerServiceServer struct{}
 
 func (UnimplementedMessengerServiceServer) Send(context.Context, *SendRequest) (*SendResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Send not implemented")
+}
+func (UnimplementedMessengerServiceServer) Upload(grpc.ClientStreamingServer[UploadRequest, UploadResponse]) error {
+	return status.Error(codes.Unimplemented, "method Upload not implemented")
 }
 func (UnimplementedMessengerServiceServer) Forward(context.Context, *ForwardRequest) (*ForwardResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Forward not implemented")
@@ -634,6 +669,9 @@ func (UnimplementedMessengerServiceServer) SetArchived(context.Context, *SetArch
 func (UnimplementedMessengerServiceServer) SetMessagePinned(context.Context, *SetMessagePinnedRequest) (*SetMessagePinnedResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetMessagePinned not implemented")
 }
+func (UnimplementedMessengerServiceServer) SetThreadPhoto(grpc.ClientStreamingServer[SetThreadPhotoRequest, SetThreadPhotoResponse]) error {
+	return status.Error(codes.Unimplemented, "method SetThreadPhoto not implemented")
+}
 func (UnimplementedMessengerServiceServer) DeleteThread(context.Context, *DeleteThreadRequest) (*DeleteThreadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteThread not implemented")
 }
@@ -696,6 +734,13 @@ func _MessengerService_Send_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	return interceptor(ctx, in, info, handler)
 }
+
+func _MessengerService_Upload_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MessengerServiceServer).Upload(&grpc.GenericServerStream[UploadRequest, UploadResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MessengerService_UploadServer = grpc.ClientStreamingServer[UploadRequest, UploadResponse]
 
 func _MessengerService_Forward_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ForwardRequest)
@@ -1219,6 +1264,13 @@ func _MessengerService_SetMessagePinned_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MessengerService_SetThreadPhoto_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MessengerServiceServer).SetThreadPhoto(&grpc.GenericServerStream[SetThreadPhotoRequest, SetThreadPhotoResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MessengerService_SetThreadPhotoServer = grpc.ClientStreamingServer[SetThreadPhotoRequest, SetThreadPhotoResponse]
+
 func _MessengerService_DeleteThread_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteThreadRequest)
 	if err := dec(in); err != nil {
@@ -1523,6 +1575,17 @@ var MessengerService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MessengerService_SetNickname_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Upload",
+			Handler:       _MessengerService_Upload_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "SetThreadPhoto",
+			Handler:       _MessengerService_SetThreadPhoto_Handler,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "meta/v1/messenger.proto",
 }

@@ -107,3 +107,7 @@ message Message {
   EncryptionKind encryption = 9;
   TransportKind transport = 10;
 }
+
+message MediaChunk {
+  bytes data = 1;
+}

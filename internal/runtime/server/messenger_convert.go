@@ -13,7 +13,7 @@ import (
 )
 
 func sendRequestFromProto(req *metav1.SendRequest) model.SendRequest {
-	result := model.SendRequest{ThreadID: model.ID(req.GetThreadId()), Text: req.GetText(), StickerID: model.ID(req.GetStickerId()), URL: req.GetUrl(), Encryption: encryptionPolicyFromProto(req.GetEncryption())}
+	result := model.SendRequest{ThreadID: model.ID(req.GetThreadId()), Text: req.GetText(), StickerID: model.ID(req.GetStickerId()), URL: req.GetUrl(), Encryption: encryptionPolicyFromProto(req.GetEncryption()), AttachmentIDs: idsFromStrings(req.GetAttachmentIds())}
 	if reply := req.GetReplyTo(); reply != nil {
 		result.ReplyTo = &model.ReplyReference{MessageID: model.ID(reply.GetMessageId()), SenderID: model.ID(reply.GetSenderId())}
 	}

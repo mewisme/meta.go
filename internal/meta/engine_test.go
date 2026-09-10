@@ -20,6 +20,16 @@ type fakeBackend struct {
 	disconnected bool
 }
 
+type attachmentIDBackend struct {
+	*fakeBackend
+	request SendTextRequest
+}
+
+func (b *attachmentIDBackend) SendText(_ context.Context, req SendTextRequest) (model.SendResult, error) {
+	b.request = req
+	return model.SendResult{MessageID: "mid.attachment"}, nil
+}
+
 func (f *fakeBackend) SetEventHandler(handler func(context.Context, any)) { f.handler = handler }
 func (f *fakeBackend) Bootstrap(context.Context) (Account, error) {
 	return Account{ID: "1", Name: "Test"}, nil
@@ -180,6 +190,22 @@ func TestEngineLifecycle(t *testing.T) {
 	backend.mu.Unlock()
 	if !disconnected {
 		t.Fatal("backend was not disconnected")
+	}
+}
+
+func TestEngineSendUsesUploadedAttachmentIDs(t *testing.T) {
+	backend := &attachmentIDBackend{fakeBackend: new(fakeBackend)}
+	engine := newEngine(context.Background(), backend, 2)
+	if _, err := engine.Connect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+	result, err := engine.Send(context.Background(), model.SendRequest{ThreadID: "10", AttachmentIDs: []model.ID{"a1", "a2"}})
+	if err != nil || result.MessageID != "mid.attachment" {
+		t.Fatalf("unexpected send result: %#v %v", result, err)
+	}
+	if len(backend.request.AttachmentIDs) != 2 || backend.request.AttachmentIDs[0] != "a1" || backend.request.AttachmentIDs[1] != "a2" {
+		t.Fatalf("uploaded attachment IDs were not forwarded: %#v", backend.request)
 	}
 }
 

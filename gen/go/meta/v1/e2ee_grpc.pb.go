@@ -20,12 +20,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	E2EEService_SendText_FullMethodName  = "/meta.v1.E2EEService/SendText"
-	E2EEService_React_FullMethodName     = "/meta.v1.E2EEService/React"
-	E2EEService_Edit_FullMethodName      = "/meta.v1.E2EEService/Edit"
-	E2EEService_Unsend_FullMethodName    = "/meta.v1.E2EEService/Unsend"
-	E2EEService_SetTyping_FullMethodName = "/meta.v1.E2EEService/SetTyping"
-	E2EEService_MarkRead_FullMethodName  = "/meta.v1.E2EEService/MarkRead"
+	E2EEService_SendText_FullMethodName      = "/meta.v1.E2EEService/SendText"
+	E2EEService_SendMedia_FullMethodName     = "/meta.v1.E2EEService/SendMedia"
+	E2EEService_DownloadMedia_FullMethodName = "/meta.v1.E2EEService/DownloadMedia"
+	E2EEService_React_FullMethodName         = "/meta.v1.E2EEService/React"
+	E2EEService_Edit_FullMethodName          = "/meta.v1.E2EEService/Edit"
+	E2EEService_Unsend_FullMethodName        = "/meta.v1.E2EEService/Unsend"
+	E2EEService_SetTyping_FullMethodName     = "/meta.v1.E2EEService/SetTyping"
+	E2EEService_MarkRead_FullMethodName      = "/meta.v1.E2EEService/MarkRead"
 )
 
 // E2EEServiceClient is the client API for E2EEService service.
@@ -33,6 +35,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type E2EEServiceClient interface {
 	SendText(ctx context.Context, in *E2EEServiceSendTextRequest, opts ...grpc.CallOption) (*E2EEServiceSendTextResponse, error)
+	SendMedia(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[E2EEServiceSendMediaRequest, E2EEServiceSendMediaResponse], error)
+	DownloadMedia(ctx context.Context, in *E2EEServiceDownloadMediaRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[E2EEServiceDownloadMediaResponse], error)
 	React(ctx context.Context, in *E2EEServiceReactRequest, opts ...grpc.CallOption) (*E2EEServiceReactResponse, error)
 	Edit(ctx context.Context, in *E2EEServiceEditRequest, opts ...grpc.CallOption) (*E2EEServiceEditResponse, error)
 	Unsend(ctx context.Context, in *E2EEServiceUnsendRequest, opts ...grpc.CallOption) (*E2EEServiceUnsendResponse, error)
@@ -57,6 +61,38 @@ func (c *e2EEServiceClient) SendText(ctx context.Context, in *E2EEServiceSendTex
 	}
 	return out, nil
 }
+
+func (c *e2EEServiceClient) SendMedia(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[E2EEServiceSendMediaRequest, E2EEServiceSendMediaResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &E2EEService_ServiceDesc.Streams[0], E2EEService_SendMedia_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[E2EEServiceSendMediaRequest, E2EEServiceSendMediaResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type E2EEService_SendMediaClient = grpc.ClientStreamingClient[E2EEServiceSendMediaRequest, E2EEServiceSendMediaResponse]
+
+func (c *e2EEServiceClient) DownloadMedia(ctx context.Context, in *E2EEServiceDownloadMediaRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[E2EEServiceDownloadMediaResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &E2EEService_ServiceDesc.Streams[1], E2EEService_DownloadMedia_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[E2EEServiceDownloadMediaRequest, E2EEServiceDownloadMediaResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type E2EEService_DownloadMediaClient = grpc.ServerStreamingClient[E2EEServiceDownloadMediaResponse]
 
 func (c *e2EEServiceClient) React(ctx context.Context, in *E2EEServiceReactRequest, opts ...grpc.CallOption) (*E2EEServiceReactResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -113,6 +149,8 @@ func (c *e2EEServiceClient) MarkRead(ctx context.Context, in *E2EEServiceMarkRea
 // for forward compatibility.
 type E2EEServiceServer interface {
 	SendText(context.Context, *E2EEServiceSendTextRequest) (*E2EEServiceSendTextResponse, error)
+	SendMedia(grpc.ClientStreamingServer[E2EEServiceSendMediaRequest, E2EEServiceSendMediaResponse]) error
+	DownloadMedia(*E2EEServiceDownloadMediaRequest, grpc.ServerStreamingServer[E2EEServiceDownloadMediaResponse]) error
 	React(context.Context, *E2EEServiceReactRequest) (*E2EEServiceReactResponse, error)
 	Edit(context.Context, *E2EEServiceEditRequest) (*E2EEServiceEditResponse, error)
 	Unsend(context.Context, *E2EEServiceUnsendRequest) (*E2EEServiceUnsendResponse, error)
@@ -130,6 +168,12 @@ type UnimplementedE2EEServiceServer struct{}
 
 func (UnimplementedE2EEServiceServer) SendText(context.Context, *E2EEServiceSendTextRequest) (*E2EEServiceSendTextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendText not implemented")
+}
+func (UnimplementedE2EEServiceServer) SendMedia(grpc.ClientStreamingServer[E2EEServiceSendMediaRequest, E2EEServiceSendMediaResponse]) error {
+	return status.Error(codes.Unimplemented, "method SendMedia not implemented")
+}
+func (UnimplementedE2EEServiceServer) DownloadMedia(*E2EEServiceDownloadMediaRequest, grpc.ServerStreamingServer[E2EEServiceDownloadMediaResponse]) error {
+	return status.Error(codes.Unimplemented, "method DownloadMedia not implemented")
 }
 func (UnimplementedE2EEServiceServer) React(context.Context, *E2EEServiceReactRequest) (*E2EEServiceReactResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method React not implemented")
@@ -184,6 +228,24 @@ func _E2EEService_SendText_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	return interceptor(ctx, in, info, handler)
 }
+
+func _E2EEService_SendMedia_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(E2EEServiceServer).SendMedia(&grpc.GenericServerStream[E2EEServiceSendMediaRequest, E2EEServiceSendMediaResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type E2EEService_SendMediaServer = grpc.ClientStreamingServer[E2EEServiceSendMediaRequest, E2EEServiceSendMediaResponse]
+
+func _E2EEService_DownloadMedia_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(E2EEServiceDownloadMediaRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(E2EEServiceServer).DownloadMedia(m, &grpc.GenericServerStream[E2EEServiceDownloadMediaRequest, E2EEServiceDownloadMediaResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type E2EEService_DownloadMediaServer = grpc.ServerStreamingServer[E2EEServiceDownloadMediaResponse]
 
 func _E2EEService_React_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(E2EEServiceReactRequest)
@@ -307,6 +369,17 @@ var E2EEService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _E2EEService_MarkRead_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SendMedia",
+			Handler:       _E2EEService_SendMedia_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "DownloadMedia",
+			Handler:       _E2EEService_DownloadMedia_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "meta/v1/e2ee.proto",
 }

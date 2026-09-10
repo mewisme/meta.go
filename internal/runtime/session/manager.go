@@ -28,6 +28,7 @@ type Config struct {
 
 type Messenger interface {
 	Send(context.Context, model.SendRequest) (model.SendResult, error)
+	Upload(context.Context, model.UploadInput) (model.UploadResult, error)
 	Forward(context.Context, model.ID, model.ID) (model.SendResult, error)
 	ShareContact(context.Context, model.ID, model.ID, string) error
 	React(context.Context, model.ID, model.ID, string) error
@@ -61,6 +62,7 @@ type Threads interface {
 	SetArchived(context.Context, model.ID, bool) error
 	PinMessage(context.Context, model.ID, model.ID) error
 	UnpinMessage(context.Context, model.ID, model.ID) error
+	SetPhoto(context.Context, model.ID, model.AttachmentInput) error
 	Delete(context.Context, model.ID) error
 	CreateDM(context.Context, model.ID) (model.ID, error)
 	SearchUsers(context.Context, string) ([]model.User, error)
@@ -73,6 +75,8 @@ type Threads interface {
 
 type E2EE interface {
 	SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error)
+	SendE2EEMedia(context.Context, model.E2EEMediaInput) (model.SendResult, error)
+	DownloadE2EE(context.Context, model.E2EEMediaDownload) ([]byte, error)
 	ReactE2EE(context.Context, model.E2EEReactionRequest) error
 	EditE2EE(context.Context, string, model.ID, string) error
 	UnsendE2EE(context.Context, string, model.ID) error

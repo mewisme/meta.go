@@ -23,6 +23,64 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type E2EEMediaKind int32
+
+const (
+	E2EEMediaKind_E2EE_MEDIA_KIND_UNSPECIFIED E2EEMediaKind = 0
+	E2EEMediaKind_E2EE_MEDIA_KIND_IMAGE       E2EEMediaKind = 1
+	E2EEMediaKind_E2EE_MEDIA_KIND_VIDEO       E2EEMediaKind = 2
+	E2EEMediaKind_E2EE_MEDIA_KIND_AUDIO       E2EEMediaKind = 3
+	E2EEMediaKind_E2EE_MEDIA_KIND_DOCUMENT    E2EEMediaKind = 4
+	E2EEMediaKind_E2EE_MEDIA_KIND_STICKER     E2EEMediaKind = 5
+)
+
+// Enum value maps for E2EEMediaKind.
+var (
+	E2EEMediaKind_name = map[int32]string{
+		0: "E2EE_MEDIA_KIND_UNSPECIFIED",
+		1: "E2EE_MEDIA_KIND_IMAGE",
+		2: "E2EE_MEDIA_KIND_VIDEO",
+		3: "E2EE_MEDIA_KIND_AUDIO",
+		4: "E2EE_MEDIA_KIND_DOCUMENT",
+		5: "E2EE_MEDIA_KIND_STICKER",
+	}
+	E2EEMediaKind_value = map[string]int32{
+		"E2EE_MEDIA_KIND_UNSPECIFIED": 0,
+		"E2EE_MEDIA_KIND_IMAGE":       1,
+		"E2EE_MEDIA_KIND_VIDEO":       2,
+		"E2EE_MEDIA_KIND_AUDIO":       3,
+		"E2EE_MEDIA_KIND_DOCUMENT":    4,
+		"E2EE_MEDIA_KIND_STICKER":     5,
+	}
+)
+
+func (x E2EEMediaKind) Enum() *E2EEMediaKind {
+	p := new(E2EEMediaKind)
+	*p = x
+	return p
+}
+
+func (x E2EEMediaKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (E2EEMediaKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_meta_v1_e2ee_proto_enumTypes[0].Descriptor()
+}
+
+func (E2EEMediaKind) Type() protoreflect.EnumType {
+	return &file_meta_v1_e2ee_proto_enumTypes[0]
+}
+
+func (x E2EEMediaKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use E2EEMediaKind.Descriptor instead.
+func (E2EEMediaKind) EnumDescriptor() ([]byte, []int) {
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{0}
+}
+
 type E2EEServiceSendTextRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	SessionId      string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -159,6 +217,498 @@ func (x *E2EEServiceSendTextResponse) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
+type E2EEServiceSendMediaMetadata struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	SessionId      string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ChatJid        string                 `protobuf:"bytes,2,opt,name=chat_jid,json=chatJid,proto3" json:"chat_jid,omitempty"`
+	FacebookUserId string                 `protobuf:"bytes,3,opt,name=facebook_user_id,json=facebookUserId,proto3" json:"facebook_user_id,omitempty"`
+	Kind           E2EEMediaKind          `protobuf:"varint,4,opt,name=kind,proto3,enum=meta.v1.E2EEMediaKind" json:"kind,omitempty"`
+	Name           string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	ContentType    string                 `protobuf:"bytes,6,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Size           int64                  `protobuf:"varint,7,opt,name=size,proto3" json:"size,omitempty"`
+	Caption        string                 `protobuf:"bytes,8,opt,name=caption,proto3" json:"caption,omitempty"`
+	Width          int32                  `protobuf:"varint,9,opt,name=width,proto3" json:"width,omitempty"`
+	Height         int32                  `protobuf:"varint,10,opt,name=height,proto3" json:"height,omitempty"`
+	Duration       int32                  `protobuf:"varint,11,opt,name=duration,proto3" json:"duration,omitempty"`
+	Voice          bool                   `protobuf:"varint,12,opt,name=voice,proto3" json:"voice,omitempty"`
+	ReplyTo        string                 `protobuf:"bytes,13,opt,name=reply_to,json=replyTo,proto3" json:"reply_to,omitempty"`
+	ReplySenderJid string                 `protobuf:"bytes,14,opt,name=reply_sender_jid,json=replySenderJid,proto3" json:"reply_sender_jid,omitempty"`
+	Sha256         []byte                 `protobuf:"bytes,15,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *E2EEServiceSendMediaMetadata) Reset() {
+	*x = E2EEServiceSendMediaMetadata{}
+	mi := &file_meta_v1_e2ee_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *E2EEServiceSendMediaMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*E2EEServiceSendMediaMetadata) ProtoMessage() {}
+
+func (x *E2EEServiceSendMediaMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_e2ee_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use E2EEServiceSendMediaMetadata.ProtoReflect.Descriptor instead.
+func (*E2EEServiceSendMediaMetadata) Descriptor() ([]byte, []int) {
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetChatJid() string {
+	if x != nil {
+		return x.ChatJid
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetFacebookUserId() string {
+	if x != nil {
+		return x.FacebookUserId
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetKind() E2EEMediaKind {
+	if x != nil {
+		return x.Kind
+	}
+	return E2EEMediaKind_E2EE_MEDIA_KIND_UNSPECIFIED
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetCaption() string {
+	if x != nil {
+		return x.Caption
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetDuration() int32 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetVoice() bool {
+	if x != nil {
+		return x.Voice
+	}
+	return false
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetReplyTo() string {
+	if x != nil {
+		return x.ReplyTo
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetReplySenderJid() string {
+	if x != nil {
+		return x.ReplySenderJid
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaMetadata) GetSha256() []byte {
+	if x != nil {
+		return x.Sha256
+	}
+	return nil
+}
+
+type E2EEServiceSendMediaRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*E2EEServiceSendMediaRequest_Metadata
+	//	*E2EEServiceSendMediaRequest_Chunk
+	Payload       isE2EEServiceSendMediaRequest_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *E2EEServiceSendMediaRequest) Reset() {
+	*x = E2EEServiceSendMediaRequest{}
+	mi := &file_meta_v1_e2ee_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *E2EEServiceSendMediaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*E2EEServiceSendMediaRequest) ProtoMessage() {}
+
+func (x *E2EEServiceSendMediaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_e2ee_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use E2EEServiceSendMediaRequest.ProtoReflect.Descriptor instead.
+func (*E2EEServiceSendMediaRequest) Descriptor() ([]byte, []int) {
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *E2EEServiceSendMediaRequest) GetPayload() isE2EEServiceSendMediaRequest_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *E2EEServiceSendMediaRequest) GetMetadata() *E2EEServiceSendMediaMetadata {
+	if x != nil {
+		if x, ok := x.Payload.(*E2EEServiceSendMediaRequest_Metadata); ok {
+			return x.Metadata
+		}
+	}
+	return nil
+}
+
+func (x *E2EEServiceSendMediaRequest) GetChunk() *MediaChunk {
+	if x != nil {
+		if x, ok := x.Payload.(*E2EEServiceSendMediaRequest_Chunk); ok {
+			return x.Chunk
+		}
+	}
+	return nil
+}
+
+type isE2EEServiceSendMediaRequest_Payload interface {
+	isE2EEServiceSendMediaRequest_Payload()
+}
+
+type E2EEServiceSendMediaRequest_Metadata struct {
+	Metadata *E2EEServiceSendMediaMetadata `protobuf:"bytes,1,opt,name=metadata,proto3,oneof"`
+}
+
+type E2EEServiceSendMediaRequest_Chunk struct {
+	Chunk *MediaChunk `protobuf:"bytes,2,opt,name=chunk,proto3,oneof"`
+}
+
+func (*E2EEServiceSendMediaRequest_Metadata) isE2EEServiceSendMediaRequest_Payload() {}
+
+func (*E2EEServiceSendMediaRequest_Chunk) isE2EEServiceSendMediaRequest_Payload() {}
+
+type E2EEServiceSendMediaResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Sha256        []byte                 `protobuf:"bytes,3,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *E2EEServiceSendMediaResponse) Reset() {
+	*x = E2EEServiceSendMediaResponse{}
+	mi := &file_meta_v1_e2ee_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *E2EEServiceSendMediaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*E2EEServiceSendMediaResponse) ProtoMessage() {}
+
+func (x *E2EEServiceSendMediaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_e2ee_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use E2EEServiceSendMediaResponse.ProtoReflect.Descriptor instead.
+func (*E2EEServiceSendMediaResponse) Descriptor() ([]byte, []int) {
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *E2EEServiceSendMediaResponse) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *E2EEServiceSendMediaResponse) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *E2EEServiceSendMediaResponse) GetSha256() []byte {
+	if x != nil {
+		return x.Sha256
+	}
+	return nil
+}
+
+type E2EEServiceDownloadMediaRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Reference     *E2EEMediaReference    `protobuf:"bytes,2,opt,name=reference,proto3" json:"reference,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *E2EEServiceDownloadMediaRequest) Reset() {
+	*x = E2EEServiceDownloadMediaRequest{}
+	mi := &file_meta_v1_e2ee_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *E2EEServiceDownloadMediaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*E2EEServiceDownloadMediaRequest) ProtoMessage() {}
+
+func (x *E2EEServiceDownloadMediaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_e2ee_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use E2EEServiceDownloadMediaRequest.ProtoReflect.Descriptor instead.
+func (*E2EEServiceDownloadMediaRequest) Descriptor() ([]byte, []int) {
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *E2EEServiceDownloadMediaRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *E2EEServiceDownloadMediaRequest) GetReference() *E2EEMediaReference {
+	if x != nil {
+		return x.Reference
+	}
+	return nil
+}
+
+type E2EEServiceDownloadMediaMetadata struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Size          int64                  `protobuf:"varint,1,opt,name=size,proto3" json:"size,omitempty"`
+	ContentType   string                 `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Sha256        []byte                 `protobuf:"bytes,3,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *E2EEServiceDownloadMediaMetadata) Reset() {
+	*x = E2EEServiceDownloadMediaMetadata{}
+	mi := &file_meta_v1_e2ee_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *E2EEServiceDownloadMediaMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*E2EEServiceDownloadMediaMetadata) ProtoMessage() {}
+
+func (x *E2EEServiceDownloadMediaMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_e2ee_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use E2EEServiceDownloadMediaMetadata.ProtoReflect.Descriptor instead.
+func (*E2EEServiceDownloadMediaMetadata) Descriptor() ([]byte, []int) {
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *E2EEServiceDownloadMediaMetadata) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *E2EEServiceDownloadMediaMetadata) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *E2EEServiceDownloadMediaMetadata) GetSha256() []byte {
+	if x != nil {
+		return x.Sha256
+	}
+	return nil
+}
+
+type E2EEServiceDownloadMediaResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*E2EEServiceDownloadMediaResponse_Metadata
+	//	*E2EEServiceDownloadMediaResponse_Chunk
+	Payload       isE2EEServiceDownloadMediaResponse_Payload `protobuf_oneof:"payload"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *E2EEServiceDownloadMediaResponse) Reset() {
+	*x = E2EEServiceDownloadMediaResponse{}
+	mi := &file_meta_v1_e2ee_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *E2EEServiceDownloadMediaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*E2EEServiceDownloadMediaResponse) ProtoMessage() {}
+
+func (x *E2EEServiceDownloadMediaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_e2ee_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use E2EEServiceDownloadMediaResponse.ProtoReflect.Descriptor instead.
+func (*E2EEServiceDownloadMediaResponse) Descriptor() ([]byte, []int) {
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *E2EEServiceDownloadMediaResponse) GetPayload() isE2EEServiceDownloadMediaResponse_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *E2EEServiceDownloadMediaResponse) GetMetadata() *E2EEServiceDownloadMediaMetadata {
+	if x != nil {
+		if x, ok := x.Payload.(*E2EEServiceDownloadMediaResponse_Metadata); ok {
+			return x.Metadata
+		}
+	}
+	return nil
+}
+
+func (x *E2EEServiceDownloadMediaResponse) GetChunk() *MediaChunk {
+	if x != nil {
+		if x, ok := x.Payload.(*E2EEServiceDownloadMediaResponse_Chunk); ok {
+			return x.Chunk
+		}
+	}
+	return nil
+}
+
+type isE2EEServiceDownloadMediaResponse_Payload interface {
+	isE2EEServiceDownloadMediaResponse_Payload()
+}
+
+type E2EEServiceDownloadMediaResponse_Metadata struct {
+	Metadata *E2EEServiceDownloadMediaMetadata `protobuf:"bytes,1,opt,name=metadata,proto3,oneof"`
+}
+
+type E2EEServiceDownloadMediaResponse_Chunk struct {
+	Chunk *MediaChunk `protobuf:"bytes,2,opt,name=chunk,proto3,oneof"`
+}
+
+func (*E2EEServiceDownloadMediaResponse_Metadata) isE2EEServiceDownloadMediaResponse_Payload() {}
+
+func (*E2EEServiceDownloadMediaResponse_Chunk) isE2EEServiceDownloadMediaResponse_Payload() {}
+
 type E2EEServiceReactRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -172,7 +722,7 @@ type E2EEServiceReactRequest struct {
 
 func (x *E2EEServiceReactRequest) Reset() {
 	*x = E2EEServiceReactRequest{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[2]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -184,7 +734,7 @@ func (x *E2EEServiceReactRequest) String() string {
 func (*E2EEServiceReactRequest) ProtoMessage() {}
 
 func (x *E2EEServiceReactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[2]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -197,7 +747,7 @@ func (x *E2EEServiceReactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceReactRequest.ProtoReflect.Descriptor instead.
 func (*E2EEServiceReactRequest) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{2}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *E2EEServiceReactRequest) GetSessionId() string {
@@ -243,7 +793,7 @@ type E2EEServiceReactResponse struct {
 
 func (x *E2EEServiceReactResponse) Reset() {
 	*x = E2EEServiceReactResponse{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[3]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -255,7 +805,7 @@ func (x *E2EEServiceReactResponse) String() string {
 func (*E2EEServiceReactResponse) ProtoMessage() {}
 
 func (x *E2EEServiceReactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[3]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -268,7 +818,7 @@ func (x *E2EEServiceReactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceReactResponse.ProtoReflect.Descriptor instead.
 func (*E2EEServiceReactResponse) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{3}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{9}
 }
 
 type E2EEServiceEditRequest struct {
@@ -283,7 +833,7 @@ type E2EEServiceEditRequest struct {
 
 func (x *E2EEServiceEditRequest) Reset() {
 	*x = E2EEServiceEditRequest{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[4]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -295,7 +845,7 @@ func (x *E2EEServiceEditRequest) String() string {
 func (*E2EEServiceEditRequest) ProtoMessage() {}
 
 func (x *E2EEServiceEditRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[4]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -308,7 +858,7 @@ func (x *E2EEServiceEditRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceEditRequest.ProtoReflect.Descriptor instead.
 func (*E2EEServiceEditRequest) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{4}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *E2EEServiceEditRequest) GetSessionId() string {
@@ -347,7 +897,7 @@ type E2EEServiceEditResponse struct {
 
 func (x *E2EEServiceEditResponse) Reset() {
 	*x = E2EEServiceEditResponse{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[5]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -359,7 +909,7 @@ func (x *E2EEServiceEditResponse) String() string {
 func (*E2EEServiceEditResponse) ProtoMessage() {}
 
 func (x *E2EEServiceEditResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[5]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -372,7 +922,7 @@ func (x *E2EEServiceEditResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceEditResponse.ProtoReflect.Descriptor instead.
 func (*E2EEServiceEditResponse) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{5}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{11}
 }
 
 type E2EEServiceUnsendRequest struct {
@@ -386,7 +936,7 @@ type E2EEServiceUnsendRequest struct {
 
 func (x *E2EEServiceUnsendRequest) Reset() {
 	*x = E2EEServiceUnsendRequest{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[6]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -398,7 +948,7 @@ func (x *E2EEServiceUnsendRequest) String() string {
 func (*E2EEServiceUnsendRequest) ProtoMessage() {}
 
 func (x *E2EEServiceUnsendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[6]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -411,7 +961,7 @@ func (x *E2EEServiceUnsendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceUnsendRequest.ProtoReflect.Descriptor instead.
 func (*E2EEServiceUnsendRequest) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{6}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *E2EEServiceUnsendRequest) GetSessionId() string {
@@ -443,7 +993,7 @@ type E2EEServiceUnsendResponse struct {
 
 func (x *E2EEServiceUnsendResponse) Reset() {
 	*x = E2EEServiceUnsendResponse{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[7]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -455,7 +1005,7 @@ func (x *E2EEServiceUnsendResponse) String() string {
 func (*E2EEServiceUnsendResponse) ProtoMessage() {}
 
 func (x *E2EEServiceUnsendResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[7]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -468,7 +1018,7 @@ func (x *E2EEServiceUnsendResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceUnsendResponse.ProtoReflect.Descriptor instead.
 func (*E2EEServiceUnsendResponse) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{7}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{13}
 }
 
 type E2EEServiceSetTypingRequest struct {
@@ -482,7 +1032,7 @@ type E2EEServiceSetTypingRequest struct {
 
 func (x *E2EEServiceSetTypingRequest) Reset() {
 	*x = E2EEServiceSetTypingRequest{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[8]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -494,7 +1044,7 @@ func (x *E2EEServiceSetTypingRequest) String() string {
 func (*E2EEServiceSetTypingRequest) ProtoMessage() {}
 
 func (x *E2EEServiceSetTypingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[8]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -507,7 +1057,7 @@ func (x *E2EEServiceSetTypingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceSetTypingRequest.ProtoReflect.Descriptor instead.
 func (*E2EEServiceSetTypingRequest) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{8}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *E2EEServiceSetTypingRequest) GetSessionId() string {
@@ -539,7 +1089,7 @@ type E2EEServiceSetTypingResponse struct {
 
 func (x *E2EEServiceSetTypingResponse) Reset() {
 	*x = E2EEServiceSetTypingResponse{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[9]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -551,7 +1101,7 @@ func (x *E2EEServiceSetTypingResponse) String() string {
 func (*E2EEServiceSetTypingResponse) ProtoMessage() {}
 
 func (x *E2EEServiceSetTypingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[9]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -564,7 +1114,7 @@ func (x *E2EEServiceSetTypingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceSetTypingResponse.ProtoReflect.Descriptor instead.
 func (*E2EEServiceSetTypingResponse) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{9}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{15}
 }
 
 type E2EEServiceMarkReadRequest struct {
@@ -580,7 +1130,7 @@ type E2EEServiceMarkReadRequest struct {
 
 func (x *E2EEServiceMarkReadRequest) Reset() {
 	*x = E2EEServiceMarkReadRequest{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[10]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -592,7 +1142,7 @@ func (x *E2EEServiceMarkReadRequest) String() string {
 func (*E2EEServiceMarkReadRequest) ProtoMessage() {}
 
 func (x *E2EEServiceMarkReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[10]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +1155,7 @@ func (x *E2EEServiceMarkReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceMarkReadRequest.ProtoReflect.Descriptor instead.
 func (*E2EEServiceMarkReadRequest) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{10}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *E2EEServiceMarkReadRequest) GetSessionId() string {
@@ -651,7 +1201,7 @@ type E2EEServiceMarkReadResponse struct {
 
 func (x *E2EEServiceMarkReadResponse) Reset() {
 	*x = E2EEServiceMarkReadResponse{}
-	mi := &file_meta_v1_e2ee_proto_msgTypes[11]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -663,7 +1213,7 @@ func (x *E2EEServiceMarkReadResponse) String() string {
 func (*E2EEServiceMarkReadResponse) ProtoMessage() {}
 
 func (x *E2EEServiceMarkReadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_e2ee_proto_msgTypes[11]
+	mi := &file_meta_v1_e2ee_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -676,14 +1226,14 @@ func (x *E2EEServiceMarkReadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use E2EEServiceMarkReadResponse.ProtoReflect.Descriptor instead.
 func (*E2EEServiceMarkReadResponse) Descriptor() ([]byte, []int) {
-	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{11}
+	return file_meta_v1_e2ee_proto_rawDescGZIP(), []int{17}
 }
 
 var File_meta_v1_e2ee_proto protoreflect.FileDescriptor
 
 const file_meta_v1_e2ee_proto_rawDesc = "" +
 	"\n" +
-	"\x12meta/v1/e2ee.proto\x12\ameta.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd9\x01\n" +
+	"\x12meta/v1/e2ee.proto\x12\ameta.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14meta/v1/common.proto\"\xd9\x01\n" +
 	"\x1aE2EEServiceSendTextRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x19\n" +
@@ -695,7 +1245,46 @@ const file_meta_v1_e2ee_proto_rawDesc = "" +
 	"\x1bE2EEServiceSendTextResponse\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
-	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\xad\x01\n" +
+	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\xd0\x03\n" +
+	"\x1cE2EEServiceSendMediaMetadata\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x19\n" +
+	"\bchat_jid\x18\x02 \x01(\tR\achatJid\x12(\n" +
+	"\x10facebook_user_id\x18\x03 \x01(\tR\x0efacebookUserId\x12*\n" +
+	"\x04kind\x18\x04 \x01(\x0e2\x16.meta.v1.E2EEMediaKindR\x04kind\x12\x12\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\x12!\n" +
+	"\fcontent_type\x18\x06 \x01(\tR\vcontentType\x12\x12\n" +
+	"\x04size\x18\a \x01(\x03R\x04size\x12\x18\n" +
+	"\acaption\x18\b \x01(\tR\acaption\x12\x14\n" +
+	"\x05width\x18\t \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\n" +
+	" \x01(\x05R\x06height\x12\x1a\n" +
+	"\bduration\x18\v \x01(\x05R\bduration\x12\x14\n" +
+	"\x05voice\x18\f \x01(\bR\x05voice\x12\x19\n" +
+	"\breply_to\x18\r \x01(\tR\areplyTo\x12(\n" +
+	"\x10reply_sender_jid\x18\x0e \x01(\tR\x0ereplySenderJid\x12\x16\n" +
+	"\x06sha256\x18\x0f \x01(\fR\x06sha256\"\x9a\x01\n" +
+	"\x1bE2EEServiceSendMediaRequest\x12C\n" +
+	"\bmetadata\x18\x01 \x01(\v2%.meta.v1.E2EEServiceSendMediaMetadataH\x00R\bmetadata\x12+\n" +
+	"\x05chunk\x18\x02 \x01(\v2\x13.meta.v1.MediaChunkH\x00R\x05chunkB\t\n" +
+	"\apayload\"\x8f\x01\n" +
+	"\x1cE2EEServiceSendMediaResponse\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x128\n" +
+	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x16\n" +
+	"\x06sha256\x18\x03 \x01(\fR\x06sha256\"{\n" +
+	"\x1fE2EEServiceDownloadMediaRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x129\n" +
+	"\treference\x18\x02 \x01(\v2\x1b.meta.v1.E2EEMediaReferenceR\treference\"q\n" +
+	" E2EEServiceDownloadMediaMetadata\x12\x12\n" +
+	"\x04size\x18\x01 \x01(\x03R\x04size\x12!\n" +
+	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x16\n" +
+	"\x06sha256\x18\x03 \x01(\fR\x06sha256\"\xa3\x01\n" +
+	" E2EEServiceDownloadMediaResponse\x12G\n" +
+	"\bmetadata\x18\x01 \x01(\v2).meta.v1.E2EEServiceDownloadMediaMetadataH\x00R\bmetadata\x12+\n" +
+	"\x05chunk\x18\x02 \x01(\v2\x13.meta.v1.MediaChunkH\x00R\x05chunkB\t\n" +
+	"\apayload\"\xad\x01\n" +
 	"\x17E2EEServiceReactRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x19\n" +
@@ -736,9 +1325,18 @@ const file_meta_v1_e2ee_proto_rawDesc = "" +
 	"\vmessage_ids\x18\x04 \x03(\tR\n" +
 	"messageIds\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1d\n" +
-	"\x1bE2EEServiceMarkReadResponse2\xff\x03\n" +
+	"\x1bE2EEServiceMarkReadResponse*\xbc\x01\n" +
+	"\rE2EEMediaKind\x12\x1f\n" +
+	"\x1bE2EE_MEDIA_KIND_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15E2EE_MEDIA_KIND_IMAGE\x10\x01\x12\x19\n" +
+	"\x15E2EE_MEDIA_KIND_VIDEO\x10\x02\x12\x19\n" +
+	"\x15E2EE_MEDIA_KIND_AUDIO\x10\x03\x12\x1c\n" +
+	"\x18E2EE_MEDIA_KIND_DOCUMENT\x10\x04\x12\x1b\n" +
+	"\x17E2EE_MEDIA_KIND_STICKER\x10\x052\xc3\x05\n" +
 	"\vE2EEService\x12U\n" +
-	"\bSendText\x12#.meta.v1.E2EEServiceSendTextRequest\x1a$.meta.v1.E2EEServiceSendTextResponse\x12L\n" +
+	"\bSendText\x12#.meta.v1.E2EEServiceSendTextRequest\x1a$.meta.v1.E2EEServiceSendTextResponse\x12Z\n" +
+	"\tSendMedia\x12$.meta.v1.E2EEServiceSendMediaRequest\x1a%.meta.v1.E2EEServiceSendMediaResponse(\x01\x12f\n" +
+	"\rDownloadMedia\x12(.meta.v1.E2EEServiceDownloadMediaRequest\x1a).meta.v1.E2EEServiceDownloadMediaResponse0\x01\x12L\n" +
 	"\x05React\x12 .meta.v1.E2EEServiceReactRequest\x1a!.meta.v1.E2EEServiceReactResponse\x12I\n" +
 	"\x04Edit\x12\x1f.meta.v1.E2EEServiceEditRequest\x1a .meta.v1.E2EEServiceEditResponse\x12O\n" +
 	"\x06Unsend\x12!.meta.v1.E2EEServiceUnsendRequest\x1a\".meta.v1.E2EEServiceUnsendResponse\x12X\n" +
@@ -757,42 +1355,63 @@ func file_meta_v1_e2ee_proto_rawDescGZIP() []byte {
 	return file_meta_v1_e2ee_proto_rawDescData
 }
 
-var file_meta_v1_e2ee_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_meta_v1_e2ee_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_meta_v1_e2ee_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_meta_v1_e2ee_proto_goTypes = []any{
-	(*E2EEServiceSendTextRequest)(nil),   // 0: meta.v1.E2EEServiceSendTextRequest
-	(*E2EEServiceSendTextResponse)(nil),  // 1: meta.v1.E2EEServiceSendTextResponse
-	(*E2EEServiceReactRequest)(nil),      // 2: meta.v1.E2EEServiceReactRequest
-	(*E2EEServiceReactResponse)(nil),     // 3: meta.v1.E2EEServiceReactResponse
-	(*E2EEServiceEditRequest)(nil),       // 4: meta.v1.E2EEServiceEditRequest
-	(*E2EEServiceEditResponse)(nil),      // 5: meta.v1.E2EEServiceEditResponse
-	(*E2EEServiceUnsendRequest)(nil),     // 6: meta.v1.E2EEServiceUnsendRequest
-	(*E2EEServiceUnsendResponse)(nil),    // 7: meta.v1.E2EEServiceUnsendResponse
-	(*E2EEServiceSetTypingRequest)(nil),  // 8: meta.v1.E2EEServiceSetTypingRequest
-	(*E2EEServiceSetTypingResponse)(nil), // 9: meta.v1.E2EEServiceSetTypingResponse
-	(*E2EEServiceMarkReadRequest)(nil),   // 10: meta.v1.E2EEServiceMarkReadRequest
-	(*E2EEServiceMarkReadResponse)(nil),  // 11: meta.v1.E2EEServiceMarkReadResponse
-	(*timestamppb.Timestamp)(nil),        // 12: google.protobuf.Timestamp
+	(E2EEMediaKind)(0),                       // 0: meta.v1.E2EEMediaKind
+	(*E2EEServiceSendTextRequest)(nil),       // 1: meta.v1.E2EEServiceSendTextRequest
+	(*E2EEServiceSendTextResponse)(nil),      // 2: meta.v1.E2EEServiceSendTextResponse
+	(*E2EEServiceSendMediaMetadata)(nil),     // 3: meta.v1.E2EEServiceSendMediaMetadata
+	(*E2EEServiceSendMediaRequest)(nil),      // 4: meta.v1.E2EEServiceSendMediaRequest
+	(*E2EEServiceSendMediaResponse)(nil),     // 5: meta.v1.E2EEServiceSendMediaResponse
+	(*E2EEServiceDownloadMediaRequest)(nil),  // 6: meta.v1.E2EEServiceDownloadMediaRequest
+	(*E2EEServiceDownloadMediaMetadata)(nil), // 7: meta.v1.E2EEServiceDownloadMediaMetadata
+	(*E2EEServiceDownloadMediaResponse)(nil), // 8: meta.v1.E2EEServiceDownloadMediaResponse
+	(*E2EEServiceReactRequest)(nil),          // 9: meta.v1.E2EEServiceReactRequest
+	(*E2EEServiceReactResponse)(nil),         // 10: meta.v1.E2EEServiceReactResponse
+	(*E2EEServiceEditRequest)(nil),           // 11: meta.v1.E2EEServiceEditRequest
+	(*E2EEServiceEditResponse)(nil),          // 12: meta.v1.E2EEServiceEditResponse
+	(*E2EEServiceUnsendRequest)(nil),         // 13: meta.v1.E2EEServiceUnsendRequest
+	(*E2EEServiceUnsendResponse)(nil),        // 14: meta.v1.E2EEServiceUnsendResponse
+	(*E2EEServiceSetTypingRequest)(nil),      // 15: meta.v1.E2EEServiceSetTypingRequest
+	(*E2EEServiceSetTypingResponse)(nil),     // 16: meta.v1.E2EEServiceSetTypingResponse
+	(*E2EEServiceMarkReadRequest)(nil),       // 17: meta.v1.E2EEServiceMarkReadRequest
+	(*E2EEServiceMarkReadResponse)(nil),      // 18: meta.v1.E2EEServiceMarkReadResponse
+	(*timestamppb.Timestamp)(nil),            // 19: google.protobuf.Timestamp
+	(*MediaChunk)(nil),                       // 20: meta.v1.MediaChunk
+	(*E2EEMediaReference)(nil),               // 21: meta.v1.E2EEMediaReference
 }
 var file_meta_v1_e2ee_proto_depIdxs = []int32{
-	12, // 0: meta.v1.E2EEServiceSendTextResponse.timestamp:type_name -> google.protobuf.Timestamp
-	12, // 1: meta.v1.E2EEServiceMarkReadRequest.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 2: meta.v1.E2EEService.SendText:input_type -> meta.v1.E2EEServiceSendTextRequest
-	2,  // 3: meta.v1.E2EEService.React:input_type -> meta.v1.E2EEServiceReactRequest
-	4,  // 4: meta.v1.E2EEService.Edit:input_type -> meta.v1.E2EEServiceEditRequest
-	6,  // 5: meta.v1.E2EEService.Unsend:input_type -> meta.v1.E2EEServiceUnsendRequest
-	8,  // 6: meta.v1.E2EEService.SetTyping:input_type -> meta.v1.E2EEServiceSetTypingRequest
-	10, // 7: meta.v1.E2EEService.MarkRead:input_type -> meta.v1.E2EEServiceMarkReadRequest
-	1,  // 8: meta.v1.E2EEService.SendText:output_type -> meta.v1.E2EEServiceSendTextResponse
-	3,  // 9: meta.v1.E2EEService.React:output_type -> meta.v1.E2EEServiceReactResponse
-	5,  // 10: meta.v1.E2EEService.Edit:output_type -> meta.v1.E2EEServiceEditResponse
-	7,  // 11: meta.v1.E2EEService.Unsend:output_type -> meta.v1.E2EEServiceUnsendResponse
-	9,  // 12: meta.v1.E2EEService.SetTyping:output_type -> meta.v1.E2EEServiceSetTypingResponse
-	11, // 13: meta.v1.E2EEService.MarkRead:output_type -> meta.v1.E2EEServiceMarkReadResponse
-	8,  // [8:14] is the sub-list for method output_type
-	2,  // [2:8] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	19, // 0: meta.v1.E2EEServiceSendTextResponse.timestamp:type_name -> google.protobuf.Timestamp
+	0,  // 1: meta.v1.E2EEServiceSendMediaMetadata.kind:type_name -> meta.v1.E2EEMediaKind
+	3,  // 2: meta.v1.E2EEServiceSendMediaRequest.metadata:type_name -> meta.v1.E2EEServiceSendMediaMetadata
+	20, // 3: meta.v1.E2EEServiceSendMediaRequest.chunk:type_name -> meta.v1.MediaChunk
+	19, // 4: meta.v1.E2EEServiceSendMediaResponse.timestamp:type_name -> google.protobuf.Timestamp
+	21, // 5: meta.v1.E2EEServiceDownloadMediaRequest.reference:type_name -> meta.v1.E2EEMediaReference
+	7,  // 6: meta.v1.E2EEServiceDownloadMediaResponse.metadata:type_name -> meta.v1.E2EEServiceDownloadMediaMetadata
+	20, // 7: meta.v1.E2EEServiceDownloadMediaResponse.chunk:type_name -> meta.v1.MediaChunk
+	19, // 8: meta.v1.E2EEServiceMarkReadRequest.timestamp:type_name -> google.protobuf.Timestamp
+	1,  // 9: meta.v1.E2EEService.SendText:input_type -> meta.v1.E2EEServiceSendTextRequest
+	4,  // 10: meta.v1.E2EEService.SendMedia:input_type -> meta.v1.E2EEServiceSendMediaRequest
+	6,  // 11: meta.v1.E2EEService.DownloadMedia:input_type -> meta.v1.E2EEServiceDownloadMediaRequest
+	9,  // 12: meta.v1.E2EEService.React:input_type -> meta.v1.E2EEServiceReactRequest
+	11, // 13: meta.v1.E2EEService.Edit:input_type -> meta.v1.E2EEServiceEditRequest
+	13, // 14: meta.v1.E2EEService.Unsend:input_type -> meta.v1.E2EEServiceUnsendRequest
+	15, // 15: meta.v1.E2EEService.SetTyping:input_type -> meta.v1.E2EEServiceSetTypingRequest
+	17, // 16: meta.v1.E2EEService.MarkRead:input_type -> meta.v1.E2EEServiceMarkReadRequest
+	2,  // 17: meta.v1.E2EEService.SendText:output_type -> meta.v1.E2EEServiceSendTextResponse
+	5,  // 18: meta.v1.E2EEService.SendMedia:output_type -> meta.v1.E2EEServiceSendMediaResponse
+	8,  // 19: meta.v1.E2EEService.DownloadMedia:output_type -> meta.v1.E2EEServiceDownloadMediaResponse
+	10, // 20: meta.v1.E2EEService.React:output_type -> meta.v1.E2EEServiceReactResponse
+	12, // 21: meta.v1.E2EEService.Edit:output_type -> meta.v1.E2EEServiceEditResponse
+	14, // 22: meta.v1.E2EEService.Unsend:output_type -> meta.v1.E2EEServiceUnsendResponse
+	16, // 23: meta.v1.E2EEService.SetTyping:output_type -> meta.v1.E2EEServiceSetTypingResponse
+	18, // 24: meta.v1.E2EEService.MarkRead:output_type -> meta.v1.E2EEServiceMarkReadResponse
+	17, // [17:25] is the sub-list for method output_type
+	9,  // [9:17] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_meta_v1_e2ee_proto_init() }
@@ -800,18 +1419,28 @@ func file_meta_v1_e2ee_proto_init() {
 	if File_meta_v1_e2ee_proto != nil {
 		return
 	}
+	file_meta_v1_common_proto_init()
+	file_meta_v1_e2ee_proto_msgTypes[3].OneofWrappers = []any{
+		(*E2EEServiceSendMediaRequest_Metadata)(nil),
+		(*E2EEServiceSendMediaRequest_Chunk)(nil),
+	}
+	file_meta_v1_e2ee_proto_msgTypes[7].OneofWrappers = []any{
+		(*E2EEServiceDownloadMediaResponse_Metadata)(nil),
+		(*E2EEServiceDownloadMediaResponse_Chunk)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meta_v1_e2ee_proto_rawDesc), len(file_meta_v1_e2ee_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   12,
+			NumEnums:      1,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_meta_v1_e2ee_proto_goTypes,
 		DependencyIndexes: file_meta_v1_e2ee_proto_depIdxs,
+		EnumInfos:         file_meta_v1_e2ee_proto_enumTypes,
 		MessageInfos:      file_meta_v1_e2ee_proto_msgTypes,
 	}.Build()
 	File_meta_v1_e2ee_proto = out.File

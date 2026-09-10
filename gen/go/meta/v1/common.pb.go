@@ -905,6 +905,50 @@ func (x *Message) GetTransport() TransportKind {
 	return TransportKind_TRANSPORT_KIND_UNSPECIFIED
 }
 
+type MediaChunk struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MediaChunk) Reset() {
+	*x = MediaChunk{}
+	mi := &file_meta_v1_common_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MediaChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MediaChunk) ProtoMessage() {}
+
+func (x *MediaChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_common_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MediaChunk.ProtoReflect.Descriptor instead.
+func (*MediaChunk) Descriptor() ([]byte, []int) {
+	return file_meta_v1_common_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *MediaChunk) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 var File_meta_v1_common_proto protoreflect.FileDescriptor
 
 const file_meta_v1_common_proto_rawDesc = "" +
@@ -979,7 +1023,10 @@ const file_meta_v1_common_proto_rawDesc = "" +
 	"encryption\x18\t \x01(\x0e2\x17.meta.v1.EncryptionKindR\n" +
 	"encryption\x124\n" +
 	"\ttransport\x18\n" +
-	" \x01(\x0e2\x16.meta.v1.TransportKindR\ttransport*\xf1\x02\n" +
+	" \x01(\x0e2\x16.meta.v1.TransportKindR\ttransport\" \n" +
+	"\n" +
+	"MediaChunk\x12\x12\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data*\xf1\x02\n" +
 	"\rErrorCategory\x12\x1e\n" +
 	"\x1aERROR_CATEGORY_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16ERROR_CATEGORY_UNKNOWN\x10\x01\x12\x17\n" +
@@ -1016,7 +1063,7 @@ func file_meta_v1_common_proto_rawDescGZIP() []byte {
 }
 
 var file_meta_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_meta_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_meta_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_meta_v1_common_proto_goTypes = []any{
 	(ErrorCategory)(0),            // 0: meta.v1.ErrorCategory
 	(TransportKind)(0),            // 1: meta.v1.TransportKind
@@ -1030,14 +1077,15 @@ var file_meta_v1_common_proto_goTypes = []any{
 	(*E2EEMediaReference)(nil),    // 9: meta.v1.E2EEMediaReference
 	(*Attachment)(nil),            // 10: meta.v1.Attachment
 	(*Message)(nil),               // 11: meta.v1.Message
-	nil,                           // 12: meta.v1.ErrorDetail.DetailsEntry
-	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(*MediaChunk)(nil),            // 12: meta.v1.MediaChunk
+	nil,                           // 13: meta.v1.ErrorDetail.DetailsEntry
+	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
 }
 var file_meta_v1_common_proto_depIdxs = []int32{
 	0,  // 0: meta.v1.ErrorDetail.category:type_name -> meta.v1.ErrorCategory
-	12, // 1: meta.v1.ErrorDetail.details:type_name -> meta.v1.ErrorDetail.DetailsEntry
+	13, // 1: meta.v1.ErrorDetail.details:type_name -> meta.v1.ErrorDetail.DetailsEntry
 	9,  // 2: meta.v1.Attachment.e2ee:type_name -> meta.v1.E2EEMediaReference
-	13, // 3: meta.v1.Message.timestamp:type_name -> google.protobuf.Timestamp
+	14, // 3: meta.v1.Message.timestamp:type_name -> google.protobuf.Timestamp
 	7,  // 4: meta.v1.Message.reply_to:type_name -> meta.v1.ReplyReference
 	8,  // 5: meta.v1.Message.mentions:type_name -> meta.v1.Mention
 	10, // 6: meta.v1.Message.attachments:type_name -> meta.v1.Attachment
@@ -1061,7 +1109,7 @@ func file_meta_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meta_v1_common_proto_rawDesc), len(file_meta_v1_common_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   10,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

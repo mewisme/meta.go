@@ -55,11 +55,11 @@ func (s *Service) Send(ctx context.Context, req model.SendRequest) (model.SendRe
 	if req.ThreadID.Empty() {
 		return model.SendResult{}, invalid("thread ID is required")
 	}
-	if strings.TrimSpace(req.Text) == "" && len(req.Attachments) == 0 && req.StickerID.Empty() && strings.TrimSpace(req.URL) == "" {
+	if strings.TrimSpace(req.Text) == "" && len(req.Attachments) == 0 && len(req.AttachmentIDs) == 0 && req.StickerID.Empty() && strings.TrimSpace(req.URL) == "" {
 		return model.SendResult{}, invalid("message text, attachment, sticker or URL is required")
 	}
 	contentKinds := 0
-	if len(req.Attachments) > 0 {
+	if len(req.Attachments) > 0 || len(req.AttachmentIDs) > 0 {
 		contentKinds++
 	}
 	if !req.StickerID.Empty() {
@@ -70,6 +70,9 @@ func (s *Service) Send(ctx context.Context, req model.SendRequest) (model.SendRe
 	}
 	if contentKinds > 1 {
 		return model.SendResult{}, invalid("attachments, sticker and external media URL are mutually exclusive")
+	}
+	if len(req.Attachments) > 0 && len(req.AttachmentIDs) > 0 {
+		return model.SendResult{}, invalid("attachment readers and uploaded attachment IDs are mutually exclusive")
 	}
 	if req.ReplyTo != nil && req.ReplyTo.MessageID.Empty() {
 		return model.SendResult{}, invalid("reply message ID is required")
@@ -85,6 +88,11 @@ func (s *Service) Send(ctx context.Context, req model.SendRequest) (model.SendRe
 		}
 		if attachment.Size < 0 {
 			return model.SendResult{}, invalid("attachment size cannot be negative")
+		}
+	}
+	for _, attachmentID := range req.AttachmentIDs {
+		if attachmentID.Empty() {
+			return model.SendResult{}, invalid("uploaded attachment IDs cannot be empty")
 		}
 	}
 	return s.backend.Send(ctx, req)

@@ -310,14 +310,15 @@ type UploadResult struct {
 }
 
 type SendRequest struct {
-	ThreadID    ID
-	Text        string
-	ReplyTo     *ReplyReference
-	Mentions    []Mention
-	Attachments []AttachmentInput
-	StickerID   ID
-	URL         string
-	Encryption  EncryptionPolicy
+	ThreadID      ID
+	Text          string
+	ReplyTo       *ReplyReference
+	Mentions      []Mention
+	Attachments   []AttachmentInput
+	AttachmentIDs []ID
+	StickerID     ID
+	URL           string
+	Encryption    EncryptionPolicy
 }
 
 type SendResult struct {

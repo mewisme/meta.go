@@ -10,6 +10,7 @@ option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
 
 service MessengerService {
   rpc Send(SendRequest) returns (SendResponse);
+  rpc Upload(stream UploadRequest) returns (UploadResponse);
   rpc Forward(ForwardRequest) returns (ForwardResponse);
   rpc ShareContact(ShareContactRequest) returns (ShareContactResponse);
   rpc React(ReactRequest) returns (ReactResponse);
@@ -39,6 +40,7 @@ service MessengerService {
   rpc SetApprovalMode(SetApprovalModeRequest) returns (SetApprovalModeResponse);
   rpc SetArchived(SetArchivedRequest) returns (SetArchivedResponse);
   rpc SetMessagePinned(SetMessagePinnedRequest) returns (SetMessagePinnedResponse);
+  rpc SetThreadPhoto(stream SetThreadPhotoRequest) returns (SetThreadPhotoResponse);
   rpc DeleteThread(DeleteThreadRequest) returns (DeleteThreadResponse);
   rpc CreateDM(CreateDMRequest) returns (CreateDMResponse);
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
@@ -193,8 +195,25 @@ message SendRequest {
   string sticker_id = 6;
   string url = 7;
   EncryptionPolicy encryption = 8;
+  repeated string attachment_ids = 9;
 }
 message SendResponse { string message_id = 1; google.protobuf.Timestamp timestamp = 2; }
+message UploadMetadata {
+  string session_id = 1;
+  string thread_id = 2;
+  string name = 3;
+  string content_type = 4;
+  int64 size = 5;
+  bool voice = 6;
+  bytes sha256 = 7;
+}
+message UploadRequest {
+  oneof payload {
+    UploadMetadata metadata = 1;
+    MediaChunk chunk = 2;
+  }
+}
+message UploadResponse { string id = 1; string name = 2; string content_type = 3; string type = 4; bytes sha256 = 5; }
 message ForwardRequest { string session_id = 1; string thread_id = 2; string message_id = 3; }
 message ForwardResponse { string message_id = 1; google.protobuf.Timestamp timestamp = 2; }
 message ShareContactRequest { string session_id = 1; string thread_id = 2; string contact_id = 3; string text = 4; }
@@ -253,6 +272,14 @@ message SetArchivedRequest { string session_id = 1; string thread_id = 2; bool a
 message SetArchivedResponse {}
 message SetMessagePinnedRequest { string session_id = 1; string thread_id = 2; string message_id = 3; bool pinned = 4; }
 message SetMessagePinnedResponse {}
+message SetThreadPhotoMetadata { string session_id = 1; string thread_id = 2; string name = 3; string content_type = 4; int64 size = 5; bytes sha256 = 6; }
+message SetThreadPhotoRequest {
+  oneof payload {
+    SetThreadPhotoMetadata metadata = 1;
+    MediaChunk chunk = 2;
+  }
+}
+message SetThreadPhotoResponse { bytes sha256 = 1; }
 message DeleteThreadRequest { string session_id = 1; string thread_id = 2; }
 message DeleteThreadResponse {}
 message CreateDMRequest { string session_id = 1; string user_id = 2; }
