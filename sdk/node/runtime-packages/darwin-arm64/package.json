@@ -1,0 +1,13 @@
+{
+  "name": "@meewmeew/meta-runtime-darwin-arm64",
+  "version": "0.0.0",
+  "description": "macOS arm64 runtime for @meewmeew/meta",
+  "type": "module",
+  "files": ["meta-runtime"],
+  "exports": {"./runtime": "./meta-runtime"},
+  "bin": {"meta-runtime": "./meta-runtime"},
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "license": "AGPL-3.0-only",
+  "publishConfig": {"access": "public"}
+}

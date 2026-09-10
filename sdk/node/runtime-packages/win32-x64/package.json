@@ -1,0 +1,13 @@
+{
+  "name": "@meewmeew/meta-runtime-win32-x64",
+  "version": "0.0.0",
+  "description": "Windows x64 runtime for @meewmeew/meta",
+  "type": "module",
+  "files": ["meta-runtime.exe"],
+  "exports": {"./runtime": "./meta-runtime.exe"},
+  "bin": {"meta-runtime": "./meta-runtime.exe"},
+  "os": ["win32"],
+  "cpu": ["x64"],
+  "license": "AGPL-3.0-only",
+  "publishConfig": {"access": "public"}
+}
