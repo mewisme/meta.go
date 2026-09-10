@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
@@ -87,7 +88,7 @@ func TestFB4ATwoFactorMetadata(t *testing.T) {
 }
 
 func TestCredentialLoginFallbackPolicy(t *testing.T) {
-	credentials := Credentials{Identifier: "user", Password: "pw"}
+	credentials := Credentials{Identifier: "user", Password: "pw", OTP: "123456"}
 	fallbackCalls := 0
 	fallback := func(context.Context, Credentials) (Cookies, error) {
 		fallbackCalls++
@@ -114,9 +115,27 @@ func TestCredentialLoginFallbackPolicy(t *testing.T) {
 }
 
 func TestCredentialValidation(t *testing.T) {
-	for _, credentials := range []Credentials{{}, {Identifier: "user"}, {Identifier: "user", Password: "pw", TOTP: "bad!"}, {Identifier: "user", Password: "pw", OTP: "12345"}, {Identifier: "user", Password: "pw", TOTP: "JBSWY3DPEHPK3PXP", OTP: "123456"}} {
+	for _, credentials := range []Credentials{{}, {Identifier: "user"}, {Identifier: "user", Password: "pw"}, {Identifier: "user", Password: "pw", TOTP: "bad!"}, {Identifier: "user", Password: "pw", OTP: "12345"}, {Identifier: "user", Password: "pw", TOTP: "JBSWY3DPEHPK3PXP", OTP: "123456"}} {
 		if err := validateCredentials(credentials); !errors.Is(err, fberrors.ErrInvalidInput) {
 			t.Fatalf("expected invalid input for %#v, got %v", credentials, err)
+		}
+	}
+	for _, credentials := range []Credentials{{Identifier: "user", Password: "pw", OTP: "123456"}, {Identifier: "user", Password: "pw", TOTP: "JBSWY3DPEHPK3PXP"}} {
+		if err := validateCredentials(credentials); err != nil {
+			t.Fatalf("expected valid credentials for %#v, got %v", credentials, err)
+		}
+	}
+}
+
+func TestCredentialValidationDoesNotExposeSecrets(t *testing.T) {
+	credentials := Credentials{Identifier: "user", Password: "password-secret", OTP: "12345"}
+	err := validateCredentials(credentials)
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	for _, secret := range []string{credentials.Password, credentials.OTP} {
+		if strings.Contains(err.Error(), secret) {
+			t.Fatalf("validation error exposed secret %q", secret)
 		}
 	}
 }

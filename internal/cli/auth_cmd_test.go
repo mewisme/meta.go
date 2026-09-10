@@ -42,7 +42,7 @@ func TestValidateLoginInput(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, input := range []loginInput{{OTP: "12345"}, {OTP: "abcdef"}, {TOTP: "bad!"}, {TOTP: "JBSWY3DPEHPK3PXP", OTP: "123456"}} {
+	for _, input := range []loginInput{{}, {OTP: "12345"}, {OTP: "abcdef"}, {TOTP: "bad!"}, {TOTP: "JBSWY3DPEHPK3PXP", OTP: "123456"}} {
 		if err := validateLoginInput(input); !errors.Is(err, fberrors.ErrInvalidInput) {
 			t.Fatalf("expected invalid input for %#v, got %v", input, err)
 		}

@@ -117,17 +117,16 @@ func newAuthLoginCommand(opts *options) *cobra.Command {
 		if err := collectBaseCredentials(cmd, &preset); err != nil {
 			return err
 		}
+		if preset.TOTP == "" && preset.OTP == "" && isInteractive(cmd) {
+			if err := promptOTP(cmd, &preset.OTP); err != nil {
+				return err
+			}
+		}
 		if err := validateLoginInput(preset); err != nil {
 			return err
 		}
 		login := auth.NewCredentialLogin()
 		cookies, err := login.Login(cmd.Context(), auth.Credentials{Identifier: preset.Identifier, Password: preset.Password, TOTP: preset.TOTP, OTP: preset.OTP})
-		if errors.Is(err, auth.ErrTwoFactorRequired) && preset.TOTP == "" && preset.OTP == "" && isInteractive(cmd) {
-			if err := promptOTP(cmd, &preset.OTP); err != nil {
-				return err
-			}
-			cookies, err = login.Login(cmd.Context(), auth.Credentials{Identifier: preset.Identifier, Password: preset.Password, OTP: preset.OTP})
-		}
 		if err != nil {
 			return err
 		}
@@ -177,8 +176,8 @@ func promptOTP(cmd *cobra.Command, value *string) error {
 }
 
 func validateLoginInput(input loginInput) error {
-	if input.TOTP != "" && input.OTP != "" {
-		return fmt.Errorf("%w: totp and otp are mutually exclusive", fberrors.ErrInvalidInput)
+	if (input.TOTP == "") == (input.OTP == "") {
+		return fmt.Errorf("%w: exactly one of totp or otp is required", fberrors.ErrInvalidInput)
 	}
 	if input.TOTP != "" {
 		if _, err := auth.TOTP(input.TOTP, time.Now()); err != nil {

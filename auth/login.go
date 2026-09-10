@@ -116,8 +116,8 @@ func validateCredentials(credentials Credentials) error {
 	if credentials.Password == "" {
 		return fmt.Errorf("%w: password is required", fberrors.ErrInvalidInput)
 	}
-	if credentials.TOTP != "" && credentials.OTP != "" {
-		return fmt.Errorf("%w: totp and otp are mutually exclusive", fberrors.ErrInvalidInput)
+	if (credentials.TOTP == "") == (credentials.OTP == "") {
+		return fmt.Errorf("%w: exactly one of totp or otp is required", fberrors.ErrInvalidInput)
 	}
 	if credentials.TOTP != "" {
 		if _, err := TOTP(credentials.TOTP, time.Now()); err != nil {
