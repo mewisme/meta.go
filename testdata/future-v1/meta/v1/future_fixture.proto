@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package meta.v1;
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+message FutureEchoRequest {
+  string value = 1;
+}
+
+message FutureEchoResponse {
+  string value = 1;
+}
+
+message FutureEvent {
+  string value = 1;
+}
+
+message FutureEventEnvelope {
+  string session_id = 1;
+  uint64 sequence = 2;
+
+  oneof payload {
+    FutureEvent future = 100;
+  }
+}

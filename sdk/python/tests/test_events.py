@@ -110,3 +110,25 @@ async def test_event_stream_close_cancels_source_once() -> None:
     await stream.aclose()
     await stream.aclose()
     assert cancelled == 1
+
+
+@pytest.mark.asyncio
+async def test_older_python_sdk_preserves_unknown_future_event_payload() -> None:
+    wire = bytes.fromhex("0a0273311007a206080a06667574757265")
+    future = events_pb2.Event.FromString(wire)
+    assert future.session_id == "s1"
+    assert future.sequence == 7
+    assert future.WhichOneof("payload") is None
+    assert future.SerializeToString() == wire
+
+    async def source():
+        yield session_pb2.SubscribeEventsResponse(event=future)
+
+    stream = EventStream(source())
+    iterator = stream.__aiter__()
+    seen: list[events_pb2.Event] = []
+    stream.on("ready", seen.append)
+    assert await anext(iterator) == future
+    with pytest.raises(StopAsyncIteration):
+        await anext(iterator)
+    assert seen == []

@@ -21,6 +21,7 @@ jobs:
           cache: true
       - run: go mod verify
       - run: ./scripts/proto.sh check
+      - run: ./scripts/proto.sh check-future
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...

@@ -20,7 +20,7 @@ test("managed runtime exposes capabilities and session lifecycle", async () => {
   try {
     assert.equal(client.info()?.protocol?.major, 1)
     assert.equal(client.hasCapability("session.lifecycle"), true)
-    assert.throws(() => client.requireCapability("future.missing"), UnsupportedCapabilityError)
+    assert.throws(() => client.requireCapability("future.echo"), error => error instanceof UnsupportedCapabilityError && error.capability === "future.echo")
     const created = await client.createSession({c_user: "42", xs: "test"}, {eventBuffer: 8, timeoutMs: 5000})
     assert.ok(created.sessionId)
     const health = await client.getSessionHealth(created.sessionId)

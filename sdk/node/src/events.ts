@@ -97,8 +97,8 @@ export class EventStream implements AsyncIterable<Event> {
       for await (const response of this.source) {
         if (this.closed) return
         const event = response.event
-        if (!event?.payload) continue
-        for (const listener of this.listeners.get(event.payload.$case) ?? []) listener(event)
+        if (!event) continue
+        if (event.payload) for (const listener of this.listeners.get(event.payload.$case) ?? []) listener(event)
         for (const queue of this.queues) queue.push(event)
       }
       this.closed = true

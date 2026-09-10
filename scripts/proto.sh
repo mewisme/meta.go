@@ -86,6 +86,87 @@ PY_NORMALIZE
   return "$status"
 }
 
+check_future() {
+  work_dir=$(mktemp -d)
+  image="$work_dir/image.binpb"
+  status=0
+  cp -R "$ROOT/proto" "$work_dir/proto"
+  mkdir -p "$work_dir/proto/meta/v1"
+  cp "$ROOT/testdata/future-v1/meta/v1/future_fixture.proto" "$work_dir/proto/meta/v1/future_fixture.proto"
+  cat >"$work_dir/buf.yaml" <<'YAML'
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+YAML
+  cat >"$work_dir/buf.gen.yaml" <<'YAML'
+version: v2
+plugins:
+  - remote: buf.build/community/stephenh-ts-proto:v2.12.1
+    out: gen/node
+    opt:
+      - outputServices=nice-grpc
+      - outputServices=generic-definitions
+      - useExactTypes=false
+      - esModuleInterop=true
+      - importSuffix=.js
+      - forceLong=bigint
+      - oneof=unions-value
+  - remote: buf.build/protocolbuffers/python:v36.1
+    out: gen/python
+  - remote: buf.build/grpc/python:v1.76.0
+    out: gen/python
+YAML
+  python3 - "$work_dir" <<'PY_FUTURE'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1]) / "proto" / "meta" / "v1"
+runtime = root / "runtime.proto"
+events = root / "events.proto"
+
+runtime_text = runtime.read_text()
+runtime_text = runtime_text.replace(
+    'import "meta/v1/common.proto";\n',
+    'import "meta/v1/common.proto";\nimport "meta/v1/future_fixture.proto";\n',
+)
+runtime_text = runtime_text.replace(
+    '  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);\n',
+    '  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);\n  rpc FutureEcho(FutureEchoRequest) returns (FutureEchoResponse);\n',
+)
+runtime.write_text(runtime_text)
+
+events_text = events.read_text()
+events_text = events_text.replace(
+    'import "meta/v1/common.proto";\n',
+    'import "meta/v1/common.proto";\nimport "meta/v1/future_fixture.proto";\n',
+)
+events_text = events_text.replace(
+    '    ThreadSystemEvent thread_system = 24;\n',
+    '    ThreadSystemEvent thread_system = 24;\n    FutureEvent future = 100;\n',
+)
+events.write_text(events_text)
+PY_FUTURE
+  if (
+    cd "$work_dir" &&
+    run_buf lint --config buf.yaml &&
+    run_buf build --config buf.yaml --exclude-source-info -o "$image" &&
+    run_buf generate "$image" --template buf.gen.yaml &&
+    grep -q 'FutureEcho' gen/node/meta/v1/runtime.ts &&
+    grep -q '\$case: "future"' gen/node/meta/v1/events.ts &&
+    grep -q 'FutureEcho' gen/python/meta/v1/runtime_pb2_grpc.py &&
+    grep -q 'future' gen/python/meta/v1/events_pb2.py
+  ); then
+    status=0
+  else
+    status=$?
+  fi
+  rm -rf "$work_dir"
+  return "$status"
+}
+
 case "${1:-check}" in
   generate)
     generate
@@ -113,13 +194,16 @@ case "${1:-check}" in
     git -C "$ROOT" diff --exit-code -- sdk/python/src/meta
     test -z "$(git -C "$ROOT" ls-files --others --exclude-standard -- sdk/python/src/meta)"
     ;;
+  check-future)
+    check_future
+    ;;
   check)
     generate
     git -C "$ROOT" diff --exit-code -- proto gen/go buf.yaml buf.gen.yaml
     test -z "$(git -C "$ROOT" ls-files --others --exclude-standard -- proto gen/go)"
     ;;
   *)
-    echo "usage: $0 {generate|generate-node|generate-python|lint|breaking [baseline]|check|check-node|check-python}" >&2
+    echo "usage: $0 {generate|generate-node|generate-python|lint|breaking [baseline]|check|check-node|check-python|check-future}" >&2
     exit 2
     ;;
 esac

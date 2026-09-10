@@ -30,8 +30,9 @@ async def test_managed_runtime_exposes_capabilities_and_session_lifecycle(runtim
         assert client.info is not None
         assert client.info.protocol.major == 1
         assert client.has_capability("session.lifecycle")
-        with pytest.raises(UnsupportedCapabilityError):
-            client.require_capability("future.missing")
+        with pytest.raises(UnsupportedCapabilityError) as error:
+            client.require_capability("future.echo")
+        assert error.value.capability == "future.echo"
 
         created = await client.create_session({"c_user": "42", "xs": "test"}, event_buffer=8, timeout_ms=5000)
         assert created.session_id

@@ -198,3 +198,5 @@ normalized model.Event
 ```
 
 No feature may introduce a language-specific native bridge, SDK-specific protocol implementation, separate event transport, or Go ABI/FFI dependency.
+
+The initial generated SDK surface is intentionally limited to Node.js/TypeScript and Python. `testdata/future-v1` plus `./scripts/proto.sh check-future` exercises a synthetic additive RPC and event variant against both generators without changing the production v1 schema. Runtime conformance tests also pin the older-SDK behavior for unknown event payloads and the newer-SDK behavior for missing capability strings.
