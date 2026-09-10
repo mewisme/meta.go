@@ -1,9 +1,10 @@
 package meta
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
+
+	"go.mewis.me/meta-extra/pkg/messagix"
 )
 
 func TestNormalizePrivacy(t *testing.T) {
@@ -15,15 +16,14 @@ func TestNormalizePrivacy(t *testing.T) {
 	}
 }
 
-func TestThemeTaskNullPayload(t *testing.T) {
-	task := &themeTask{ThreadKey: 1, ThemeFBID: 2, SyncGroup: 1, label: "43", queue: "thread_theme", includeNulls: true}
-	payload, queue := task.Create()
-	data, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != `{"thread_key":1,"theme_fbid":2,"sync_group":1,"source":null,"payload":null}` || queue != "thread_theme" {
-		t.Fatalf("unexpected theme task: %s queue=%v", data, queue)
+func TestNormalizeThreadTheme(t *testing.T) {
+	description, color := "desc", "#123456"
+	value := messagix.ThreadThemeVariant{ID: "2", AccessibilityLabel: "Theme", Description: &description, ComposerBackgroundColor: &color, NormalThemeID: "1"}
+	value.BackgroundAsset = &messagix.ThreadThemeAsset{}
+	value.BackgroundAsset.Image.URI = "https://example.invalid/background"
+	got := normalizeThreadTheme(value)
+	if got.ID != "2" || got.Name != "Theme" || got.Description != description || got.ComposerBackgroundColor != color || got.NormalThemeID != "1" || got.BackgroundImage == "" {
+		t.Fatalf("unexpected normalized theme: %#v", got)
 	}
 }
 

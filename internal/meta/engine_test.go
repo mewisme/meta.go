@@ -68,9 +68,13 @@ func (f *fakeBackend) ListThreads(context.Context, int) (model.ThreadList, error
 func (f *fakeBackend) GetThread(context.Context, model.ID) (*model.Thread, error) {
 	return &model.Thread{ID: "10"}, nil
 }
-func (f *fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error   { return nil }
-func (f *fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error { return nil }
-func (f *fakeBackend) MuteThread(context.Context, model.ID, time.Duration) error      { return nil }
+func (f *fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error     { return nil }
+func (f *fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error   { return nil }
+func (f *fakeBackend) MuteThread(context.Context, model.ID, time.Duration) error        { return nil }
+func (f *fakeBackend) MuteThreadCalls(context.Context, model.ID, time.Duration) error   { return nil }
+func (f *fakeBackend) SetThreadApprovalMode(context.Context, model.ID, bool) error      { return nil }
+func (f *fakeBackend) SetThreadArchived(context.Context, model.ID, bool) error          { return nil }
+func (f *fakeBackend) SetMessagePinned(context.Context, model.ID, model.ID, bool) error { return nil }
 func (f *fakeBackend) SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error {
 	return nil
 }
@@ -275,6 +279,12 @@ func (b *blockingBackend) GetThread(context.Context, model.ID) (*model.Thread, e
 func (b *blockingBackend) CreatePoll(context.Context, model.ID, string, []string) error   { return nil }
 func (b *blockingBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error { return nil }
 func (b *blockingBackend) MuteThread(context.Context, model.ID, time.Duration) error      { return nil }
+func (b *blockingBackend) MuteThreadCalls(context.Context, model.ID, time.Duration) error { return nil }
+func (b *blockingBackend) SetThreadApprovalMode(context.Context, model.ID, bool) error    { return nil }
+func (b *blockingBackend) SetThreadArchived(context.Context, model.ID, bool) error        { return nil }
+func (b *blockingBackend) SetMessagePinned(context.Context, model.ID, model.ID, bool) error {
+	return nil
+}
 func (b *blockingBackend) SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error {
 	return nil
 }

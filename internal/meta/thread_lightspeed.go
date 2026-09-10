@@ -58,6 +58,55 @@ func (b *messagixBackend) MuteThread(ctx context.Context, threadID model.ID, dur
 	return err
 }
 
+func (b *messagixBackend) MuteThreadCalls(ctx context.Context, threadID model.ID, duration time.Duration) error {
+	thread, err := parsePositiveID(threadID, "thread")
+	if err != nil {
+		return err
+	}
+	_, err = b.client.SetThreadCallsMute(ctx, thread, muteExpiry(duration))
+	return err
+}
+
+func (b *messagixBackend) SetThreadApprovalMode(ctx context.Context, threadID model.ID, enabled bool) error {
+	thread, err := parsePositiveID(threadID, "thread")
+	if err != nil {
+		return err
+	}
+	_, err = b.client.SetThreadApprovalMode(ctx, thread, enabled)
+	return err
+}
+
+func (b *messagixBackend) SetThreadArchived(ctx context.Context, threadID model.ID, archived bool) error {
+	thread, err := parsePositiveID(threadID, "thread")
+	if err != nil {
+		return err
+	}
+	_, err = b.client.SetThreadArchived(ctx, thread, archived)
+	return err
+}
+
+func (b *messagixBackend) SetMessagePinned(ctx context.Context, threadID, messageID model.ID, pinned bool) error {
+	thread, err := parsePositiveID(threadID, "thread")
+	if err != nil {
+		return err
+	}
+	if messageID.Empty() {
+		return errors.New("message ID is required")
+	}
+	_, err = b.client.SetMessagePinned(ctx, thread, messageID.String(), pinned)
+	return err
+}
+
+func muteExpiry(duration time.Duration) int64 {
+	if duration < 0 {
+		return -1
+	}
+	if duration == 0 {
+		return 0
+	}
+	return time.Now().Add(duration).UnixMilli()
+}
+
 func (b *messagixBackend) SetThreadPhoto(ctx context.Context, threadID model.ID, input model.AttachmentInput) error {
 	thread, err := parsePositiveID(threadID, "thread")
 	if err != nil {

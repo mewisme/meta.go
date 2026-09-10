@@ -19,9 +19,13 @@ func (*fakeBackend) ListThreads(context.Context, int) (model.ThreadList, error) 
 func (*fakeBackend) GetThread(context.Context, model.ID) (*model.Thread, error) {
 	return &model.Thread{ID: "1"}, nil
 }
-func (*fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error   { return nil }
-func (*fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error { return nil }
-func (*fakeBackend) MuteThread(context.Context, model.ID, time.Duration) error      { return nil }
+func (*fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error     { return nil }
+func (*fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error   { return nil }
+func (*fakeBackend) MuteThread(context.Context, model.ID, time.Duration) error        { return nil }
+func (*fakeBackend) MuteThreadCalls(context.Context, model.ID, time.Duration) error   { return nil }
+func (*fakeBackend) SetThreadApprovalMode(context.Context, model.ID, bool) error      { return nil }
+func (*fakeBackend) SetThreadArchived(context.Context, model.ID, bool) error          { return nil }
+func (*fakeBackend) SetMessagePinned(context.Context, model.ID, model.ID, bool) error { return nil }
 func (*fakeBackend) SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error {
 	return nil
 }
@@ -64,6 +68,24 @@ func TestServiceValidationAndDelegation(t *testing.T) {
 	}
 	if err := service.Mute(context.Background(), "1", -time.Second); err != nil {
 		t.Fatal(err)
+	}
+	if err := service.MuteCalls(context.Background(), "1", -time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.SetApprovalMode(context.Background(), "1", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.SetArchived(context.Background(), "1", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.PinMessage(context.Background(), "1", "mid.1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.UnpinMessage(context.Background(), "1", "mid.1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.PinMessage(context.Background(), "", "mid.1"); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid pin target, got %v", err)
 	}
 	if err := service.SetPhoto(context.Background(), "1", model.AttachmentInput{Reader: bytes.NewBufferString("x"), Size: 1}); err != nil {
 		t.Fatal(err)

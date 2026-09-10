@@ -16,7 +16,7 @@ import (
 
 func newThreadCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{Use: "thread", Short: "Thread query and administration"}
-	cmd.AddCommand(newThreadListCommand(opts), newThreadGetCommand(opts), newThreadPollCommand(opts), newThreadMuteCommand(opts), newThreadPhotoCommand(opts), newThreadDeleteCommand(opts), newThreadCreateDMCommand(opts), newThreadSearchCommand(opts), newThreadContactCommand(opts), newThreadAdminCommand(opts), newThreadNameCommand(opts), newThreadEmojiCommand(opts), newThreadNicknameCommand(opts))
+	cmd.AddCommand(newThreadListCommand(opts), newThreadGetCommand(opts), newThreadPollCommand(opts), newThreadMuteCommand(opts), newThreadCallsMuteCommand(opts), newThreadApprovalCommand(opts), newThreadArchiveCommand(opts), newThreadPinCommand(opts), newThreadPhotoCommand(opts), newThreadDeleteCommand(opts), newThreadCreateDMCommand(opts), newThreadSearchCommand(opts), newThreadContactCommand(opts), newThreadAdminCommand(opts), newThreadNameCommand(opts), newThreadEmojiCommand(opts), newThreadNicknameCommand(opts))
 	return cmd
 }
 
@@ -111,18 +111,9 @@ func newThreadPollCommand(opts *options) *cobra.Command {
 
 func newThreadMuteCommand(opts *options) *cobra.Command {
 	return &cobra.Command{Use: "mute <thread-id> <duration|forever|off>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
-		var duration time.Duration
-		switch strings.ToLower(strings.TrimSpace(args[1])) {
-		case "forever":
-			duration = -time.Second
-		case "off", "unmute":
-			duration = 0
-		default:
-			parsed, err := time.ParseDuration(args[1])
-			if err != nil || parsed < 0 {
-				return fmt.Errorf("%w: invalid mute duration %q", fberrors.ErrInvalidInput, args[1])
-			}
-			duration = parsed
+		duration, err := parseMuteDuration(args[1])
+		if err != nil {
+			return err
 		}
 		r, err := loadRuntime(cmd.Context(), opts)
 		if err != nil {
@@ -138,6 +129,124 @@ func newThreadMuteCommand(opts *options) *cobra.Command {
 		}
 		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]string{"thread_id": args[0], "mute": args[1]}, "thread mute updated")
 	}}
+}
+
+func newThreadCallsMuteCommand(opts *options) *cobra.Command {
+	return &cobra.Command{Use: "calls-mute <thread-id> <duration|forever|off>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		duration, err := parseMuteDuration(args[1])
+		if err != nil {
+			return err
+		}
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		c, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+		if err := c.Threads.MuteCalls(cmd.Context(), model.ID(args[0]), duration); err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]string{"thread_id": args[0], "calls_mute": args[1]}, "thread call mute updated")
+	}}
+}
+
+func newThreadApprovalCommand(opts *options) *cobra.Command {
+	return &cobra.Command{Use: "approval <thread-id> <on|off>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		enabled, err := parseOnOff(args[1], "approval")
+		if err != nil {
+			return err
+		}
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		c, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+		if err := c.Threads.SetApprovalMode(cmd.Context(), model.ID(args[0]), enabled); err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"thread_id": args[0], "approval": enabled}, "thread approval mode updated")
+	}}
+}
+
+func newThreadArchiveCommand(opts *options) *cobra.Command {
+	return &cobra.Command{Use: "archive <thread-id> <on|off>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		archived, err := parseOnOff(args[1], "archive")
+		if err != nil {
+			return err
+		}
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		c, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+		if err := c.Threads.SetArchived(cmd.Context(), model.ID(args[0]), archived); err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"thread_id": args[0], "archived": archived}, "thread archive state updated")
+	}}
+}
+
+func newThreadPinCommand(opts *options) *cobra.Command {
+	remove := false
+	cmd := &cobra.Command{Use: "pin <thread-id> <message-id>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		c, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+		if remove {
+			err = c.Threads.UnpinMessage(cmd.Context(), model.ID(args[0]), model.ID(args[1]))
+		} else {
+			err = c.Threads.PinMessage(cmd.Context(), model.ID(args[0]), model.ID(args[1]))
+		}
+		if err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]any{"thread_id": args[0], "message_id": args[1], "pinned": !remove}, "message pin updated")
+	}}
+	cmd.Flags().BoolVar(&remove, "remove", false, "unpin the message")
+	return cmd
+}
+
+func parseMuteDuration(value string) (time.Duration, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "forever":
+		return -time.Second, nil
+	case "off", "unmute":
+		return 0, nil
+	default:
+		parsed, err := time.ParseDuration(value)
+		if err != nil || parsed < 0 {
+			return 0, fmt.Errorf("%w: invalid mute duration %q", fberrors.ErrInvalidInput, value)
+		}
+		return parsed, nil
+	}
+}
+
+func parseOnOff(value, name string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "on":
+		return true, nil
+	case "off":
+		return false, nil
+	default:
+		return false, fmt.Errorf("%w: %s state must be on or off", fberrors.ErrInvalidInput, name)
+	}
 }
 
 func newThreadPhotoCommand(opts *options) *cobra.Command {

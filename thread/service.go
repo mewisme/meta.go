@@ -20,6 +20,10 @@ type Backend interface {
 	CreatePoll(context.Context, model.ID, string, []string) error
 	VotePoll(context.Context, model.ID, model.ID, []model.ID) error
 	MuteThread(context.Context, model.ID, time.Duration) error
+	MuteThreadCalls(context.Context, model.ID, time.Duration) error
+	SetThreadApprovalMode(context.Context, model.ID, bool) error
+	SetThreadArchived(context.Context, model.ID, bool) error
+	SetMessagePinned(context.Context, model.ID, model.ID, bool) error
 	SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error
 	DeleteThread(context.Context, model.ID) error
 	CreateDM(context.Context, model.ID) (model.ID, error)
@@ -100,6 +104,55 @@ func (s *Service) Mute(ctx context.Context, threadID model.ID, duration time.Dur
 		return invalid("thread ID is required")
 	}
 	return s.backend.MuteThread(ctx, threadID, duration)
+}
+
+// MuteCalls mutes call notifications for duration. Zero unmutes; any negative duration mutes indefinitely.
+func (s *Service) MuteCalls(ctx context.Context, threadID model.ID, duration time.Duration) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() {
+		return invalid("thread ID is required")
+	}
+	return s.backend.MuteThreadCalls(ctx, threadID, duration)
+}
+
+func (s *Service) SetApprovalMode(ctx context.Context, threadID model.ID, enabled bool) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() {
+		return invalid("thread ID is required")
+	}
+	return s.backend.SetThreadApprovalMode(ctx, threadID, enabled)
+}
+
+func (s *Service) SetArchived(ctx context.Context, threadID model.ID, archived bool) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() {
+		return invalid("thread ID is required")
+	}
+	return s.backend.SetThreadArchived(ctx, threadID, archived)
+}
+
+func (s *Service) PinMessage(ctx context.Context, threadID, messageID model.ID) error {
+	return s.setMessagePinned(ctx, threadID, messageID, true)
+}
+
+func (s *Service) UnpinMessage(ctx context.Context, threadID, messageID model.ID) error {
+	return s.setMessagePinned(ctx, threadID, messageID, false)
+}
+
+func (s *Service) setMessagePinned(ctx context.Context, threadID, messageID model.ID, pinned bool) error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if threadID.Empty() || messageID.Empty() {
+		return invalid("thread ID and message ID are required")
+	}
+	return s.backend.SetMessagePinned(ctx, threadID, messageID, pinned)
 }
 
 func (s *Service) SetPhoto(ctx context.Context, threadID model.ID, input model.AttachmentInput) error {

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mewis.me/meta-extra/pkg/messagix"
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
 	"go.mewis.me/meta-extra/pkg/messagix/useragent"
 
@@ -291,75 +292,44 @@ func (b *messagixBackend) ListMessageRequests(ctx context.Context) ([]MessageReq
 }
 
 func (b *messagixBackend) ListThemes(ctx context.Context) ([]Theme, error) {
-	result, err := b.graphQL(ctx, protocol.ThemeListFriendlyName, protocol.ThemeListDocID, map[string]any{"version": "default"})
+	values, err := b.client.ListThreadThemes(ctx)
 	if err != nil {
 		return nil, err
 	}
-	data := mapAt(result, "data")
-	rawThemes, _ := data["messenger_thread_themes"].([]any)
-	themes := make([]Theme, 0, len(rawThemes))
-	for _, raw := range rawThemes {
-		themeMap, ok := raw.(map[string]any)
-		if !ok || stringValue(themeMap["id"]) == "" {
+	themes := make([]Theme, 0, len(values))
+	for _, value := range values {
+		if value.ID == "" {
 			continue
 		}
-		themes = append(themes, normalizeTheme(themeMap))
+		themes = append(themes, normalizeThreadTheme(value.ThreadThemeVariant))
 	}
 	return themes, nil
 }
 
-func normalizeTheme(value map[string]any) Theme {
-	background := mapAt(value, "background_asset", "image")
-	icon := mapAt(value, "icon_asset", "image")
+func normalizeThreadTheme(value messagix.ThreadThemeVariant) Theme {
+	backgroundImage, iconAsset := "", ""
+	if value.BackgroundAsset != nil {
+		backgroundImage = value.BackgroundAsset.Image.URI
+	}
+	if value.IconAsset != nil {
+		iconAsset = value.IconAsset.Image.URI
+	}
 	return Theme{
-		ID: model.ID(stringValue(value["id"])), Name: stringValue(value["accessibility_label"]), Description: stringValue(value["description"]), AppColorMode: stringValue(value["app_color_mode"]), ComposerBackgroundColor: stringValue(value["composer_background_color"]), BackgroundGradientColors: stringSlice(value["background_gradient_colors"]), TitleBarButtonTintColor: stringValue(value["title_bar_button_tint_color"]), InboundMessageGradientColors: stringSlice(value["inbound_message_gradient_colors"]), TitleBarTextColor: stringValue(value["title_bar_text_color"]), ComposerTintColor: stringValue(value["composer_tint_color"]), TitleBarAttributionColor: stringValue(value["title_bar_attribution_color"]), ComposerInputBackgroundColor: stringValue(value["composer_input_background_color"]), HotLikeColor: stringValue(value["hot_like_color"]), BackgroundImage: stringValue(background["uri"]), MessageTextColor: stringValue(value["message_text_color"]), InboundMessageTextColor: stringValue(value["inbound_message_text_color"]), PrimaryButtonBackgroundColor: stringValue(value["primary_button_background_color"]), TitleBarBackgroundColor: stringValue(value["title_bar_background_color"]), TertiaryTextColor: stringValue(value["tertiary_text_color"]), ReactionPillBackgroundColor: stringValue(value["reaction_pill_background_color"]), SecondaryTextColor: stringValue(value["secondary_text_color"]), FallbackColor: stringValue(value["fallback_color"]), GradientColors: stringSlice(value["gradient_colors"]), NormalThemeID: model.ID(stringValue(value["normal_theme_id"])), IconAsset: stringValue(icon["uri"]),
+		ID: model.ID(value.ID), Name: value.AccessibilityLabel, Description: deref(value.Description), AppColorMode: value.AppColorMode, ComposerBackgroundColor: deref(value.ComposerBackgroundColor), BackgroundGradientColors: value.BackgroundGradientColors, TitleBarButtonTintColor: deref(value.TitleBarButtonTintColor), InboundMessageGradientColors: value.InboundMessageGradientColors, TitleBarTextColor: deref(value.TitleBarTextColor), ComposerTintColor: deref(value.ComposerTintColor), TitleBarAttributionColor: deref(value.TitleBarAttributionColor), ComposerInputBackgroundColor: deref(value.ComposerInputBackgroundColor), HotLikeColor: deref(value.HotLikeColor), BackgroundImage: backgroundImage, MessageTextColor: deref(value.MessageTextColor), InboundMessageTextColor: deref(value.InboundMessageTextColor), PrimaryButtonBackgroundColor: deref(value.PrimaryButtonBackgroundColor), TitleBarBackgroundColor: deref(value.TitleBarBackgroundColor), TertiaryTextColor: deref(value.TertiaryTextColor), ReactionPillBackgroundColor: deref(value.ReactionPillBackgroundColor), SecondaryTextColor: deref(value.SecondaryTextColor), FallbackColor: value.FallbackColor, GradientColors: value.GradientColors, NormalThemeID: model.ID(value.NormalThemeID), IconAsset: iconAsset,
 	}
-}
-
-type themeTask struct {
-	ThreadKey    int64 `json:"thread_key"`
-	ThemeFBID    int64 `json:"theme_fbid"`
-	SyncGroup    int64 `json:"sync_group"`
-	Source       any   `json:"source,omitempty"`
-	Payload      any   `json:"payload,omitempty"`
-	label        string
-	queue        string
-	includeNulls bool
-}
-
-func (t *themeTask) GetLabel() string { return t.label }
-func (t *themeTask) Create() (any, string) {
-	if !t.includeNulls {
-		return t, t.queue
-	}
-	return struct {
-		ThreadKey int64 `json:"thread_key"`
-		ThemeFBID int64 `json:"theme_fbid"`
-		SyncGroup int64 `json:"sync_group"`
-		Source    any   `json:"source"`
-		Payload   any   `json:"payload"`
-	}{ThreadKey: t.ThreadKey, ThemeFBID: t.ThemeFBID, SyncGroup: t.SyncGroup}, t.queue
 }
 
 func (b *messagixBackend) SetTheme(ctx context.Context, threadID, themeID model.ID) error {
-	thread, err := strconv.ParseInt(threadID.String(), 10, 64)
-	if err != nil || thread == 0 {
-		return fmt.Errorf("invalid thread ID %q", threadID)
+	thread, err := parsePositiveID(threadID, "thread")
+	if err != nil {
+		return err
 	}
-	theme, err := strconv.ParseInt(themeID.String(), 10, 64)
-	if err != nil || theme == 0 {
-		return fmt.Errorf("invalid theme ID %q", themeID)
+	theme, err := parsePositiveID(themeID, "theme")
+	if err != nil {
+		return err
 	}
-	tasks := []struct {
-		label, queue string
-		includeNulls bool
-	}{{"1013", "ai_generated_theme", false}, {"1037", "msgr_custom_thread_theme", false}, {"1028", "thread_theme_writer", false}, {"43", "thread_theme", true}}
-	for _, task := range tasks {
-		if _, err := b.client.ExecuteTasks(ctx, &themeTask{ThreadKey: thread, ThemeFBID: theme, SyncGroup: 1, label: task.label, queue: task.queue, includeNulls: task.includeNulls}); err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err = b.client.SetThreadTheme(ctx, thread, theme)
+	return err
 }
 
 func (b *messagixBackend) CurrentNote(ctx context.Context) (*Note, error) {
@@ -483,16 +453,9 @@ func firstString(value map[string]any, keys ...string) string {
 	return ""
 }
 
-func stringSlice(value any) []string {
-	raw, ok := value.([]any)
-	if !ok {
-		return nil
+func deref(value *string) string {
+	if value == nil {
+		return ""
 	}
-	result := make([]string, 0, len(raw))
-	for _, item := range raw {
-		if text := stringValue(item); text != "" {
-			result = append(result, text)
-		}
-	}
-	return result
+	return *value
 }

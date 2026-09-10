@@ -150,24 +150,25 @@ func (b *messagixBackend) SetThreadAdmin(ctx context.Context, threadID, userID m
 }
 
 func (b *messagixBackend) SetThreadEmoji(ctx context.Context, threadID model.ID, emoji string) error {
-	form, _, err := b.baseForm(ctx)
+	threadKey, err := parsePositiveID(threadID, "thread")
 	if err != nil {
 		return err
 	}
-	form.Set("emoji_choice", emoji)
-	form.Set("thread_or_other_fbid", threadID.String())
-	return b.postThreadMutation(ctx, protocol.ThreadEmojiURL, form)
+	_, err = b.client.SetThreadEmoji(ctx, threadKey, emoji)
+	return err
 }
 
 func (b *messagixBackend) SetThreadNickname(ctx context.Context, threadID, userID model.ID, nickname string) error {
-	form, _, err := b.baseForm(ctx)
+	threadKey, err := parsePositiveID(threadID, "thread")
 	if err != nil {
 		return err
 	}
-	form.Set("nickname", nickname)
-	form.Set("participant_id", userID.String())
-	form.Set("thread_or_other_fbid", threadID.String())
-	return b.postThreadMutation(ctx, protocol.ThreadNicknameURL, form)
+	contactID, err := parsePositiveID(userID, "user")
+	if err != nil {
+		return err
+	}
+	_, err = b.client.SetThreadNickname(ctx, threadKey, contactID, nickname)
+	return err
 }
 
 func (b *messagixBackend) SetThreadName(ctx context.Context, threadID model.ID, name string) error {

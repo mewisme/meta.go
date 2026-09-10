@@ -92,6 +92,10 @@ type backend interface {
 	CreatePoll(context.Context, model.ID, string, []string) error
 	VotePoll(context.Context, model.ID, model.ID, []model.ID) error
 	MuteThread(context.Context, model.ID, time.Duration) error
+	MuteThreadCalls(context.Context, model.ID, time.Duration) error
+	SetThreadApprovalMode(context.Context, model.ID, bool) error
+	SetThreadArchived(context.Context, model.ID, bool) error
+	SetMessagePinned(context.Context, model.ID, model.ID, bool) error
 	SetThreadPhoto(context.Context, model.ID, model.AttachmentInput) error
 	DeleteThread(context.Context, model.ID) error
 	CreateDM(context.Context, model.ID) (model.ID, error)
@@ -434,6 +438,42 @@ func (e *Engine) MuteThread(ctx context.Context, threadID model.ID, duration tim
 	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.MuteThread(ctx, threadID, duration)
+}
+
+func (e *Engine) MuteThreadCalls(ctx context.Context, threadID model.ID, duration time.Duration) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.MuteThreadCalls(ctx, threadID, duration)
+}
+
+func (e *Engine) SetThreadApprovalMode(ctx context.Context, threadID model.ID, enabled bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.SetThreadApprovalMode(ctx, threadID, enabled)
+}
+
+func (e *Engine) SetThreadArchived(ctx context.Context, threadID model.ID, archived bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.SetThreadArchived(ctx, threadID, archived)
+}
+
+func (e *Engine) SetMessagePinned(ctx context.Context, threadID, messageID model.ID, pinned bool) error {
+	if !e.connected.Load() {
+		return ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.SetMessagePinned(ctx, threadID, messageID, pinned)
 }
 
 func (e *Engine) SetThreadPhoto(ctx context.Context, threadID model.ID, input model.AttachmentInput) error {
