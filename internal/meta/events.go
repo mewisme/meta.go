@@ -37,6 +37,11 @@ func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 		e.regularState.Store(model.ConnectionFailed)
 		e.recordError(evt.Err)
 		e.emit(Event{Kind: EventError, Error: evt.Err})
+	case *messagix.ThreadSystemEvent:
+		if normalized := normalizeThreadSystemEvent(evt); normalized != nil {
+			e.lastRecv.Store(time.Now().UnixMilli())
+			e.emit(Event{Kind: EventThreadSystem, ThreadSystem: normalized})
+		}
 	case *table.LSTable:
 		if evt != nil {
 			e.emitTable(evt)
@@ -64,6 +69,43 @@ func (e *Engine) handleTransportEvent(_ context.Context, event any) {
 		e.recordError(err)
 		e.emit(Event{Kind: EventError, Error: err})
 	}
+}
+
+func normalizeThreadSystemEvent(evt *messagix.ThreadSystemEvent) *model.ThreadSystemEvent {
+	if evt == nil {
+		return nil
+	}
+	kind := model.ThreadSystemKind("")
+	switch evt.Kind {
+	case messagix.ThreadSystemNicknameUpdated:
+		kind = model.ThreadSystemNicknameUpdated
+	case messagix.ThreadSystemEmojiUpdated:
+		kind = model.ThreadSystemEmojiUpdated
+	case messagix.ThreadSystemApprovalUpdated:
+		kind = model.ThreadSystemApprovalUpdated
+	case messagix.ThreadSystemThemeUpdated:
+		kind = model.ThreadSystemThemeUpdated
+	case messagix.ThreadSystemMemberAdded:
+		kind = model.ThreadSystemMemberAdded
+	case messagix.ThreadSystemMemberRemoved:
+		kind = model.ThreadSystemMemberRemoved
+	case messagix.ThreadSystemAdminUpdated:
+		kind = model.ThreadSystemAdminUpdated
+	case messagix.ThreadSystemPinUpdated:
+		kind = model.ThreadSystemPinUpdated
+	case messagix.ThreadSystemPollUpdated:
+		kind = model.ThreadSystemPollUpdated
+	default:
+		return nil
+	}
+	return &model.ThreadSystemEvent{Kind: kind, ThreadID: positiveID(evt.ThreadKey), ParticipantID: positiveID(evt.ParticipantID), MessageID: model.ID(evt.MessageID), PollID: positiveID(evt.PollID), Nickname: evt.Nickname, Emoji: evt.Emoji, Enabled: evt.Enabled, Pinned: evt.Pinned, IsAdmin: evt.IsAdmin}
+}
+
+func positiveID(value int64) model.ID {
+	if value <= 0 {
+		return ""
+	}
+	return id64(value)
 }
 
 func (e *Engine) emitE2EEMessage(evt *waEvents.FBMessage) {

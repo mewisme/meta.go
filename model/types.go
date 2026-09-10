@@ -410,6 +410,33 @@ type ThreadUpdateEvent struct {
 	Value    string `json:"value,omitempty"`
 }
 
+type ThreadSystemKind string
+
+const (
+	ThreadSystemNicknameUpdated ThreadSystemKind = "nicknameUpdated"
+	ThreadSystemEmojiUpdated    ThreadSystemKind = "emojiUpdated"
+	ThreadSystemApprovalUpdated ThreadSystemKind = "approvalModeUpdated"
+	ThreadSystemThemeUpdated    ThreadSystemKind = "themeUpdated"
+	ThreadSystemMemberAdded     ThreadSystemKind = "memberAdded"
+	ThreadSystemMemberRemoved   ThreadSystemKind = "memberRemoved"
+	ThreadSystemAdminUpdated    ThreadSystemKind = "participantAdminUpdated"
+	ThreadSystemPinUpdated      ThreadSystemKind = "messagePinUpdated"
+	ThreadSystemPollUpdated     ThreadSystemKind = "pollUpdated"
+)
+
+type ThreadSystemEvent struct {
+	Kind          ThreadSystemKind `json:"kind"`
+	ThreadID      ID               `json:"threadId,omitempty"`
+	ParticipantID ID               `json:"participantId,omitempty"`
+	MessageID     ID               `json:"messageId,omitempty"`
+	PollID        ID               `json:"pollId,omitempty"`
+	Nickname      string           `json:"nickname,omitempty"`
+	Emoji         string           `json:"emoji,omitempty"`
+	Enabled       bool             `json:"enabled,omitempty"`
+	Pinned        bool             `json:"pinned,omitempty"`
+	IsAdmin       bool             `json:"isAdmin,omitempty"`
+}
+
 type E2EEReceiptEvent struct {
 	Type       string `json:"type"`
 	ChatJID    string `json:"chatJid"`
@@ -471,6 +498,7 @@ const (
 	EventReadReceipt     EventKind = "readReceipt"
 	EventDeliveryReceipt EventKind = "deliveryReceipt"
 	EventThreadUpdate    EventKind = "threadUpdate"
+	EventThreadSystem    EventKind = "threadSystem"
 	EventE2EEReady       EventKind = "e2eeReady"
 	EventE2EEReceipt     EventKind = "e2eeReceipt"
 )
@@ -488,6 +516,7 @@ type Event struct {
 	ReadReceipt     *ReadReceiptEvent     `json:"-"`
 	DeliveryReceipt *DeliveryReceiptEvent `json:"-"`
 	ThreadUpdate    *ThreadUpdateEvent    `json:"-"`
+	ThreadSystem    *ThreadSystemEvent    `json:"-"`
 	E2EEReceipt     *E2EEReceiptEvent     `json:"-"`
 }
 
@@ -520,6 +549,8 @@ func (e Event) MarshalJSON() ([]byte, error) {
 		data = e.DeliveryReceipt
 	case EventThreadUpdate:
 		data = e.ThreadUpdate
+	case EventThreadSystem:
+		data = e.ThreadSystem
 	case EventE2EEReceipt:
 		data = e.E2EEReceipt
 	}
@@ -576,6 +607,9 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 	case EventThreadUpdate:
 		e.ThreadUpdate = new(ThreadUpdateEvent)
 		return json.Unmarshal(raw.Data, e.ThreadUpdate)
+	case EventThreadSystem:
+		e.ThreadSystem = new(ThreadSystemEvent)
+		return json.Unmarshal(raw.Data, e.ThreadSystem)
 	case EventE2EEReceipt:
 		e.E2EEReceipt = new(E2EEReceiptEvent)
 		return json.Unmarshal(raw.Data, e.E2EEReceipt)

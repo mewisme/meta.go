@@ -720,6 +720,8 @@ func eventHumanValue(event model.Event) any {
 		return event.DeliveryReceipt
 	case model.EventThreadUpdate:
 		return event.ThreadUpdate
+	case model.EventThreadSystem:
+		return event.ThreadSystem
 	case model.EventE2EEReceipt:
 		return event.E2EEReceipt
 	default:

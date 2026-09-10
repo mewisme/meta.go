@@ -28,6 +28,11 @@ func TestEventJSONRoundTrip(t *testing.T) {
 				t.Fatal("new-session flag was lost")
 			}
 		}},
+		{"thread-system", Event{Kind: EventThreadSystem, ThreadSystem: &ThreadSystemEvent{Kind: ThreadSystemPinUpdated, ThreadID: "10", MessageID: "m1", Pinned: true}}, func(t *testing.T, got Event) {
+			if got.ThreadSystem == nil || got.ThreadSystem.Kind != ThreadSystemPinUpdated || got.ThreadSystem.ThreadID != "10" || got.ThreadSystem.MessageID != "m1" || !got.ThreadSystem.Pinned {
+				t.Fatalf("unexpected thread system event: %#v", got.ThreadSystem)
+			}
+		}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

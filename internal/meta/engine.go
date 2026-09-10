@@ -34,6 +34,7 @@ type DeliveryReceiptEvent = model.DeliveryReceiptEvent
 type MessageEditEvent = model.MessageEditEvent
 type MessageUnsendEvent = model.MessageUnsendEvent
 type ThreadUpdateEvent = model.ThreadUpdateEvent
+type ThreadSystemEvent = model.ThreadSystemEvent
 type MessageRequest = model.MessageRequest
 type Theme = model.Theme
 type Note = model.Note
@@ -51,6 +52,7 @@ const (
 	EventMessageEdit     = model.EventMessageEdit
 	EventMessageUnsend   = model.EventMessageUnsend
 	EventThreadUpdate    = model.EventThreadUpdate
+	EventThreadSystem    = model.EventThreadSystem
 	EventE2EEReady       = model.EventE2EEReady
 	EventE2EEReceipt     = model.EventE2EEReceipt
 )

@@ -81,6 +81,32 @@ func TestReconnectHealthCounter(t *testing.T) {
 	}
 }
 
+func TestThreadSystemEventNormalization(t *testing.T) {
+	backend := new(fakeBackend)
+	engine := newEngine(context.Background(), backend, 4)
+	engine.handleTransportEvent(context.Background(), &messagix.ThreadSystemEvent{Kind: messagix.ThreadSystemAdminUpdated, ThreadKey: 10, ParticipantID: 20, IsAdmin: true})
+	event := <-engine.Events()
+	if event.Kind != EventThreadSystem || event.ThreadSystem == nil || event.ThreadSystem.Kind != model.ThreadSystemAdminUpdated || event.ThreadSystem.ThreadID != "10" || event.ThreadSystem.ParticipantID != "20" || !event.ThreadSystem.IsAdmin {
+		t.Fatalf("unexpected normalized system event: %#v", event)
+	}
+	if engine.Health().LastReceive.IsZero() {
+		t.Fatal("thread system event did not update last receive")
+	}
+}
+
+func TestThreadSystemEventUnknownKindIsIgnored(t *testing.T) {
+	engine := newEngine(context.Background(), new(fakeBackend), 1)
+	engine.handleTransportEvent(context.Background(), &messagix.ThreadSystemEvent{Kind: messagix.ThreadSystemEventKind("future_kind"), ThreadKey: 10})
+	select {
+	case event := <-engine.Events():
+		t.Fatalf("unexpected event for unknown system kind: %#v", event)
+	default:
+	}
+	if got := positiveID(0); !got.Empty() {
+		t.Fatalf("non-positive protocol ID must normalize to empty, got %q", got)
+	}
+}
+
 func TestE2EEAttachmentNormalizationPreservesDownloadReference(t *testing.T) {
 	transport := &waMediaTransport.WAMediaTransport{
 		Integral:  &waMediaTransport.WAMediaTransport_Integral{DirectPath: stringPtr("/media/path"), MediaKey: []byte{1, 2, 3}, FileSHA256: []byte{4, 5, 6}, FileEncSHA256: []byte{7, 8, 9}},
