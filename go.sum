@@ -171,8 +171,8 @@ go.mau.fi/whatsmeow v0.0.0-20260816113502-fb386f152837 h1:xJ13dqFcK/oPNImltlk7su
 go.mau.fi/whatsmeow v0.0.0-20260816113502-fb386f152837/go.mod h1:UFP0D7aj+biuFejsllcoNiHTQorh0ODFUyG4Txpqfks=
 go.mau.fi/zeroconfig v0.2.0 h1:e/OGEERqVRRKlgaro7E6bh8xXiKFSXB3eNNIud7FUjU=
 go.mau.fi/zeroconfig v0.2.0/go.mod h1:J0Vn0prHNOm493oZoQ84kq83ZaNCYZnq+noI1b1eN8w=
-go.mewis.me/meta-extra v0.0.1 h1:w3g7svu0yLRpWBzO0C7EgsHqyKfHbmzHVDAZJ9TuGZM=
-go.mewis.me/meta-extra v0.0.1/go.mod h1:MFu+oRRoKrmjxhPhJKYflJztT0xiDiuOaOUcjCRXpH8=
+go.mewis.me/meta-extra v0.2608.1-0.20260910140639-7bfb166864f1 h1:J5dg/b53/L6rDsEX7vI/AE6sATvCbZKjXkh5S9QLS0c=
+go.mewis.me/meta-extra v0.2608.1-0.20260910140639-7bfb166864f1/go.mod h1:MFu+oRRoKrmjxhPhJKYflJztT0xiDiuOaOUcjCRXpH8=
 go.uber.org/mock v0.6.0 h1:hyF9dfmbgIX5EfOdasqLsWD6xqpNZlXblLB/Dbnwv3Y=
 go.uber.org/mock v0.6.0/go.mod h1:KiVJ4BqZJaMj4svdfmHM0AUx4NJYO8ZNpPnZn1Z+BBU=
 go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
