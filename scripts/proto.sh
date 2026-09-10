@@ -31,14 +31,29 @@ generate() {
 generate_node() {
   image_dir=$(mktemp -d)
   image="$image_dir/image.binpb"
+  generated="$ROOT/sdk/node/src/gen"
+  backup_dir=$(mktemp -d)
+  had_generated=0
   status=0
-  (
-    cd "$ROOT"
-    run_buf lint
-    run_buf build --exclude-source-info -o "$image"
+  if [ -d "$generated" ]; then
+    cp -R "$generated" "$backup_dir/gen"
+    had_generated=1
+  fi
+  if (
+    cd "$ROOT" &&
+    run_buf lint &&
+    run_buf build --exclude-source-info -o "$image" &&
     run_buf generate "$image" --template sdk/node/buf.gen.yaml
-  ) || status=$?
-  rm -rf "$image_dir"
+  ); then
+    status=0
+  else
+    status=$?
+    rm -rf "$generated"
+    if [ "$had_generated" -eq 1 ]; then
+      cp -R "$backup_dir/gen" "$generated"
+    fi
+  fi
+  rm -rf "$image_dir" "$backup_dir"
   return "$status"
 }
 
@@ -48,22 +63,25 @@ generate_python() {
   generated="$ROOT/sdk/python/.generated"
   status=0
   rm -rf "$generated"
-  (
-    cd "$ROOT"
-    run_buf lint
-    run_buf build --exclude-source-info -o "$image"
-    run_buf generate "$image" --template sdk/python/buf.gen.yaml
+  if (
+    cd "$ROOT" &&
+    run_buf lint &&
+    run_buf build --exclude-source-info -o "$image" &&
+    run_buf generate "$image" --template sdk/python/buf.gen.yaml &&
     python3 - <<'PY_NORMALIZE'
 from pathlib import Path
 for path in Path("sdk/python/.generated/meta").rglob("*"):
     if path.is_file() and path.suffix in {".py", ".pyi"}:
         path.write_text(path.read_text().rstrip() + "\n")
 PY_NORMALIZE
+  ); then
     rm -rf sdk/python/src/meta
     mkdir -p sdk/python/src
     cp -R sdk/python/.generated/meta sdk/python/src/meta
     touch sdk/python/src/meta/__init__.py sdk/python/src/meta/py.typed sdk/python/src/meta/v1/__init__.py
-  ) || status=$?
+  else
+    status=$?
+  fi
   rm -rf "$image_dir" "$generated"
   return "$status"
 }

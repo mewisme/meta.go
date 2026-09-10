@@ -37,10 +37,13 @@ goreleaser release --snapshot --clean --skip=publish
 Inspect `dist/` and verify:
 
 - Linux, macOS and Windows archives for amd64 and arm64;
+- standalone `meta-runtime_VERSION_OS_ARCH` executables for Linux/macOS and `.exe` executables for Windows, on amd64 and arm64;
 - SHA-256 checksum manifest;
 - SPDX JSON SBOM files;
 - embedded version and commit metadata;
 - archive contents include the README, license, changelog, third-party inventory and documentation.
+
+The Node and Python SDK managed-runtime loaders default to the SDK package version when selecting a downloadable runtime. Publish an SDK version only when a runtime release with the same version exists. Installed runtime paths and explicit runtime-version overrides remain supported for independent release cadences.
 
 ## Reproducibility
 

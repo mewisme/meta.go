@@ -1,4 +1,5 @@
 from .client import MetaClient
+from .distribution import RuntimeDistributionOptions, RuntimeTarget, resolve_runtime_path
 from .errors import (
     EventBufferOverflowError,
     MetaError,
@@ -23,6 +24,9 @@ __all__ = [
     "PROTOCOL_MAJOR",
     "ProtocolMismatchError",
     "RuntimeBootstrap",
+    "RuntimeDistributionOptions",
     "RuntimeLaunchError",
+    "RuntimeTarget",
     "UnsupportedCapabilityError",
+    "resolve_runtime_path",
 ]

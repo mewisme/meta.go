@@ -1,6 +1,7 @@
 import {spawn, type ChildProcess} from "node:child_process"
 import {basename} from "node:path"
 import {setTimeout as delay} from "node:timers/promises"
+import {resolveRuntimePath, type RuntimeDistributionOptions} from "./distribution.js"
 import {ProtocolMismatchError, RuntimeLaunchError} from "./errors.js"
 
 export const PROTOCOL_MAJOR = 1
@@ -8,7 +9,7 @@ const maxBootstrapBytes = 64 << 10
 const maxStderrBytes = 16 << 10
 
 export interface RuntimeBootstrap { endpoint: string; token: string; protocol: number }
-export interface ManagedRuntimeOptions { runtimePath?: string; listen?: string; token?: string; env?: NodeJS.ProcessEnv; bootstrapTimeoutMs?: number; stopTimeoutMs?: number }
+export interface ManagedRuntimeOptions extends RuntimeDistributionOptions { listen?: string; token?: string; bootstrapTimeoutMs?: number; stopTimeoutMs?: number }
 
 export class ManagedRuntime {
   readonly endpoint: string
@@ -29,7 +30,7 @@ export class ManagedRuntime {
   }
 
   static async start(options: ManagedRuntimeOptions = {}): Promise<ManagedRuntime> {
-    const runtimePath = options.runtimePath ?? process.env.META_RUNTIME_PATH ?? (process.platform === "win32" ? "meta-runtime.exe" : "meta-runtime")
+    const runtimePath = await resolveRuntimePath(options)
     const child = spawn(runtimePath, ["--listen", options.listen ?? "127.0.0.1:0"], {env: {...process.env, ...options.env, ...(options.token ? {META_RUNTIME_TOKEN: options.token} : {})}, stdio: ["ignore", "pipe", "pipe"], windowsHide: true})
     const stderr: Buffer[] = []
     let stderrBytes = 0

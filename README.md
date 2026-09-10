@@ -118,7 +118,7 @@ CLI runtime environment variables:
 
 A local `go.work` that includes `../meta-extra` is supported for development and is gitignored; CI runs with `GOWORK=off`.
 
-Release packaging uses GoReleaser (cross-platform archives, SHA-256 checksums, SBOMs, provenance). See [RELEASING.md](RELEASING.md). Third-party license metadata: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Release packaging uses GoReleaser (cross-platform CLI archives, standalone `meta-runtime` binaries, SHA-256 checksums, SBOMs, provenance). See [RELEASING.md](RELEASING.md). Third-party license metadata: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 Contribution rules and design constraints: [CONTRIBUTING.md](CONTRIBUTING.md).
 

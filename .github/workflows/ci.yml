@@ -104,6 +104,35 @@ jobs:
       - run: uv run --directory sdk/python pytest
       - run: uv build --directory sdk/python
 
+  runtime-lifecycle:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.10"
+      - run: pnpm --dir sdk/node install --frozen-lockfile
+      - run: uv sync --directory sdk/python --frozen --all-groups
+      - run: pnpm --dir sdk/node exec tsx --test test/runtime.test.ts test/distribution.test.ts
+      - run: uv run --directory sdk/python pytest -q tests/test_runtime.py tests/test_distribution.py
+
   release-config:
     runs-on: ubuntu-latest
     steps:

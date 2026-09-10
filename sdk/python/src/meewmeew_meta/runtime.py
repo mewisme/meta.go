@@ -4,11 +4,10 @@ import asyncio
 import contextlib
 import json
 import os
-import sys
-from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from .distribution import RuntimeDistributionOptions, resolve_runtime_path
 from .errors import ProtocolMismatchError, RuntimeLaunchError
 
 PROTOCOL_MAJOR = 1
@@ -24,11 +23,9 @@ class RuntimeBootstrap:
 
 
 @dataclass(frozen=True, slots=True)
-class ManagedRuntimeOptions:
-    runtime_path: str | Path | None = None
+class ManagedRuntimeOptions(RuntimeDistributionOptions):
     listen: str = "127.0.0.1:0"
     token: str | None = None
-    env: Mapping[str, str] | None = None
     bootstrap_timeout: float = 10.0
     stop_timeout: float = 5.0
 
@@ -56,14 +53,10 @@ class ManagedRuntime:
     @classmethod
     async def start(cls, options: ManagedRuntimeOptions | None = None) -> ManagedRuntime:
         options = options or ManagedRuntimeOptions()
-        runtime_path = str(
-            options.runtime_path
-            or os.environ.get("META_RUNTIME_PATH")
-            or ("meta-runtime.exe" if sys.platform == "win32" else "meta-runtime")
-        )
         env = dict(os.environ)
         if options.env:
             env.update(options.env)
+        runtime_path = await asyncio.to_thread(resolve_runtime_path, options, env)
         if options.token:
             env["META_RUNTIME_TOKEN"] = options.token
         try:

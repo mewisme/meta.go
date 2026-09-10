@@ -150,6 +150,19 @@ The protobuf toolchain is pinned by repository configuration/scripts:
 
 Generation must be reproducible without requiring globally installed tools. CI lints schemas, checks breaking changes where a comparison baseline is available, regenerates bindings and fails on generated drift.
 
+## Runtime distribution
+
+GoReleaser publishes `meta-runtime` as a standalone executable for Linux, macOS and Windows on amd64 and arm64. Runtime executables are included in the same SHA-256 checksum manifest and provenance flow as the normal CLI release artifacts.
+
+Node and Python use verified lazy download instead of bundling every platform binary into each SDK package. Managed runtime selection is deterministic:
+
+1. explicit SDK runtime path;
+2. `META_RUNTIME_PATH`;
+3. an installed `meta-runtime` on `PATH`;
+4. the runtime release matching the SDK package version, or an explicit runtime-version override.
+
+Downloaded executables are selected from the host OS/architecture, verified against the release checksum manifest before execution and cached by runtime version plus target. SDK package and runtime release versions may advance independently at the protocol level, but the default managed download pins the same release version for reproducibility. The runtime protocol-major handshake and capability checks remain the final compatibility boundary. External runtime mode never downloads or launches a process.
+
 ## Compatibility policy
 
 Runtime release versions and RPC protocol versions are independent.
