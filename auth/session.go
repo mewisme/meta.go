@@ -30,6 +30,7 @@ type Session struct {
 	Username       string
 	DTSG           string
 	Jazoest        string
+	LSD            string
 	SessionID      string
 	ClientRevision int64
 	BootstrappedAt time.Time
@@ -87,6 +88,10 @@ var sessionPatterns = map[string][]*regexp.Regexp{
 		regexp.MustCompile(`"jazoest":"?([0-9]+)`),
 		regexp.MustCompile(`name=["']jazoest["'][^>]*value=["']([0-9]+)["']`),
 	},
+	"lsd": {
+		regexp.MustCompile(`"LSD"[^}]*"token":"([^"]+)"`),
+		regexp.MustCompile(`"lsd":"([^"]+)"`),
+	},
 	"session_id": {
 		regexp.MustCompile(`"sessionId":"([^"]+)"`),
 	},
@@ -140,6 +145,7 @@ func ParseHomepage(body []byte, cookies Cookies) (Session, error) {
 	text := html.UnescapeString(string(body))
 	dtsg := firstMatch(text, sessionPatterns["dtsg"])
 	jazoest := firstMatch(text, sessionPatterns["jazoest"])
+	lsd := firstMatch(text, sessionPatterns["lsd"])
 	sessionID := firstMatch(text, sessionPatterns["session_id"])
 	fbid := firstMatch(text, sessionPatterns["actor_id"])
 	if fbid == "" {
@@ -156,7 +162,7 @@ func ParseHomepage(body []byte, cookies Cookies) (Session, error) {
 	if len(missing) > 0 {
 		return Session{}, &fberrors.ProtocolError{Operation: "parse homepage bootstrap", Code: strings.Join(missing, ","), Cause: fberrors.ErrProtocolChanged}
 	}
-	return Session{Cookies: cookies.Clone(), FBID: model.ID(fbid), DTSG: dtsg, Jazoest: jazoest, SessionID: sessionID, ClientRevision: revision, BootstrappedAt: time.Now()}, nil
+	return Session{Cookies: cookies.Clone(), FBID: model.ID(fbid), DTSG: dtsg, Jazoest: jazoest, LSD: lsd, SessionID: sessionID, ClientRevision: revision, BootstrappedAt: time.Now()}, nil
 }
 
 func firstMatch(text string, patterns []*regexp.Regexp) string {

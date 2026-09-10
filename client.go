@@ -152,6 +152,12 @@ func (c *Client) Connect(ctx context.Context) error {
 	}
 	c.engine = engine
 	c.account = model.User{ID: account.ID, Name: account.Name, Username: account.Username}
+	if c.authSource != clientAuthNone {
+		c.cookies = cookies.Clone()
+		c.appState = nil
+		c.credentials = auth.Credentials{}
+		c.authSource = clientAuthCookies
+	}
 	c.Messenger = messenger.NewService(engine)
 	c.Threads = threadservice.NewService(engine)
 	c.Facebook = facebookservice.NewService(engine)
@@ -281,6 +287,146 @@ func (c *Client) resolveAuth(ctx context.Context, profile storage.Profile, secre
 		return nil, fmt.Errorf("%w: %v", fberrors.ErrUnauthorized, err)
 	}
 	return cookies, nil
+}
+
+func (c *Client) RefreshAuth(ctx context.Context, source *auth.Source) (auth.AuthSnapshot, error) {
+	if c == nil {
+		return auth.AuthSnapshot{}, errors.New("nil meta client")
+	}
+	c.connectMu.Lock()
+	defer c.connectMu.Unlock()
+	c.mu.RLock()
+	if c.closed {
+		c.mu.RUnlock()
+		return auth.AuthSnapshot{}, errors.New("meta client is closed")
+	}
+	engine, account, profile, secrets := c.engine, c.account, c.profile, c.secrets
+	c.mu.RUnlock()
+	if engine == nil || !engine.Connected() {
+		return auth.AuthSnapshot{}, fberrors.ErrNotConnected
+	}
+	previous, err := engine.AuthState(ctx)
+	if err != nil {
+		return auth.AuthSnapshot{}, err
+	}
+	cookies := auth.Cookies(previous.Cookies).Clone()
+	if source != nil {
+		cookies, err = c.resolveSource(ctx, *source)
+		if err != nil {
+			return auth.AuthSnapshot{}, err
+		}
+		if err := requireSameAccount(account.ID, cookies["c_user"]); err != nil {
+			return auth.AuthSnapshot{}, err
+		}
+		validated, err := (auth.SessionValidator{}).Validate(ctx, cookies)
+		if err != nil {
+			return auth.AuthSnapshot{}, err
+		}
+		if validated.FBID != account.ID {
+			return auth.AuthSnapshot{}, fmt.Errorf("%w: authenticated account differs from connected account", fberrors.ErrAccountMismatch)
+		}
+	}
+	state, err := engine.RefreshAuth(ctx, map[string]string(cookies))
+	if err != nil {
+		return auth.AuthSnapshot{}, err
+	}
+	if state.FBID != account.ID {
+		_, rollbackErr := engine.RefreshAuth(context.WithoutCancel(ctx), previous.Cookies)
+		return auth.AuthSnapshot{}, errors.Join(fmt.Errorf("%w: refreshed account differs from connected account", fberrors.ErrAccountMismatch), rollbackErr)
+	}
+	refreshed := auth.Cookies(state.Cookies).Clone()
+	snapshot := authSnapshot(state, account)
+	if profile.Name != "" && secrets != nil {
+		if err := (auth.ProfileManager{Secrets: secrets}).SaveAuthSnapshot(ctx, profile.Name, snapshot); err != nil {
+			_, rollbackErr := engine.RefreshAuth(context.WithoutCancel(ctx), previous.Cookies)
+			return auth.AuthSnapshot{}, errors.Join(fmt.Errorf("persist refreshed auth state: %w", err), rollbackErr)
+		}
+	}
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return auth.AuthSnapshot{}, errors.New("meta client is closed")
+	}
+	c.cookies = refreshed.Clone()
+	c.appState = nil
+	c.credentials = auth.Credentials{}
+	c.authSource = clientAuthCookies
+	c.mu.Unlock()
+	return snapshot, nil
+}
+
+func (c *Client) AuthSnapshot(ctx context.Context) (auth.AuthSnapshot, error) {
+	if c == nil {
+		return auth.AuthSnapshot{}, errors.New("nil meta client")
+	}
+	c.connectMu.Lock()
+	defer c.connectMu.Unlock()
+	c.mu.RLock()
+	if c.closed {
+		c.mu.RUnlock()
+		return auth.AuthSnapshot{}, errors.New("meta client is closed")
+	}
+	engine, account := c.engine, c.account
+	c.mu.RUnlock()
+	if engine == nil || !engine.Connected() {
+		return auth.AuthSnapshot{}, fberrors.ErrNotConnected
+	}
+	state, err := engine.AuthState(ctx)
+	if err != nil {
+		return auth.AuthSnapshot{}, err
+	}
+	if state.FBID != account.ID {
+		return auth.AuthSnapshot{}, fmt.Errorf("%w: auth state differs from connected account", fberrors.ErrAccountMismatch)
+	}
+	cookies := auth.Cookies(state.Cookies).Clone()
+	c.mu.Lock()
+	if !c.closed {
+		c.cookies = cookies.Clone()
+		c.appState = nil
+		c.credentials = auth.Credentials{}
+		c.authSource = clientAuthCookies
+	}
+	c.mu.Unlock()
+	return authSnapshot(state, account), nil
+}
+
+func (c *Client) resolveSource(ctx context.Context, source auth.Source) (auth.Cookies, error) {
+	if err := source.Validate(); err != nil {
+		return nil, err
+	}
+	switch {
+	case source.Cookies != nil:
+		return source.Cookies.Clone(), nil
+	case source.AppState != nil:
+		return source.AppState.Cookies()
+	default:
+		c.mu.RLock()
+		login := c.credentialLogin
+		c.mu.RUnlock()
+		if login == nil {
+			return nil, errors.New("credential login is unavailable")
+		}
+		cookies, err := login(ctx, *source.Credentials)
+		if err != nil {
+			return nil, err
+		}
+		if err := cookies.ValidateRegular(); err != nil {
+			return nil, fmt.Errorf("%w: %v", fberrors.ErrUnauthorized, err)
+		}
+		return cookies, nil
+	}
+}
+
+func requireSameAccount(accountID model.ID, cookieUserID string) error {
+	if accountID.Empty() || cookieUserID == "" || accountID.String() != cookieUserID {
+		return fmt.Errorf("%w: authentication source belongs to another account", fberrors.ErrAccountMismatch)
+	}
+	return nil
+}
+
+func authSnapshot(state meta.AuthState, account model.User) auth.AuthSnapshot {
+	cookies := auth.Cookies(state.Cookies).Clone()
+	return auth.AuthSnapshot{Cookies: cookies, AppState: cookies.AppState(), Session: auth.Session{Cookies: cookies.Clone(), FBID: state.FBID, Name: account.Name, Username: account.Username, DTSG: state.DTSG, Jazoest: state.Jazoest, LSD: state.LSD, SessionID: state.SessionID, ClientRevision: state.ClientRevision, BootstrappedAt: time.Now()}}
 }
 
 func (c *Client) Health() HealthSnapshot {

@@ -53,6 +53,26 @@ client, err := meta.NewClient(meta.WithCredentials(auth.Credentials{
 
 After successful credential resolution, the client retains only resulting cookies for reconnects and clears stored password/TOTP/OTP values.
 
+## Refresh authentication without disconnecting
+
+Connected clients can refresh Facebook web session state in place. Existing Messenger/E2EE connections, services and event handlers remain attached to the same client and engine.
+
+```go
+snapshot, err := client.RefreshAuth(ctx, nil)
+```
+
+Passing `nil` keeps current cookies and refreshes browser session metadata such as DTSG, Jazoest, LSD and client revision. To rotate cookies or AppState without recreating listeners, pass one replacement source:
+
+```go
+snapshot, err := client.RefreshAuth(ctx, &auth.Source{
+	AppState: state,
+})
+```
+
+`auth.Source` accepts exactly one of cookies, AppState or credentials. A connected client only accepts refreshed authentication for the same Facebook account. Failed refreshes restore the previous live and persisted authentication state.
+
+`client.AuthSnapshot(ctx)` exports current cookies, normalized AppState and Facebook session metadata. It also includes cookies updated by normal Facebook HTTP responses.
+
 Credential login uses the maintained login flow first and a compatibility flow only when the primary protocol changes. Authentication rejection, checkpoints, rate limits and protocol changes are returned as typed errors.
 
 ## Session validation

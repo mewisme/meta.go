@@ -12,6 +12,7 @@ import (
 
 	"go.mewis.me/meta.go/auth"
 	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/model"
 	"go.mewis.me/meta.go/storage"
 )
 
@@ -97,6 +98,36 @@ func TestExplicitEmptyCookiesDoNotFallBackToProfile(t *testing.T) {
 	defer client.Close()
 	if _, err := client.resolveAuth(ctx, storage.Profile{Name: "default"}, secrets); !errors.Is(err, fberrors.ErrUnauthorized) {
 		t.Fatalf("expected explicit empty auth to fail, got %v", err)
+	}
+}
+
+func TestResolveSourceAndSameAccount(t *testing.T) {
+	client, err := NewClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	credentials := auth.Credentials{Identifier: "user", Password: "pw", OTP: "123456"}
+	client.credentialLogin = func(context.Context, auth.Credentials) (auth.Cookies, error) {
+		return auth.Cookies{"c_user": "1", "xs": "x"}, nil
+	}
+	for _, source := range []auth.Source{
+		{Cookies: auth.Cookies{"c_user": "1", "xs": "x"}},
+		{AppState: auth.AppState{{Key: "c_user", Value: "1"}, {Key: "xs", Value: "x"}}},
+		{Credentials: &credentials},
+	} {
+		cookies, err := client.resolveSource(context.Background(), source)
+		if err != nil || cookies["c_user"] != "1" {
+			t.Fatalf("source %#v resolved to %#v, %v", source, cookies, err)
+		}
+	}
+	if err := requireSameAccount("1", "1"); err != nil {
+		t.Fatal(err)
+	}
+	for _, pair := range [][2]string{{"1", "2"}, {"1", ""}, {"", "1"}} {
+		if err := requireSameAccount(model.ID(pair[0]), pair[1]); !errors.Is(err, fberrors.ErrAccountMismatch) {
+			t.Fatalf("expected account mismatch for %#v, got %v", pair, err)
+		}
 	}
 }
 

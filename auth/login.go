@@ -40,6 +40,8 @@ type Credentials struct {
 	OTP        string
 }
 
+func (c Credentials) Validate() error { return validateCredentials(c) }
+
 type loginField struct {
 	ID          string
 	Name        string

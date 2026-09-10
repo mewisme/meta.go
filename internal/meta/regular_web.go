@@ -30,6 +30,7 @@ type browserFormState struct {
 	Jazoest        string
 	ClientRevision string
 	LSD            string
+	SessionID      string
 }
 
 var browserStatePatterns = map[string][]*regexp.Regexp{
@@ -48,6 +49,9 @@ var browserStatePatterns = map[string][]*regexp.Regexp{
 	"lsd": {
 		regexp.MustCompile(`"LSD"[^}]*"token":"([^"]+)"`),
 		regexp.MustCompile(`"lsd":"([^"]+)"`),
+	},
+	"session_id": {
+		regexp.MustCompile(`"sessionId":"([^"]+)"`),
 	},
 }
 
@@ -76,6 +80,7 @@ func (b *messagixBackend) browserFormState(ctx context.Context) (browserFormStat
 		Jazoest:        firstBrowserStateMatch(text, browserStatePatterns["jazoest"]),
 		ClientRevision: firstBrowserStateMatch(text, browserStatePatterns["client_revision"]),
 		LSD:            firstBrowserStateMatch(text, browserStatePatterns["lsd"]),
+		SessionID:      firstBrowserStateMatch(text, browserStatePatterns["session_id"]),
 	}
 	if state.FBID == "0" || state.DTSG == "" || state.ClientRevision == "0" {
 		return browserFormState{}, errors.New("messagix browser form state is incomplete")

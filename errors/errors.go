@@ -13,6 +13,7 @@ var (
 	ErrCheckpointRequired = errors.New("checkpoint required")
 	ErrRateLimited        = errors.New("rate limited")
 	ErrInvalidInput       = errors.New("invalid input")
+	ErrAccountMismatch    = errors.New("account mismatch")
 	ErrNotConnected       = errors.New("not connected")
 	ErrE2EENotReady       = errors.New("e2ee not ready")
 	ErrUnsupported        = errors.New("unsupported")
@@ -64,7 +65,7 @@ func Classify(err error) ErrorCategory {
 		return ErrorCategoryAuth
 	case errors.Is(err, ErrRateLimited):
 		return ErrorCategoryRateLimit
-	case errors.Is(err, ErrInvalidInput):
+	case errors.Is(err, ErrInvalidInput), errors.Is(err, ErrAccountMismatch):
 		return ErrorCategoryInput
 	case errors.Is(err, ErrNotConnected):
 		return ErrorCategoryConnection

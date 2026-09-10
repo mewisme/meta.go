@@ -10,12 +10,12 @@ import (
 )
 
 func TestParseHomepage(t *testing.T) {
-	body := []byte(`<script>DTSGInitialData",[],{"token":"DTSG"}</script><input name="jazoest" value="22000"><script>{"sessionId":"sid","actorID":"123","client_revision":456,}</script>`)
+	body := []byte(`<script>DTSGInitialData",[],{"token":"DTSG"}</script><input name="jazoest" value="22000"><script>{"LSD":{"token":"LSD"},"sessionId":"sid","actorID":"123","client_revision":456,}</script>`)
 	session, err := ParseHomepage(body, Cookies{"c_user": "123", "xs": "x"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if session.FBID != "123" || session.DTSG != "DTSG" || session.SessionID != "sid" || session.ClientRevision != 456 {
+	if session.FBID != "123" || session.DTSG != "DTSG" || session.LSD != "LSD" || session.SessionID != "sid" || session.ClientRevision != 456 {
 		t.Fatalf("unexpected session: %#v", session)
 	}
 }

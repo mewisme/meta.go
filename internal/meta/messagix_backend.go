@@ -120,6 +120,44 @@ func (b *messagixBackend) Disconnect() {
 	b.client.Disconnect()
 }
 
+func (b *messagixBackend) AuthState(ctx context.Context) (AuthState, error) {
+	state, err := b.browserFormState(ctx)
+	if err != nil {
+		return AuthState{}, err
+	}
+	values := b.client.GetCookies().GetAll()
+	cookies := make(map[string]string, len(values))
+	for key, value := range values {
+		cookies[string(key)] = value
+	}
+	revision, _ := strconv.ParseInt(state.ClientRevision, 10, 64)
+	return AuthState{Cookies: cookies, FBID: model.ID(state.FBID), DTSG: state.DTSG, Jazoest: state.Jazoest, LSD: state.LSD, SessionID: state.SessionID, ClientRevision: revision}, nil
+}
+
+func (b *messagixBackend) RefreshAuth(ctx context.Context, values map[string]string) (AuthState, error) {
+	jar := b.client.GetCookies()
+	previousCookies := jar.GetAll()
+	b.browserStateMu.Lock()
+	previousState := b.browserState
+	b.browserState = nil
+	b.browserStateMu.Unlock()
+
+	nextCookies := make(map[cookies.MetaCookieName]string, len(values))
+	for key, value := range values {
+		nextCookies[cookies.MetaCookieName(key)] = value
+	}
+	jar.UpdateValues(nextCookies)
+	state, err := b.AuthState(ctx)
+	if err == nil {
+		return state, nil
+	}
+	jar.UpdateValues(previousCookies)
+	b.browserStateMu.Lock()
+	b.browserState = previousState
+	b.browserStateMu.Unlock()
+	return AuthState{}, err
+}
+
 func (b *messagixBackend) ConnectE2EE(ctx context.Context, accountID model.ID) error {
 	if b.E2EEConnected() {
 		return nil

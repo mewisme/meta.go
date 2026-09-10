@@ -17,6 +17,7 @@ func TestClassify(t *testing.T) {
 		{ErrCheckpointRequired, ErrorCategoryCheckpoint},
 		{ErrRateLimited, ErrorCategoryRateLimit},
 		{ErrInvalidInput, ErrorCategoryInput},
+		{ErrAccountMismatch, ErrorCategoryInput},
 		{ErrNotConnected, ErrorCategoryConnection},
 		{ErrE2EENotReady, ErrorCategoryE2EE},
 		{ErrProtocolChanged, ErrorCategoryProtocol},

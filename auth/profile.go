@@ -45,6 +45,16 @@ func (m ProfileManager) ImportCookies(ctx context.Context, profile string, cooki
 	if _, err := m.Profiles.Get(ctx, profile); err != nil {
 		return err
 	}
+	return m.SaveCookies(ctx, profile, cookies)
+}
+
+func (m ProfileManager) SaveCookies(ctx context.Context, profile string, cookies Cookies) error {
+	if m.Secrets == nil {
+		return errors.New("secret store is required")
+	}
+	if err := cookies.ValidateRegular(); err != nil {
+		return err
+	}
 	return m.Secrets.Put(ctx, profile, secretCookies, []byte(cookies.String()))
 }
 
@@ -57,18 +67,70 @@ func (m ProfileManager) LoadCookies(ctx context.Context, profile string) (Cookie
 }
 
 func (m ProfileManager) SaveSession(ctx context.Context, profile string, session Session) error {
-	type persistedSession struct {
-		FBID           string `json:"fbid"`
-		DTSG           string `json:"dtsg"`
-		Jazoest        string `json:"jazoest"`
-		SessionID      string `json:"session_id"`
-		ClientRevision int64  `json:"client_revision"`
-	}
-	data, err := json.Marshal(persistedSession{FBID: session.FBID.String(), DTSG: session.DTSG, Jazoest: session.Jazoest, SessionID: session.SessionID, ClientRevision: session.ClientRevision})
+	data, err := marshalSession(session)
 	if err != nil {
 		return err
 	}
 	return m.Secrets.Put(ctx, profile, secretSession, data)
+}
+
+func (m ProfileManager) SaveAuthSnapshot(ctx context.Context, profile string, snapshot AuthSnapshot) error {
+	if m.Secrets == nil {
+		return errors.New("secret store is required")
+	}
+	if err := snapshot.Cookies.ValidateRegular(); err != nil {
+		return err
+	}
+	sessionData, err := marshalSession(snapshot.Session)
+	if err != nil {
+		return err
+	}
+	oldCookies, oldCookiesErr := m.Secrets.Get(ctx, profile, secretCookies)
+	oldSession, oldSessionErr := m.Secrets.Get(ctx, profile, secretSession)
+	if oldCookiesErr != nil && !errors.Is(oldCookiesErr, storage.ErrNotFound) {
+		return oldCookiesErr
+	}
+	if oldSessionErr != nil && !errors.Is(oldSessionErr, storage.ErrNotFound) {
+		return oldSessionErr
+	}
+	if err := m.Secrets.Put(ctx, profile, secretCookies, []byte(snapshot.Cookies.String())); err != nil {
+		return err
+	}
+	if err := m.Secrets.Put(ctx, profile, secretSession, sessionData); err != nil {
+		rollbackCtx := context.WithoutCancel(ctx)
+		var rollback error
+		if oldCookiesErr == nil {
+			rollback = errors.Join(rollback, m.Secrets.Put(rollbackCtx, profile, secretCookies, oldCookies))
+		} else {
+			rollback = errors.Join(rollback, ignoreNotFound(m.Secrets.Delete(rollbackCtx, profile, secretCookies)))
+		}
+		if oldSessionErr == nil {
+			rollback = errors.Join(rollback, m.Secrets.Put(rollbackCtx, profile, secretSession, oldSession))
+		} else {
+			rollback = errors.Join(rollback, ignoreNotFound(m.Secrets.Delete(rollbackCtx, profile, secretSession)))
+		}
+		return errors.Join(err, rollback)
+	}
+	return nil
+}
+
+func marshalSession(session Session) ([]byte, error) {
+	type persistedSession struct {
+		FBID           string `json:"fbid"`
+		DTSG           string `json:"dtsg"`
+		Jazoest        string `json:"jazoest"`
+		LSD            string `json:"lsd,omitempty"`
+		SessionID      string `json:"session_id"`
+		ClientRevision int64  `json:"client_revision"`
+	}
+	return json.Marshal(persistedSession{FBID: session.FBID.String(), DTSG: session.DTSG, Jazoest: session.Jazoest, LSD: session.LSD, SessionID: session.SessionID, ClientRevision: session.ClientRevision})
+}
+
+func ignoreNotFound(err error) error {
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil
+	}
+	return err
 }
 
 func (m ProfileManager) Refresh(ctx context.Context, profile string, validator SessionValidator) (Session, error) {

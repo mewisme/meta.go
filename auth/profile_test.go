@@ -31,6 +31,27 @@ func TestProfileLifecycle(t *testing.T) {
 	}
 }
 
+func TestSaveAuthSnapshotRollsBackCookiePersistence(t *testing.T) {
+	backend := storage.NewMemorySecretStore()
+	secrets := &failingSecretStore{backend: backend, failProfile: "default", failName: secretSession}
+	manager := ProfileManager{Secrets: secrets}
+	ctx := context.Background()
+	if err := backend.Put(ctx, "default", secretCookies, []byte("c_user=1; xs=old")); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.SaveAuthSnapshot(ctx, "default", AuthSnapshot{Cookies: Cookies{"c_user": "1", "xs": "new"}, Session: Session{FBID: "1", DTSG: "d", Jazoest: "j"}}); err == nil {
+		t.Fatal("expected persistence failure")
+	}
+	data, err := backend.Get(ctx, "default", secretCookies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cookies, err := ParseCookieString(string(data))
+	if err != nil || cookies["xs"] != "old" {
+		t.Fatalf("cookies were not rolled back: %q %v", data, err)
+	}
+}
+
 func TestLegacyImportDoesNotOverwrite(t *testing.T) {
 	profiles := storage.NewMemoryProfileStore()
 	secrets := storage.NewMemorySecretStore()

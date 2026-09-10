@@ -70,6 +70,21 @@ type SendTextRequest struct {
 type UploadRequest = model.UploadInput
 type UploadResult = model.UploadResult
 
+type AuthState struct {
+	Cookies        map[string]string
+	FBID           model.ID
+	DTSG           string
+	Jazoest        string
+	LSD            string
+	SessionID      string
+	ClientRevision int64
+}
+
+type authBackend interface {
+	AuthState(context.Context) (AuthState, error)
+	RefreshAuth(context.Context, map[string]string) (AuthState, error)
+}
+
 type backend interface {
 	SetEventHandler(func(context.Context, any))
 	Bootstrap(context.Context) (Account, error)
@@ -854,6 +869,36 @@ func (e *Engine) ConnectE2EE(ctx context.Context, accountID model.ID) error {
 func (e *Engine) Events() <-chan Event { return e.events }
 func (e *Engine) Connected() bool      { return e.connected.Load() && !e.closed.Load() }
 func (e *Engine) E2EEConnected() bool  { return e.e2eeReady.Load() && !e.closed.Load() }
+
+func (e *Engine) AuthState(ctx context.Context) (AuthState, error) {
+	e.connectMu.Lock()
+	defer e.connectMu.Unlock()
+	if !e.Connected() {
+		return AuthState{}, ErrNotConnected
+	}
+	backend, ok := e.backend.(authBackend)
+	if !ok {
+		return AuthState{}, fberrors.ErrUnsupported
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return backend.AuthState(ctx)
+}
+
+func (e *Engine) RefreshAuth(ctx context.Context, cookies map[string]string) (AuthState, error) {
+	e.connectMu.Lock()
+	defer e.connectMu.Unlock()
+	if !e.Connected() {
+		return AuthState{}, ErrNotConnected
+	}
+	backend, ok := e.backend.(authBackend)
+	if !ok {
+		return AuthState{}, fberrors.ErrUnsupported
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return backend.RefreshAuth(ctx, cookies)
+}
 
 func (e *Engine) On(handler func(Event)) func() {
 	if e == nil || handler == nil || e.closed.Load() {
