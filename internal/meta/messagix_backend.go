@@ -86,6 +86,13 @@ func (b *messagixBackend) SetEventHandler(handler func(context.Context, any)) {
 	b.client.SetEventHandler(handler)
 }
 
+func (b *messagixBackend) transportContext() context.Context {
+	if b.lifetimeCtx != nil {
+		return b.lifetimeCtx
+	}
+	return context.Background()
+}
+
 func (b *messagixBackend) Bootstrap(ctx context.Context) (Account, error) {
 	user, _, err := b.client.LoadMessagesPage(ctx)
 	if err != nil {
@@ -125,10 +132,7 @@ func (b *messagixBackend) ConnectE2EE(ctx context.Context, accountID model.ID) e
 		return err
 	}
 	if b.handler != nil {
-		handlerCtx := b.lifetimeCtx
-		if handlerCtx == nil {
-			handlerCtx = context.Background()
-		}
+		handlerCtx := b.transportContext()
 		e2ee.AddEventHandler(func(event any) { b.handler(handlerCtx, event) })
 	}
 	b.e2ee = e2ee
@@ -138,7 +142,7 @@ func (b *messagixBackend) ConnectE2EE(ctx context.Context, accountID model.ID) e
 	if err := b.deviceStore.Device().Save(ctx); err != nil {
 		return err
 	}
-	if err := e2ee.ConnectContext(ctx); err != nil {
+	if err := e2ee.ConnectContext(b.transportContext()); err != nil {
 		return err
 	}
 	if !e2ee.WaitForConnection(15*time.Second) || !e2ee.IsLoggedIn() {
