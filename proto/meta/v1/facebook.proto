@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package meta.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+service FacebookService {
+  rpc GetUser(FacebookServiceGetUserRequest) returns (FacebookServiceGetUserResponse);
+  rpc Search(FacebookServiceSearchRequest) returns (FacebookServiceSearchResponse);
+  rpc ListNotifications(FacebookServiceListNotificationsRequest) returns (FacebookServiceListNotificationsResponse);
+  rpc SetBio(FacebookServiceSetBioRequest) returns (FacebookServiceSetBioResponse);
+  rpc CreateAdditionalProfile(FacebookServiceCreateAdditionalProfileRequest) returns (FacebookServiceCreateAdditionalProfileResponse);
+  rpc Unfriend(FacebookServiceUnfriendRequest) returns (FacebookServiceUnfriendResponse);
+  rpc SetBlocked(FacebookServiceSetBlockedRequest) returns (FacebookServiceSetBlockedResponse);
+  rpc CreatePost(FacebookServiceCreatePostRequest) returns (FacebookServiceCreatePostResponse);
+  rpc ArchivePost(FacebookServiceArchivePostRequest) returns (FacebookServiceArchivePostResponse);
+  rpc DeletePost(FacebookServiceDeletePostRequest) returns (FacebookServiceDeletePostResponse);
+  rpc CreateMarketplaceListing(FacebookServiceCreateMarketplaceListingRequest) returns (FacebookServiceCreateMarketplaceListingResponse);
+  rpc GetMarketplaceListing(FacebookServiceGetMarketplaceListingRequest) returns (FacebookServiceGetMarketplaceListingResponse);
+  rpc SetProfessionalMode(FacebookServiceSetProfessionalModeRequest) returns (FacebookServiceSetProfessionalModeResponse);
+}
+
+message FacebookUser {
+  string id = 1;
+  string name = 2;
+  string first_name = 3;
+  string username = 4;
+  string profile_url = 5;
+  string avatar_url = 6;
+  string gender = 7;
+  string alternate_name = 8;
+  bool non_friend = 9;
+}
+
+message FacebookSearchResult { string id = 1; string name = 2; string url = 3; }
+message FacebookNotification { string id = 1; string text = 2; string url = 3; google.protobuf.Timestamp timestamp = 4; }
+message FacebookPost { string id = 1; string url = 2; }
+
+enum FacebookPostOwnership {
+  FACEBOOK_POST_OWNERSHIP_UNSPECIFIED = 0;
+  FACEBOOK_POST_OWNERSHIP_OWNED = 1;
+  FACEBOOK_POST_OWNERSHIP_SHARED = 2;
+}
+
+message MarketplaceLocation { double latitude = 1; double longitude = 2; string name = 3; }
+message MarketplaceListingInput {
+  string title = 1;
+  string brand = 2;
+  string price = 3;
+  string currency = 4;
+  string description = 5;
+  repeated string hashtags = 6;
+  string category = 7;
+  repeated string photo_ids = 8;
+  MarketplaceLocation location = 9;
+}
+message MarketplaceListing {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string price = 4;
+  string currency = 5;
+  FacebookUser seller = 6;
+  MarketplaceLocation location = 7;
+  string url = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message FacebookServiceGetUserRequest { string session_id = 1; string user_id = 2; }
+message FacebookServiceGetUserResponse { FacebookUser user = 1; }
+message FacebookServiceSearchRequest { string session_id = 1; string query = 2; int32 limit = 3; }
+message FacebookServiceSearchResponse { repeated FacebookSearchResult results = 1; }
+message FacebookServiceListNotificationsRequest { string session_id = 1; int32 limit = 2; }
+message FacebookServiceListNotificationsResponse { repeated FacebookNotification notifications = 1; }
+message FacebookServiceSetBioRequest { string session_id = 1; string bio = 2; bool publish_feed_story = 3; }
+message FacebookServiceSetBioResponse {}
+message FacebookServiceCreateAdditionalProfileRequest { string session_id = 1; string name = 2; string username = 3; }
+message FacebookServiceCreateAdditionalProfileResponse {}
+message FacebookServiceUnfriendRequest { string session_id = 1; string user_id = 2; }
+message FacebookServiceUnfriendResponse {}
+message FacebookServiceSetBlockedRequest { string session_id = 1; string user_id = 2; bool blocked = 3; }
+message FacebookServiceSetBlockedResponse {}
+message FacebookServiceCreatePostRequest { string session_id = 1; string text = 2; }
+message FacebookServiceCreatePostResponse { FacebookPost post = 1; }
+message FacebookServiceArchivePostRequest { string session_id = 1; string post_id = 2; FacebookPostOwnership ownership = 3; }
+message FacebookServiceArchivePostResponse {}
+message FacebookServiceDeletePostRequest { string session_id = 1; string post_id = 2; FacebookPostOwnership ownership = 3; }
+message FacebookServiceDeletePostResponse {}
+message FacebookServiceCreateMarketplaceListingRequest { string session_id = 1; MarketplaceListingInput listing = 2; }
+message FacebookServiceCreateMarketplaceListingResponse { MarketplaceListing listing = 1; }
+message FacebookServiceGetMarketplaceListingRequest { string session_id = 1; string listing_id = 2; }
+message FacebookServiceGetMarketplaceListingResponse { MarketplaceListing listing = 1; }
+message FacebookServiceSetProfessionalModeRequest { string session_id = 1; bool enabled = 2; }
+message FacebookServiceSetProfessionalModeResponse {}

@@ -11,7 +11,6 @@ import (
 
 	metago "go.mewis.me/meta.go"
 	"go.mewis.me/meta.go/auth"
-	"go.mewis.me/meta.go/facebook"
 	"go.mewis.me/meta.go/model"
 )
 
@@ -72,6 +71,31 @@ type Threads interface {
 	SetNickname(context.Context, model.ID, model.ID, string) error
 }
 
+type E2EE interface {
+	SendE2EE(context.Context, model.E2EESendRequest) (model.SendResult, error)
+	ReactE2EE(context.Context, model.E2EEReactionRequest) error
+	EditE2EE(context.Context, string, model.ID, string) error
+	UnsendE2EE(context.Context, string, model.ID) error
+	TypingE2EE(context.Context, string, bool) error
+	ReadE2EE(context.Context, model.E2EEReadRequest) error
+}
+
+type Facebook interface {
+	User(context.Context, model.ID) (*model.FacebookUser, error)
+	Search(context.Context, string, int) ([]model.SearchResult, error)
+	Notifications(context.Context, int) ([]model.Notification, error)
+	SetBio(context.Context, string, bool) error
+	CreateAdditionalProfile(context.Context, string, string) error
+	Unfriend(context.Context, model.ID) error
+	SetBlocked(context.Context, model.ID, bool) error
+	CreatePost(context.Context, string) (*model.Post, error)
+	ArchivePost(context.Context, model.ID, model.PostOwnership) error
+	DeletePost(context.Context, model.ID, model.PostOwnership) error
+	CreateMarketplaceListing(context.Context, model.MarketplaceListingInput) (*model.MarketplaceListing, error)
+	MarketplaceListing(context.Context, model.ID) (*model.MarketplaceListing, error)
+	SetProfessionalMode(context.Context, bool) error
+}
+
 type Client interface {
 	Connect(context.Context) error
 	Close() error
@@ -79,7 +103,8 @@ type Client interface {
 	Account() model.User
 	MessengerService() Messenger
 	ThreadService() Threads
-	FacebookService() *facebook.Service
+	E2EEService() E2EE
+	FacebookService() Facebook
 	Subscribe(func(model.Event)) func()
 }
 
@@ -102,13 +127,14 @@ func newManagedClient(config Config) (Client, error) {
 	return &managedClient{client: client}, nil
 }
 
-func (c *managedClient) Connect(ctx context.Context) error  { return c.client.Connect(ctx) }
-func (c *managedClient) Close() error                       { return c.client.Close() }
-func (c *managedClient) Health() model.HealthSnapshot       { return c.client.Health() }
-func (c *managedClient) Account() model.User                { return c.client.Account() }
-func (c *managedClient) MessengerService() Messenger        { return c.client.Messenger }
-func (c *managedClient) ThreadService() Threads             { return c.client.Threads }
-func (c *managedClient) FacebookService() *facebook.Service { return c.client.Facebook }
+func (c *managedClient) Connect(ctx context.Context) error { return c.client.Connect(ctx) }
+func (c *managedClient) Close() error                      { return c.client.Close() }
+func (c *managedClient) Health() model.HealthSnapshot      { return c.client.Health() }
+func (c *managedClient) Account() model.User               { return c.client.Account() }
+func (c *managedClient) MessengerService() Messenger       { return c.client.Messenger }
+func (c *managedClient) ThreadService() Threads            { return c.client.Threads }
+func (c *managedClient) E2EEService() E2EE                 { return c.client.Messenger }
+func (c *managedClient) FacebookService() Facebook         { return c.client.Facebook }
 func (c *managedClient) Subscribe(handler func(model.Event)) func() {
 	return c.client.On("", handler)
 }

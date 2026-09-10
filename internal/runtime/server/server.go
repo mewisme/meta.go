@@ -54,6 +54,8 @@ func New(config Config) (*Server, error) {
 	metav1.RegisterRuntimeServiceServer(s.grpc, &runtimeService{server: s})
 	metav1.RegisterSessionServiceServer(s.grpc, &sessionService{server: s})
 	metav1.RegisterMessengerServiceServer(s.grpc, &messengerService{server: s})
+	metav1.RegisterE2EEServiceServer(s.grpc, &e2eeService{server: s})
+	metav1.RegisterFacebookServiceServer(s.grpc, &facebookService{server: s})
 	return s, nil
 }
 

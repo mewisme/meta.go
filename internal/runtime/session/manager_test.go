@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"go.mewis.me/meta.go/facebook"
 	"go.mewis.me/meta.go/model"
 )
 
@@ -28,11 +27,12 @@ func (f *fakeClient) Close() error {
 	return nil
 }
 
-func (f *fakeClient) Health() model.HealthSnapshot       { return f.health }
-func (f *fakeClient) Account() model.User                { return f.account }
-func (f *fakeClient) MessengerService() Messenger        { return nil }
-func (f *fakeClient) ThreadService() Threads             { return nil }
-func (f *fakeClient) FacebookService() *facebook.Service { return nil }
+func (f *fakeClient) Health() model.HealthSnapshot { return f.health }
+func (f *fakeClient) Account() model.User          { return f.account }
+func (f *fakeClient) MessengerService() Messenger  { return nil }
+func (f *fakeClient) ThreadService() Threads       { return nil }
+func (f *fakeClient) E2EEService() E2EE            { return nil }
+func (f *fakeClient) FacebookService() Facebook    { return nil }
 func (f *fakeClient) Subscribe(handler func(model.Event)) func() {
 	f.handler = handler
 	return func() { f.unsubscribes++ }

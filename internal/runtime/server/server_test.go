@@ -14,7 +14,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	fberrors "go.mewis.me/meta.go/errors"
-	"go.mewis.me/meta.go/facebook"
 	metav1 "go.mewis.me/meta.go/gen/go/meta/v1"
 	"go.mewis.me/meta.go/internal/runtime/session"
 	"go.mewis.me/meta.go/model"
@@ -28,6 +27,8 @@ type runtimeFakeClient struct {
 	handler   func(model.Event)
 	messenger session.Messenger
 	threads   session.Threads
+	e2ee      session.E2EE
+	facebook  session.Facebook
 }
 
 func (f *runtimeFakeClient) Connect(context.Context) error {
@@ -44,7 +45,8 @@ func (f *runtimeFakeClient) Health() model.HealthSnapshot        { return f.heal
 func (f *runtimeFakeClient) Account() model.User                 { return f.account }
 func (f *runtimeFakeClient) MessengerService() session.Messenger { return f.messenger }
 func (f *runtimeFakeClient) ThreadService() session.Threads      { return f.threads }
-func (f *runtimeFakeClient) FacebookService() *facebook.Service  { return nil }
+func (f *runtimeFakeClient) E2EEService() session.E2EE           { return f.e2ee }
+func (f *runtimeFakeClient) FacebookService() session.Facebook   { return f.facebook }
 func (f *runtimeFakeClient) Subscribe(handler func(model.Event)) func() {
 	f.handler = handler
 	return func() { f.handler = nil }

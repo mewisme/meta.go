@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package meta.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+service E2EEService {
+  rpc SendText(E2EEServiceSendTextRequest) returns (E2EEServiceSendTextResponse);
+  rpc React(E2EEServiceReactRequest) returns (E2EEServiceReactResponse);
+  rpc Edit(E2EEServiceEditRequest) returns (E2EEServiceEditResponse);
+  rpc Unsend(E2EEServiceUnsendRequest) returns (E2EEServiceUnsendResponse);
+  rpc SetTyping(E2EEServiceSetTypingRequest) returns (E2EEServiceSetTypingResponse);
+  rpc MarkRead(E2EEServiceMarkReadRequest) returns (E2EEServiceMarkReadResponse);
+}
+
+message E2EEServiceSendTextRequest {
+  string session_id = 1;
+  string chat_jid = 2;
+  string facebook_user_id = 3;
+  string text = 4;
+  string reply_to = 5;
+  string reply_sender_jid = 6;
+}
+message E2EEServiceSendTextResponse { string message_id = 1; google.protobuf.Timestamp timestamp = 2; }
+message E2EEServiceReactRequest { string session_id = 1; string chat_jid = 2; string message_id = 3; string sender_jid = 4; string reaction = 5; }
+message E2EEServiceReactResponse {}
+message E2EEServiceEditRequest { string session_id = 1; string chat_jid = 2; string message_id = 3; string text = 4; }
+message E2EEServiceEditResponse {}
+message E2EEServiceUnsendRequest { string session_id = 1; string chat_jid = 2; string message_id = 3; }
+message E2EEServiceUnsendResponse {}
+message E2EEServiceSetTypingRequest { string session_id = 1; string chat_jid = 2; bool typing = 3; }
+message E2EEServiceSetTypingResponse {}
+message E2EEServiceMarkReadRequest { string session_id = 1; string chat_jid = 2; string sender_jid = 3; repeated string message_ids = 4; google.protobuf.Timestamp timestamp = 5; }
+message E2EEServiceMarkReadResponse {}
