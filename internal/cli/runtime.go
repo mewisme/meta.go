@@ -17,6 +17,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/zalando/go-keyring"
+
 	"go.mewis.me/meta.go"
 	"go.mewis.me/meta.go/auth"
 	"go.mewis.me/meta.go/config"

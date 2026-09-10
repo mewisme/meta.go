@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"go.mau.fi/whatsmeow/proto/waMediaTransport"
+
 	"go.mewis.me/meta.go/model"
 )
 

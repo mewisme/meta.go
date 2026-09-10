@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
 	"go.mewis.me/meta.go/config"
 	fberrors "go.mewis.me/meta.go/errors"
 )

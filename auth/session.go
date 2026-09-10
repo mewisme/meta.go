@@ -17,6 +17,7 @@ import (
 	metaCookies "go.mewis.me/meta-extra/pkg/messagix/cookies"
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
+
 	fberrors "go.mewis.me/meta.go/errors"
 	"go.mewis.me/meta.go/internal/webapi"
 	"go.mewis.me/meta.go/model"

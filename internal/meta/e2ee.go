@@ -18,8 +18,9 @@ import (
 	"go.mewis.me/meta-extra/pkg/messagix/methods"
 	"go.mewis.me/meta-extra/pkg/messagix/socket"
 	"go.mewis.me/meta-extra/pkg/messagix/table"
-	"go.mewis.me/meta.go/model"
 	"google.golang.org/protobuf/proto"
+
+	"go.mewis.me/meta.go/model"
 )
 
 func (b *messagixBackend) SendE2EE(ctx context.Context, req model.E2EESendRequest) (model.SendResult, error) {

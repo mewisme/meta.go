@@ -11,10 +11,11 @@ import (
 
 	"charm.land/huh/v2"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
+
 	"go.mewis.me/meta.go/auth"
 	fberrors "go.mewis.me/meta.go/errors"
 	"go.mewis.me/meta.go/storage"
-	"golang.org/x/term"
 )
 
 type loginInput struct {
@@ -159,13 +160,13 @@ func collectBaseCredentials(cmd *cobra.Command, input *loginInput) error {
 		fields = append(fields, huh.NewInput().Title("Identifier").Value(&input.Identifier).Validate(huh.ValidateNotEmpty()))
 	}
 	if input.Password == "" {
-		fields = append(fields, huh.NewInput().Title("Password").Password(true).Value(&input.Password).Validate(huh.ValidateNotEmpty()))
+		fields = append(fields, huh.NewInput().Title("Password").EchoMode(huh.EchoModePassword).Value(&input.Password).Validate(huh.ValidateNotEmpty()))
 	}
 	return huh.NewForm(huh.NewGroup(fields...)).WithInput(cmd.InOrStdin()).WithOutput(cmd.ErrOrStderr()).RunWithContext(cmd.Context())
 }
 
 func promptOTP(cmd *cobra.Command, value *string) error {
-	field := huh.NewInput().Title("One-time password").Description("Enter the current 6-digit authentication code").Password(true).Value(value).Validate(func(value string) error {
+	field := huh.NewInput().Title("One-time password").Description("Enter the current 6-digit authentication code").EchoMode(huh.EchoModePassword).Value(value).Validate(func(value string) error {
 		if len(value) != 6 {
 			return errors.New("OTP must be exactly 6 digits")
 		}

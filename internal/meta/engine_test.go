@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"go.mewis.me/meta-extra/pkg/messagix"
+
 	"go.mewis.me/meta.go/model"
 )
 

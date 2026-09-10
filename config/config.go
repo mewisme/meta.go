@@ -11,8 +11,9 @@ import (
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
-	"go.mewis.me/meta.go/internal/fsutil"
 	"gopkg.in/yaml.v3"
+
+	"go.mewis.me/meta.go/internal/fsutil"
 )
 
 const CurrentSchemaVersion = 1

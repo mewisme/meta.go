@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"go.mewis.me/meta-extra/pkg/messagix/table"
+
 	fberrors "go.mewis.me/meta.go/errors"
 	"go.mewis.me/meta.go/model"
 )
@@ -24,7 +25,7 @@ func BenchmarkEventConversion(b *testing.B) {
 }
 
 func BenchmarkEventQueue(b *testing.B) {
-	engine := newEngine(nil, new(fakeBackend), 64)
+	engine := newEngine(context.Background(), new(fakeBackend), 64)
 	defer engine.Close()
 	event := Event{Kind: EventTyping, Typing: &model.TypingEvent{ThreadID: "1", SenderID: "2", Typing: true}}
 	b.ReportAllocs()
@@ -47,7 +48,7 @@ func BenchmarkEngineStartupConnect(b *testing.B) {
 func TestEngineLoadRemainsBounded(t *testing.T) {
 	runtime.GC()
 	beforeGoroutines := runtime.NumGoroutine()
-	engine := newEngine(nil, new(fakeBackend), 32)
+	engine := newEngine(context.Background(), new(fakeBackend), 32)
 	defer engine.Close()
 	for i := 0; i < 10000; i++ {
 		unsubscribe := engine.On(func(Event) {})
@@ -85,7 +86,7 @@ func (b *blockingSendBackend) SendText(ctx context.Context, _ SendTextRequest) (
 }
 
 func TestEngineDefaultRequestTimeout(t *testing.T) {
-	engine := newEngine(nil, new(blockingSendBackend), 1)
+	engine := newEngine(context.Background(), new(blockingSendBackend), 1)
 	engine.requestTimeout = 20 * time.Millisecond
 	defer engine.Close()
 	if _, err := engine.Connect(context.Background()); err != nil {
@@ -102,7 +103,7 @@ func TestEngineDefaultRequestTimeout(t *testing.T) {
 }
 
 func TestEngineCallerDeadlineOverridesDefaultTimeout(t *testing.T) {
-	engine := newEngine(nil, new(blockingSendBackend), 1)
+	engine := newEngine(context.Background(), new(blockingSendBackend), 1)
 	engine.requestTimeout = time.Second
 	defer engine.Close()
 	if _, err := engine.Connect(context.Background()); err != nil {
@@ -127,7 +128,7 @@ func (b *failingBootstrapBackend) Bootstrap(context.Context) (Account, error) {
 
 func TestEngineConnectFailureIsObservableAndNotRetriedInternally(t *testing.T) {
 	backend := new(failingBootstrapBackend)
-	engine := newEngine(nil, backend, 1)
+	engine := newEngine(context.Background(), backend, 1)
 	defer engine.Close()
 	if _, err := engine.Connect(context.Background()); err == nil {
 		t.Fatal("expected connect failure")

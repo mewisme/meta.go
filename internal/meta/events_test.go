@@ -2,18 +2,20 @@ package meta
 
 import (
 	"bytes"
+	"context"
 	"testing"
 	"time"
 
 	"go.mau.fi/whatsmeow/proto/waMediaTransport"
 	"go.mewis.me/meta-extra/pkg/messagix"
 	"go.mewis.me/meta-extra/pkg/messagix/table"
+
 	"go.mewis.me/meta.go/model"
 )
 
 func TestEmitTableNormalizesRealtimeEvents(t *testing.T) {
 	backend := new(fakeBackend)
-	engine := newEngine(nil, backend, 32)
+	engine := newEngine(context.Background(), backend, 32)
 	tbl := &table.LSTable{
 		LSInsertMessage:         []*table.LSInsertMessage{{MessageId: "m1", ThreadKey: 10, SenderId: 20, Text: "hello", TimestampMs: 1234}},
 		LSUpsertReaction:        []*table.LSUpsertReaction{{MessageId: "m1", ThreadKey: 10, ActorId: 30, Reaction: "❤"}},
@@ -53,7 +55,7 @@ func TestMessageAttachmentNormalization(t *testing.T) {
 }
 
 func TestEngineDropOldestMetrics(t *testing.T) {
-	engine := newEngine(nil, new(fakeBackend), 1)
+	engine := newEngine(context.Background(), new(fakeBackend), 1)
 	engine.emit(Event{Kind: EventReady})
 	engine.emit(Event{Kind: EventTyping})
 	if got := engine.Health().DroppedEventCount; got != 1 {
@@ -66,9 +68,9 @@ func TestEngineDropOldestMetrics(t *testing.T) {
 
 func TestReconnectHealthCounter(t *testing.T) {
 	backend := new(fakeBackend)
-	engine := newEngine(nil, backend, 4)
+	engine := newEngine(context.Background(), backend, 4)
 	engine.connected.Store(true)
-	engine.handleTransportEvent(nil, &messagix.ReconnectedEvent{})
+	engine.handleTransportEvent(context.Background(), &messagix.ReconnectedEvent{})
 	health := engine.Health()
 	if health.ReconnectCount != 1 || health.Regular != model.ConnectionConnected {
 		t.Fatalf("unexpected health: %#v", health)

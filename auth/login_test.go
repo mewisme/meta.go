@@ -13,8 +13,9 @@ import (
 	"testing"
 
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
-	fberrors "go.mewis.me/meta.go/errors"
 	"maunium.net/go/mautrix/bridgev2"
+
+	fberrors "go.mewis.me/meta.go/errors"
 )
 
 func TestNormalizeCredentialLoginError(t *testing.T) {

@@ -160,7 +160,7 @@ func IsRetryable(err error, statusCode int) bool {
 		return true
 	}
 	var networkError net.Error
-	return err != nil && errors.As(err, &networkError) && (networkError.Timeout() || networkError.Temporary())
+	return err != nil && errors.As(err, &networkError) && networkError.Timeout()
 }
 
 func (c *Client) Do(req *http.Request) ([]byte, error) {

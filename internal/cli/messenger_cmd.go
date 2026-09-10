@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
 	fberrors "go.mewis.me/meta.go/errors"
 	"go.mewis.me/meta.go/internal/fsutil"
 	"go.mewis.me/meta.go/messenger"

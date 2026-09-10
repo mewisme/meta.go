@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/itchyny/gojq"
+
 	fberrors "go.mewis.me/meta.go/errors"
 )
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
+
 	fberrors "go.mewis.me/meta.go/errors"
 )
 

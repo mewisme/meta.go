@@ -12,6 +12,7 @@ import (
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 	"go.mewis.me/meta-extra/pkg/messagix/socket"
 	"go.mewis.me/meta-extra/pkg/messagix/table"
+
 	"go.mewis.me/meta.go/model"
 )
 

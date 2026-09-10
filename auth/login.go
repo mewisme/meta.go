@@ -21,9 +21,10 @@ import (
 	metaCookies "go.mewis.me/meta-extra/pkg/messagix/cookies"
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
+	"maunium.net/go/mautrix/bridgev2"
+
 	fberrors "go.mewis.me/meta.go/errors"
 	"go.mewis.me/meta.go/internal/protocol"
-	"maunium.net/go/mautrix/bridgev2"
 )
 
 var ErrTwoFactorRequired = errors.New("two-factor code required")
@@ -317,7 +318,7 @@ func loginFB4A(ctx context.Context, credentials Credentials, cfg fb4aConfig) (Co
 	if userID == "" || firstFactor == "" {
 		return nil, &fberrors.ProtocolError{Operation: "FB4A two-factor metadata", Endpoint: state.url, Subcode: strconv.Itoa(response.Error.Subcode), FBTraceID: response.Error.FBTraceID, StatusCode: status, Cause: fberrors.ErrProtocolChanged}
 	}
-	response, status, err = state.login(ctx, state.twoFactorForm(otp, otp, userID, firstFactor, 2))
+	response, _, err = state.login(ctx, state.twoFactorForm(otp, otp, userID, firstFactor, 2))
 	if err != nil {
 		return nil, err
 	}

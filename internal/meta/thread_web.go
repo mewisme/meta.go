@@ -13,6 +13,7 @@ import (
 
 	"go.mewis.me/meta-extra/pkg/messagix/socket"
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
+
 	"go.mewis.me/meta.go/internal/protocol"
 	"go.mewis.me/meta.go/internal/webapi"
 	"go.mewis.me/meta.go/model"

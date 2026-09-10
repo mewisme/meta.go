@@ -16,6 +16,7 @@ import (
 
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
 	"go.mewis.me/meta-extra/pkg/messagix/useragent"
+
 	"go.mewis.me/meta.go/internal/graphql"
 	"go.mewis.me/meta.go/internal/protocol"
 	"go.mewis.me/meta.go/internal/webapi"
@@ -232,7 +233,7 @@ func graphQLError(result map[string]any) error {
 			return errors.New(message)
 		}
 	}
-	return errors.New("Facebook GraphQL request failed")
+	return errors.New("facebook GraphQL request failed")
 }
 
 func (b *messagixBackend) ListMessageRequests(ctx context.Context) ([]MessageRequest, error) {

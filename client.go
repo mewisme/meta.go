@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+
 	"go.mewis.me/meta.go/auth"
 	fberrors "go.mewis.me/meta.go/errors"
 	facebookservice "go.mewis.me/meta.go/facebook"
@@ -205,8 +206,8 @@ func (c *Client) Close() error {
 	// returning. Cancellation happens before taking this lock to avoid making
 	// Close wait on a network operation it could have interrupted.
 	c.connectMu.Lock()
-	c.connectMu.Unlock()
 	c.logger.Debug("client closed")
+	c.connectMu.Unlock()
 	return nil
 }
 

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
+
 	"go.mewis.me/meta.go/internal/protocol"
 	"go.mewis.me/meta.go/internal/webapi"
 	"go.mewis.me/meta.go/model"
@@ -30,7 +31,7 @@ func (b *messagixBackend) GetFacebookUser(ctx context.Context, userID model.ID) 
 	}
 	profile := mapAt(mapAt(result, "payload"), "profiles", userID.String())
 	if len(profile) == 0 {
-		return nil, fmt.Errorf("Facebook user %s not found", userID)
+		return nil, fmt.Errorf("facebook user %s not found", userID)
 	}
 	gender := "unknown"
 	switch int64Value(profile["gender"]) {
@@ -85,7 +86,7 @@ func (b *messagixBackend) SearchFacebook(ctx context.Context, query string, limi
 		}
 	}
 	if searchErr != nil {
-		return nil, fmt.Errorf("Facebook search persisted queries failed: %w", searchErr)
+		return nil, fmt.Errorf("facebook search persisted queries failed: %w", searchErr)
 	}
 	edges, _ := mapAt(result, "data", "serpResponse", "results")["edges"].([]any)
 	return parseSearchResults(edges, limit), nil
@@ -171,7 +172,7 @@ func (b *messagixBackend) SetFacebookBio(ctx context.Context, bio string, publis
 	}
 	returned := stringValue(mapAt(result, "data", "profile_intro_card_set", "profile_intro_card", "bio")["text"])
 	if returned != bio {
-		return errors.New("Facebook did not confirm the requested bio")
+		return errors.New("facebook did not confirm the requested bio")
 	}
 	return nil
 }
@@ -190,7 +191,7 @@ func (b *messagixBackend) CreateAdditionalProfile(ctx context.Context, name, use
 		return errors.New(message)
 	}
 	if len(created) == 0 {
-		return errors.New("Facebook did not confirm additional profile creation")
+		return errors.New("facebook did not confirm additional profile creation")
 	}
 	return nil
 }
@@ -207,7 +208,7 @@ func (b *messagixBackend) UnfriendFacebookUser(ctx context.Context, userID model
 	}
 	data := mapAt(result, "data")
 	if len(data) == 0 || containsFailedSuccess(data) {
-		return errors.New("Facebook did not confirm unfriend mutation")
+		return errors.New("facebook did not confirm unfriend mutation")
 	}
 	return nil
 }
@@ -228,7 +229,7 @@ func (b *messagixBackend) SetFacebookBlocked(ctx context.Context, userID model.I
 		return err
 	}
 	if len(mapAt(result, "data")) == 0 {
-		return errors.New("Facebook did not confirm block mutation")
+		return errors.New("facebook did not confirm block mutation")
 	}
 	return nil
 }
@@ -251,7 +252,7 @@ func (b *messagixBackend) CreateFacebookPost(ctx context.Context, text string) (
 	story := mapAt(result, "data", "story_create", "story")
 	url := stringValue(story["url"])
 	if url == "" {
-		return nil, errors.New("Facebook did not return the created post")
+		return nil, errors.New("facebook did not return the created post")
 	}
 	return &model.Post{ID: model.ID(firstString(story, "id", "post_id")), URL: url}, nil
 }
@@ -285,7 +286,7 @@ func (b *messagixBackend) setPostDisposition(ctx context.Context, postID model.I
 		return err
 	}
 	if !boolValue(mapAt(result, "data", resultPath)["success"]) {
-		return errors.New("Facebook did not confirm post mutation")
+		return errors.New("facebook did not confirm post mutation")
 	}
 	return nil
 }
@@ -297,7 +298,7 @@ func (b *messagixBackend) facebookMutationIDs() (string, string, error) {
 	}
 	actorID := strconv.FormatInt(account.GetFBID(), 10)
 	if actorID == "0" {
-		return "", "", errors.New("Facebook actor ID is unavailable")
+		return "", "", errors.New("facebook actor ID is unavailable")
 	}
 	mutationID, err := webapi.NewSessionID()
 	if err != nil {
@@ -340,7 +341,7 @@ func (b *messagixBackend) CreateMarketplaceListing(ctx context.Context, input mo
 	photoIDs := make([]string, 0, len(input.PhotoIDs))
 	for _, id := range input.PhotoIDs {
 		if id.Empty() {
-			return nil, errors.New("Marketplace photo ID is empty")
+			return nil, errors.New("marketplace photo ID is empty")
 		}
 		photoIDs = append(photoIDs, id.String())
 	}
@@ -365,7 +366,7 @@ func (b *messagixBackend) CreateMarketplaceListing(ctx context.Context, input mo
 	story := mapAt(result, "data", "marketplace_listing_create", "listing", "story")
 	id, listingURL := model.ID(stringValue(story["id"])), stringValue(story["url"])
 	if id.Empty() || listingURL == "" {
-		return nil, errors.New("Facebook did not return the created Marketplace listing")
+		return nil, errors.New("facebook did not return the created Marketplace listing")
 	}
 	return &model.MarketplaceListing{ID: id, Title: input.Title, Description: input.Description, Price: input.Price, Currency: strings.ToUpper(input.Currency), Location: input.Location, URL: listingURL}, nil
 }
@@ -379,7 +380,7 @@ func (b *messagixBackend) GetMarketplaceListing(ctx context.Context, listingID m
 	page := mapAt(result, "data", "viewer", "marketplace_product_details_page")
 	renderable, target := mapAt(page, "marketplace_listing_renderable_target"), mapAt(page, "target")
 	if len(renderable) == 0 || len(target) == 0 {
-		return nil, errors.New("Marketplace response did not contain listing details")
+		return nil, errors.New("marketplace response did not contain listing details")
 	}
 	actors, _ := mapAt(target, "story")["actors"].([]any)
 	var seller model.FacebookUser
@@ -413,7 +414,7 @@ func (b *messagixBackend) SetProfessionalMode(ctx context.Context, enabled bool)
 		return err
 	}
 	if len(mapAt(result, "data")) == 0 {
-		return errors.New("Facebook did not confirm Professional Mode mutation")
+		return errors.New("facebook did not confirm Professional Mode mutation")
 	}
 	return nil
 }

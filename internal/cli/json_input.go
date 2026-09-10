@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	fberrors "go.mewis.me/meta.go/errors"
 	"io"
+
+	fberrors "go.mewis.me/meta.go/errors"
 )
 
 func decodeJSONInput(data []byte, selector string, target any) error {

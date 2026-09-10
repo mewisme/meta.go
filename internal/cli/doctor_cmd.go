@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
 	"go.mewis.me/meta.go"
 	"go.mewis.me/meta.go/auth"
 	"go.mewis.me/meta.go/storage"
