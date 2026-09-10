@@ -11,6 +11,7 @@
 - [Troubleshooting](troubleshooting.md)
 - [Platform support](support.md)
 - [Maintenance policy](maintenance.md)
+- [Multi-language runtime architecture](runtime-architecture.md)
 
 Community and process:
 
