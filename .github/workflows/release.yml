@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to resume
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -26,7 +32,9 @@ jobs:
           fetch-depth: 0
       - id: version
         name: Resolve release version
-        run: echo "version=$(bash scripts/release-version.sh "$GITHUB_REF_NAME")" >> "$GITHUB_OUTPUT"
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: echo "version=$(bash scripts/release-version.sh "$RELEASE_TAG")" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
@@ -388,7 +396,8 @@ jobs:
       - name: Upload standalone runtime assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" runtime-dist/* --clobber
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: gh release upload "$RELEASE_TAG" runtime-dist/* --clobber
       - name: Attest release artifacts
         uses: actions/attest@v4
         with:
