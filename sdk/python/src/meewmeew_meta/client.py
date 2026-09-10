@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from pathlib import Path
 from typing import Any, cast
 
@@ -101,6 +101,11 @@ class MetaClient:
         cls,
         runtime_path: str | Path | None = None,
         *,
+        runtime_version: str | None = None,
+        runtime_cache_dir: str | Path | None = None,
+        release_base_url: str | None = None,
+        download_runtime: bool = True,
+        env: Mapping[str, str] | None = None,
         listen: str = "127.0.0.1:0",
         token: str | None = None,
         bootstrap_timeout: float = 10.0,
@@ -109,6 +114,11 @@ class MetaClient:
         managed = await ManagedRuntime.start(
             ManagedRuntimeOptions(
                 runtime_path=runtime_path,
+                runtime_version=runtime_version,
+                runtime_cache_dir=runtime_cache_dir,
+                release_base_url=release_base_url,
+                download_runtime=download_runtime,
+                env=env,
                 listen=listen,
                 token=token,
                 bootstrap_timeout=bootstrap_timeout,
