@@ -23,6 +23,23 @@ builds:
     goarch:
       - amd64
       - arm64
+upx:
+  - ids:
+      - meta
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    compress: best
+  - ids:
+      - meta
+    goos:
+      - windows
+    goarch:
+      - amd64
+    compress: best
+
 archives:
   - id: meta
     ids:

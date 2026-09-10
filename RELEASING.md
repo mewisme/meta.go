@@ -105,6 +105,8 @@ Run those only in a disposable checkout because they modify package manifests in
 
 GoReleaser builds only the `meta` CLI archives. Runtime binaries are intentionally excluded from GoReleaser so they cannot diverge from the copies installed by SDK packages. The workflow uploads the prebuilt runtime matrix to the same GitHub release and creates a separate SHA-256 runtime checksum manifest.
 
+Release builds use UPX 5.2.1 with `--best` for Linux amd64/arm64 and Windows amd64 binaries. macOS and Windows arm64 remain uncompressed because UPX compatibility is not reliable enough for those targets. CI launches UPX-packed native Linux/Windows runtimes and release builds also run `upx -t` before packaging.
+
 Release artifacts receive GitHub attestations; npm publishing uses provenance and OIDC; PyPI uses Trusted Publishing.
 
 Do not reuse or move an existing release tag. If a released build needs a fix, create a new patch version.

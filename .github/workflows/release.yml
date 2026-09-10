@@ -95,6 +95,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Install UPX
+        uses: crazy-max/ghaction-upx@v4
+        with:
+          version: v5.2.1
+          install-only: true
       - name: Build runtime
         env:
           VERSION: ${{ needs.validate.outputs.version }}
@@ -102,6 +107,12 @@ jobs:
           mkdir -p runtime
           output="runtime/meta-runtime_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.ext }}"
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags "-s -w -X go.mewis.me/meta.go.Version=${VERSION} -X go.mewis.me/meta.go.Commit=${GITHUB_SHA}" -o "$output" ./cmd/meta-runtime
+          case "${{ matrix.goos }}/${{ matrix.goarch }}" in
+            linux/amd64|linux/arm64|windows/amd64)
+              upx --best "$output"
+              upx -t "$output"
+              ;;
+          esac
           test -s "$output"
       - uses: actions/upload-artifact@v7
         with:
@@ -361,6 +372,11 @@ jobs:
         uses: anchore/sbom-action/download-syft@v0.24.2
       - name: Add Syft to PATH
         run: dirname '${{ steps.syft.outputs.cmd }}' >> "$GITHUB_PATH"
+      - name: Install UPX
+        uses: crazy-max/ghaction-upx@v4
+        with:
+          version: v5.2.1
+          install-only: true
       - name: Release Go CLI
         uses: goreleaser/goreleaser-action@v7
         with:

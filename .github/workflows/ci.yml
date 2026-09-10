@@ -155,12 +155,24 @@ jobs:
             echo "goarch=$goarch"
             echo "ext=$ext"
           } >> "$GITHUB_OUTPUT"
+      - name: Install UPX
+        if: runner.os != 'macOS'
+        uses: crazy-max/ghaction-upx@v4
+        with:
+          version: v5.2.1
+          install-only: true
       - name: Build host runtime
         shell: bash
         run: |
           mkdir -p .cgm/runtime-lifecycle/node .cgm/runtime-lifecycle/python
           output="$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/meta-runtime${{ steps.target.outputs.ext }}"
           CGO_ENABLED=0 GOOS=${{ steps.target.outputs.goos }} GOARCH=${{ steps.target.outputs.goarch }} go build -trimpath -o "$output" ./cmd/meta-runtime
+          case "${{ steps.target.outputs.goos }}/${{ steps.target.outputs.goarch }}" in
+            linux/amd64|linux/arm64|windows/amd64)
+              upx --best "$output"
+              upx -t "$output"
+              ;;
+          esac
           test -s "$output"
       - name: Pack Node SDK and bundled runtime
         shell: bash
