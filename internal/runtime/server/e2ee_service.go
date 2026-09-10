@@ -24,7 +24,10 @@ func (s *e2eeService) service(sessionID string) (session.E2EE, error) {
 	if err != nil {
 		return nil, err
 	}
-	service := sess.Client().E2EEService()
+	service, err := sess.E2EEService()
+	if err != nil {
+		return nil, err
+	}
 	if service == nil {
 		return nil, fberrors.ErrE2EENotReady
 	}

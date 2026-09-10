@@ -23,7 +23,10 @@ func (s *messengerService) messenger(sessionID string) (session.Messenger, error
 	if err != nil {
 		return nil, err
 	}
-	service := sess.Client().MessengerService()
+	service, err := sess.MessengerService()
+	if err != nil {
+		return nil, err
+	}
 	if service == nil {
 		return nil, fberrors.ErrNotConnected
 	}
@@ -35,7 +38,10 @@ func (s *messengerService) threads(sessionID string) (session.Threads, error) {
 	if err != nil {
 		return nil, err
 	}
-	service := sess.Client().ThreadService()
+	service, err := sess.ThreadService()
+	if err != nil {
+		return nil, err
+	}
 	if service == nil {
 		return nil, fberrors.ErrNotConnected
 	}

@@ -269,6 +269,81 @@ func TestEngineCloseCancelsInFlightConnect(t *testing.T) {
 	<-closeDone
 }
 
+func TestEngineConnectFailureStates(t *testing.T) {
+	t.Run("bootstrap", func(t *testing.T) {
+		want := errors.New("bootstrap failed")
+		engine := newEngine(t.Context(), &bootstrapErrorBackend{fakeBackend: new(fakeBackend), err: want}, 1)
+		if _, err := engine.Connect(t.Context()); !errors.Is(err, want) {
+			t.Fatalf("got %v, want %v", err, want)
+		}
+		if health := engine.Health(); health.Regular != model.ConnectionFailed || health.LastErrorCategory == "" {
+			t.Fatalf("unexpected health: %#v", health)
+		}
+	})
+	t.Run("connect", func(t *testing.T) {
+		want := errors.New("connect failed")
+		engine := newEngine(t.Context(), &connectErrorBackend{fakeBackend: new(fakeBackend), err: want}, 1)
+		if _, err := engine.Connect(t.Context()); !errors.Is(err, want) {
+			t.Fatalf("got %v, want %v", err, want)
+		}
+		if health := engine.Health(); health.Regular != model.ConnectionFailed || engine.Connected() {
+			t.Fatalf("unexpected state: health=%#v connected=%v", health, engine.Connected())
+		}
+	})
+}
+
+func TestEngineE2EEFailureState(t *testing.T) {
+	want := errors.New("e2ee failed")
+	backend := &e2eeErrorBackend{fakeBackend: new(fakeBackend), err: want}
+	engine := newEngine(t.Context(), backend, 1)
+	if _, err := engine.Connect(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.ConnectE2EE(t.Context(), "1"); !errors.Is(err, want) {
+		t.Fatalf("got %v, want %v", err, want)
+	}
+	if health := engine.Health(); health.E2EE != model.ConnectionFailed || engine.E2EEConnected() {
+		t.Fatalf("unexpected state: health=%#v e2ee=%v", health, engine.E2EEConnected())
+	}
+}
+
+func TestEngineUnsubscribeDuringDispatch(t *testing.T) {
+	backend := new(fakeBackend)
+	engine := newEngine(t.Context(), backend, 1)
+	calls := 0
+	var unsubscribe func()
+	unsubscribe = engine.On(func(Event) {
+		calls++
+		unsubscribe()
+	})
+	engine.emit(Event{Kind: EventReady})
+	engine.emit(Event{Kind: EventReconnected})
+	if calls != 1 {
+		t.Fatalf("handler calls = %d, want 1", calls)
+	}
+}
+
+type bootstrapErrorBackend struct {
+	*fakeBackend
+	err error
+}
+
+func (b *bootstrapErrorBackend) Bootstrap(context.Context) (Account, error) { return Account{}, b.err }
+
+type connectErrorBackend struct {
+	*fakeBackend
+	err error
+}
+
+func (b *connectErrorBackend) Connect(context.Context, context.Context) error { return b.err }
+
+type e2eeErrorBackend struct {
+	*fakeBackend
+	err error
+}
+
+func (b *e2eeErrorBackend) ConnectE2EE(context.Context, model.ID) error { return b.err }
+
 type blockingBackend struct {
 	started chan struct{}
 	release chan struct{}

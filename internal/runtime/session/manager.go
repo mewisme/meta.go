@@ -211,7 +211,33 @@ func (s *Session) Health() model.HealthSnapshot {
 	return s.client.Health()
 }
 
-func (s *Session) Client() Client { return s.client }
+func (s *Session) MessengerService() (Messenger, error) {
+	if s == nil || s.closed.Load() {
+		return nil, ErrClosed
+	}
+	return s.client.MessengerService(), nil
+}
+
+func (s *Session) ThreadService() (Threads, error) {
+	if s == nil || s.closed.Load() {
+		return nil, ErrClosed
+	}
+	return s.client.ThreadService(), nil
+}
+
+func (s *Session) E2EEService() (E2EE, error) {
+	if s == nil || s.closed.Load() {
+		return nil, ErrClosed
+	}
+	return s.client.E2EEService(), nil
+}
+
+func (s *Session) FacebookService() (Facebook, error) {
+	if s == nil || s.closed.Load() {
+		return nil, ErrClosed
+	}
+	return s.client.FacebookService(), nil
+}
 
 func (s *Session) Close() error {
 	if s == nil || !s.closed.CompareAndSwap(false, true) {

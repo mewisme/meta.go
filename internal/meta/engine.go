@@ -900,6 +900,7 @@ func (e *Engine) RefreshAuth(ctx context.Context, cookies map[string]string) (Au
 	return backend.RefreshAuth(ctx, cookies)
 }
 
+// On registers a synchronous event handler. Handlers must return promptly; a blocking handler delays later handlers on the same event.
 func (e *Engine) On(handler func(Event)) func() {
 	if e == nil || handler == nil || e.closed.Load() {
 		return func() {}

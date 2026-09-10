@@ -19,7 +19,10 @@ func (s *facebookService) service(sessionID string) (session.Facebook, error) {
 	if err != nil {
 		return nil, err
 	}
-	service := sess.Client().FacebookService()
+	service, err := sess.FacebookService()
+	if err != nil {
+		return nil, err
+	}
 	if service == nil {
 		return nil, fberrors.ErrNotConnected
 	}

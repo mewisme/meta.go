@@ -75,6 +75,16 @@ func TestManagerLifecycle(t *testing.T) {
 	if err := manager.Close(created.ID()); err != nil {
 		t.Fatal(err)
 	}
+	for name, get := range map[string]func() error{
+		"messenger": func() error { _, err := created.MessengerService(); return err },
+		"threads":   func() error { _, err := created.ThreadService(); return err },
+		"e2ee":      func() error { _, err := created.E2EEService(); return err },
+		"facebook":  func() error { _, err := created.FacebookService(); return err },
+	} {
+		if err := get(); !errors.Is(err, ErrClosed) {
+			t.Fatalf("%s service after close: %v", name, err)
+		}
+	}
 	if fake.closes != 1 || manager.Len() != 0 {
 		t.Fatalf("unexpected close state: closes=%d len=%d", fake.closes, manager.Len())
 	}
