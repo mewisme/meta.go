@@ -33,6 +33,10 @@ type Client struct {
 	logger      *slog.Logger
 	timeout     time.Duration
 	cookies     auth.Cookies
+	appState    auth.AppState
+	credentials auth.Credentials
+	authSource  clientAuthSource
+	optionErr   error
 	profile     storage.Profile
 	secrets     storage.SecretStore
 	e2ee        bool
@@ -41,15 +45,25 @@ type Client struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mu        sync.RWMutex
-	connectMu sync.Mutex
-	handlerMu sync.RWMutex
-	engine    *meta.Engine
-	account   model.User
-	closed    bool
-	nextID    uint64
-	handlers  map[uint64]clientHandler
+	mu              sync.RWMutex
+	connectMu       sync.Mutex
+	handlerMu       sync.RWMutex
+	engine          *meta.Engine
+	account         model.User
+	closed          bool
+	nextID          uint64
+	handlers        map[uint64]clientHandler
+	credentialLogin func(context.Context, auth.Credentials) (auth.Cookies, error)
 }
+
+type clientAuthSource uint8
+
+const (
+	clientAuthNone clientAuthSource = iota
+	clientAuthCookies
+	clientAuthAppState
+	clientAuthCredentials
+)
 
 type clientHandler struct {
 	kind    EventKind
@@ -59,11 +73,17 @@ type clientHandler struct {
 // NewClient creates a client with production-safe defaults and applies opts in order.
 func NewClient(opts ...Option) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	client := &Client{httpClient: &http.Client{}, logger: logging.RedactLogger(slog.Default()), timeout: 30 * time.Second, eventBuffer: 100, ctx: ctx, cancel: cancel, handlers: map[uint64]clientHandler{}}
+	client := &Client{httpClient: &http.Client{}, logger: logging.RedactLogger(slog.Default()), timeout: 30 * time.Second, eventBuffer: 100, ctx: ctx, cancel: cancel, handlers: map[uint64]clientHandler{}, credentialLogin: func(ctx context.Context, credentials auth.Credentials) (auth.Cookies, error) {
+		return auth.NewCredentialLogin().Login(ctx, credentials)
+	}}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(client)
 		}
+	}
+	if client.optionErr != nil {
+		cancel()
+		return nil, client.optionErr
 	}
 	if client.timeout <= 0 {
 		cancel()
@@ -92,22 +112,12 @@ func (c *Client) Connect(ctx context.Context) error {
 		c.mu.RUnlock()
 		return nil
 	}
-	cookies := c.cookies.Clone()
 	profile := c.profile
 	secrets := c.secrets
 	c.mu.RUnlock()
-	if len(cookies) == 0 && profile.Name != "" && secrets != nil {
-		loaded, err := (auth.ProfileManager{Secrets: secrets}).LoadCookies(ctx, profile.Name)
-		if err != nil {
-			return fmt.Errorf("%w: load profile cookies: %v", fberrors.ErrUnauthorized, err)
-		}
-		cookies = loaded
-	}
-	if len(cookies) == 0 {
-		return fmt.Errorf("%w: no cookies configured", fberrors.ErrUnauthorized)
-	}
-	if err := cookies.ValidateRegular(); err != nil {
-		return fmt.Errorf("%w: %v", fberrors.ErrUnauthorized, err)
+	cookies, err := c.resolveAuth(ctx, profile, secrets)
+	if err != nil {
+		return err
 	}
 	deviceStore, err := c.deviceStore(ctx, profile, secrets)
 	if err != nil {
@@ -189,6 +199,10 @@ func (c *Client) Close() error {
 	engine := c.engine
 	c.engine = nil
 	c.cookies = nil
+	c.appState = nil
+	c.credentials = auth.Credentials{}
+	c.authSource = clientAuthNone
+	c.optionErr = nil
 	c.profile = storage.Profile{}
 	c.secrets = nil
 	c.account = model.User{}
@@ -209,6 +223,64 @@ func (c *Client) Close() error {
 	c.logger.Debug("client closed")
 	c.connectMu.Unlock()
 	return nil
+}
+
+func (c *Client) resolveAuth(ctx context.Context, profile storage.Profile, secrets storage.SecretStore) (auth.Cookies, error) {
+	c.mu.RLock()
+	source := c.authSource
+	cookies := c.cookies.Clone()
+	state := c.appState.Clone()
+	credentials := c.credentials
+	login := c.credentialLogin
+	c.mu.RUnlock()
+
+	switch source {
+	case clientAuthCookies:
+	case clientAuthAppState:
+		resolved, err := state.Cookies()
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", fberrors.ErrUnauthorized, err)
+		}
+		cookies = resolved
+	case clientAuthCredentials:
+		if login == nil {
+			return nil, errors.New("credential login is unavailable")
+		}
+		resolved, err := login(ctx, credentials)
+		if err != nil {
+			return nil, err
+		}
+		if err := resolved.ValidateRegular(); err != nil {
+			return nil, fmt.Errorf("%w: %v", fberrors.ErrUnauthorized, err)
+		}
+		cookies = resolved
+		c.mu.Lock()
+		if c.closed {
+			c.mu.Unlock()
+			return nil, errors.New("meta client is closed")
+		}
+		if c.authSource == clientAuthCredentials {
+			c.cookies = cookies.Clone()
+			c.credentials = auth.Credentials{}
+			c.authSource = clientAuthCookies
+		}
+		c.mu.Unlock()
+	case clientAuthNone:
+		if profile.Name != "" && secrets != nil {
+			loaded, err := (auth.ProfileManager{Secrets: secrets}).LoadCookies(ctx, profile.Name)
+			if err != nil {
+				return nil, fmt.Errorf("%w: load profile cookies: %v", fberrors.ErrUnauthorized, err)
+			}
+			cookies = loaded
+		}
+	}
+	if len(cookies) == 0 {
+		return nil, fmt.Errorf("%w: no authentication configured", fberrors.ErrUnauthorized)
+	}
+	if err := cookies.ValidateRegular(); err != nil {
+		return nil, fmt.Errorf("%w: %v", fberrors.ErrUnauthorized, err)
+	}
+	return cookies, nil
 }
 
 func (c *Client) Health() HealthSnapshot {

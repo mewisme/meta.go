@@ -1,11 +1,13 @@
 package meta
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"go.mewis.me/meta.go/auth"
+	fberrors "go.mewis.me/meta.go/errors"
 	"go.mewis.me/meta.go/internal/logging"
 	"go.mewis.me/meta.go/storage"
 )
@@ -39,7 +41,27 @@ func WithTimeout(timeout time.Duration) Option {
 }
 
 func WithCookies(cookies auth.Cookies) Option {
-	return func(client *Client) { client.cookies = cookies.Clone() }
+	return func(client *Client) {
+		if client.setAuthSource(clientAuthCookies) {
+			client.cookies = cookies.Clone()
+		}
+	}
+}
+
+func WithAppState(state auth.AppState) Option {
+	return func(client *Client) {
+		if client.setAuthSource(clientAuthAppState) {
+			client.appState = state.Clone()
+		}
+	}
+}
+
+func WithCredentials(credentials auth.Credentials) Option {
+	return func(client *Client) {
+		if client.setAuthSource(clientAuthCredentials) {
+			client.credentials = credentials
+		}
+	}
 }
 
 func WithProfile(profile storage.Profile) Option {
@@ -56,4 +78,13 @@ func WithE2EE(enabled bool) Option {
 
 func WithEventBuffer(size int) Option {
 	return func(client *Client) { client.eventBuffer = size }
+}
+
+func (client *Client) setAuthSource(source clientAuthSource) bool {
+	if client.authSource != clientAuthNone && client.authSource != source {
+		client.optionErr = fmt.Errorf("%w: multiple explicit authentication sources", fberrors.ErrInvalidInput)
+		return false
+	}
+	client.authSource = source
+	return true
 }

@@ -23,6 +23,83 @@ func TestNewClientValidatesOptions(t *testing.T) {
 	}
 }
 
+func TestNewClientRejectsMultipleExplicitAuthSources(t *testing.T) {
+	if _, err := NewClient(WithCookies(auth.Cookies{"c_user": "1", "xs": "x"}), WithAppState(auth.AppState{{Key: "c_user", Value: "1"}, {Key: "xs", Value: "x"}})); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid input, got %v", err)
+	}
+	if _, err := NewClient(WithCredentials(auth.Credentials{Identifier: "user", Password: "pw", OTP: "123456"}), WithCookies(auth.Cookies{"c_user": "1", "xs": "x"})); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid input, got %v", err)
+	}
+}
+
+func TestClientResolvesAppState(t *testing.T) {
+	client, err := NewClient(WithAppState(auth.AppState{{Key: "c_user", Value: "1"}, {Key: "xs", Value: "x"}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	cookies, err := client.resolveAuth(context.Background(), storage.Profile{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cookies["c_user"] != "1" || cookies["xs"] != "x" {
+		t.Fatalf("unexpected cookies: %#v", cookies)
+	}
+}
+
+func TestClientCredentialResolutionClearsSecretsAndKeepsCookies(t *testing.T) {
+	credentials := auth.Credentials{Identifier: "user", Password: "password-secret", OTP: "123456"}
+	client, err := NewClient(WithCredentials(credentials))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	client.credentialLogin = func(_ context.Context, got auth.Credentials) (auth.Cookies, error) {
+		if got != credentials {
+			t.Fatalf("unexpected credentials: %#v", got)
+		}
+		return auth.Cookies{"c_user": "1", "xs": "x"}, nil
+	}
+	first, err := client.resolveAuth(context.Background(), storage.Profile{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.credentialLogin = func(context.Context, auth.Credentials) (auth.Cookies, error) {
+		t.Fatal("credential login called twice")
+		return nil, nil
+	}
+	second, err := client.resolveAuth(context.Background(), storage.Profile{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.mu.RLock()
+	storedCredentials, source := client.credentials, client.authSource
+	client.mu.RUnlock()
+	if storedCredentials != (auth.Credentials{}) || source != clientAuthCookies || first["xs"] != "x" || second["xs"] != "x" {
+		t.Fatalf("credential state not cleared/preserved: credentials=%#v source=%d first=%#v second=%#v", storedCredentials, source, first, second)
+	}
+}
+
+func TestExplicitEmptyCookiesDoNotFallBackToProfile(t *testing.T) {
+	secrets := storage.NewMemorySecretStore()
+	manager := auth.ProfileManager{Profiles: storage.NewMemoryProfileStore(), Secrets: secrets}
+	ctx := context.Background()
+	if _, err := manager.Create(ctx, "default", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.ImportCookies(ctx, "default", auth.Cookies{"c_user": "1", "xs": "x"}); err != nil {
+		t.Fatal(err)
+	}
+	client, err := NewClient(WithCookies(nil), WithProfile(storage.Profile{Name: "default"}), WithSecretStore(secrets))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	if _, err := client.resolveAuth(ctx, storage.Profile{Name: "default"}, secrets); !errors.Is(err, fberrors.ErrUnauthorized) {
+		t.Fatalf("expected explicit empty auth to fail, got %v", err)
+	}
+}
+
 func TestWithHTTPClientDoesNotMutateCallerClient(t *testing.T) {
 	httpClient := &http.Client{Timeout: time.Minute}
 	client, err := NewClient(WithHTTPClient(httpClient), WithTimeout(3*time.Second))
@@ -148,21 +225,23 @@ func TestClientCloseCancelsBeforeWaitingForConnect(t *testing.T) {
 
 func TestClientCloseReleasesSensitiveReferences(t *testing.T) {
 	secrets := storage.NewMemorySecretStore()
-	client, err := NewClient(WithCookies(auth.Cookies{"c_user": "1", "xs": "secret"}), WithProfile(storage.Profile{Name: "default"}), WithSecretStore(secrets))
+	client, err := NewClient(WithCredentials(auth.Credentials{Identifier: "user", Password: "secret", OTP: "123456"}), WithProfile(storage.Profile{Name: "default"}), WithSecretStore(secrets))
 	if err != nil {
 		t.Fatal(err)
 	}
+	client.appState = auth.AppState{{Key: "c_user", Value: "1"}}
+	client.cookies = auth.Cookies{"c_user": "1", "xs": "secret"}
 	client.On(EventMessage, func(Event) {})
 	if err := client.Close(); err != nil {
 		t.Fatal(err)
 	}
 	client.mu.RLock()
-	cookies, profile, store, account := client.cookies, client.profile, client.secrets, client.account
+	cookies, state, credentials, source, profile, store, account := client.cookies, client.appState, client.credentials, client.authSource, client.profile, client.secrets, client.account
 	client.mu.RUnlock()
 	client.handlerMu.RLock()
 	handlers := len(client.handlers)
 	client.handlerMu.RUnlock()
-	if cookies != nil || profile.Name != "" || store != nil || !account.ID.Empty() || handlers != 0 {
-		t.Fatalf("sensitive references retained after close: cookies=%d profile=%q store=%t account=%s handlers=%d", len(cookies), profile.Name, store != nil, account.ID, handlers)
+	if cookies != nil || state != nil || credentials != (auth.Credentials{}) || source != clientAuthNone || profile.Name != "" || store != nil || !account.ID.Empty() || handlers != 0 {
+		t.Fatalf("sensitive references retained after close: cookies=%d app_state=%d credentials=%t source=%d profile=%q store=%t account=%s handlers=%d", len(cookies), len(state), credentials != (auth.Credentials{}), source, profile.Name, store != nil, account.ID, handlers)
 	}
 }

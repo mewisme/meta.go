@@ -1,6 +1,6 @@
 # Authentication and profiles
 
-meta.go supports cookie-based sessions and credential login. Cookies are the simplest option when an authenticated browser session already exists.
+meta.go supports cookies, AppState and credential login as explicit client authentication sources. Configure exactly one source per client.
 
 ## Cookies
 
@@ -16,6 +16,18 @@ if err := cookies.ValidateRegular(); err != nil {
 
 Browser-exported cookie JSON can be parsed with `auth.ParseBrowserCookieJSON`.
 
+## AppState
+
+```go
+state, err := auth.ParseAppStateJSON(appStateJSON)
+if err != nil {
+	return err
+}
+client, err := meta.NewClient(meta.WithAppState(state))
+```
+
+Canonical AppState items use `key` and `value`. The parser also accepts `name` as a compatibility alias for browser-exported cookie arrays. Duplicate keys use the last value.
+
 ## Credential login
 
 ```go
@@ -27,7 +39,19 @@ cookies, err := login.Login(ctx, auth.Credentials{
 })
 ```
 
-`TOTP` is a TOTP seed and meta generates the current code when needed. Use `OTP` instead when a one-time numeric code has already been generated. `TOTP` and `OTP` are mutually exclusive.
+`TOTP` is a TOTP seed and meta generates the current code. Use `OTP` instead when a one-time numeric code has already been generated. Identifier, password and exactly one of `TOTP` or `OTP` are required.
+
+Credential login may also be configured directly on the client:
+
+```go
+client, err := meta.NewClient(meta.WithCredentials(auth.Credentials{
+	Identifier: "account@example.com",
+	Password:   password,
+	OTP:        otp,
+}))
+```
+
+After successful credential resolution, the client retains only resulting cookies for reconnects and clears stored password/TOTP/OTP values.
 
 Credential login uses the maintained login flow first and a compatibility flow only when the primary protocol changes. Authentication rejection, checkpoints, rate limits and protocol changes are returned as typed errors.
 
