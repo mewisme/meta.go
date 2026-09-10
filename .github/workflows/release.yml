@@ -358,7 +358,7 @@ jobs:
           sha256sum meta-runtime_* > "meta-runtime_${VERSION}_checksums.txt"
       - name: Install Syft
         id: syft
-        uses: anchore/sbom-action/download-syft@v0.24.0
+        uses: anchore/sbom-action/download-syft@v0.24.2
       - name: Add Syft to PATH
         run: dirname '${{ steps.syft.outputs.cmd }}' >> "$GITHUB_PATH"
       - name: Release Go CLI
