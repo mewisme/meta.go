@@ -24,6 +24,16 @@ class SessionServiceStub(object):
                 request_serializer=meta_dot_v1_dot_session__pb2.ConnectRequest.SerializeToString,
                 response_deserializer=meta_dot_v1_dot_session__pb2.ConnectResponse.FromString,
                 _registered_method=True)
+        self.RefreshAuth = channel.unary_unary(
+                '/meta.v1.SessionService/RefreshAuth',
+                request_serializer=meta_dot_v1_dot_session__pb2.RefreshAuthRequest.SerializeToString,
+                response_deserializer=meta_dot_v1_dot_session__pb2.RefreshAuthResponse.FromString,
+                _registered_method=True)
+        self.GetAuthSnapshot = channel.unary_unary(
+                '/meta.v1.SessionService/GetAuthSnapshot',
+                request_serializer=meta_dot_v1_dot_session__pb2.GetAuthSnapshotRequest.SerializeToString,
+                response_deserializer=meta_dot_v1_dot_session__pb2.GetAuthSnapshotResponse.FromString,
+                _registered_method=True)
         self.CloseSession = channel.unary_unary(
                 '/meta.v1.SessionService/CloseSession',
                 request_serializer=meta_dot_v1_dot_session__pb2.CloseSessionRequest.SerializeToString,
@@ -51,6 +61,18 @@ class SessionServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def Connect(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RefreshAuth(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAuthSnapshot(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -86,6 +108,16 @@ def add_SessionServiceServicer_to_server(servicer, server):
                     servicer.Connect,
                     request_deserializer=meta_dot_v1_dot_session__pb2.ConnectRequest.FromString,
                     response_serializer=meta_dot_v1_dot_session__pb2.ConnectResponse.SerializeToString,
+            ),
+            'RefreshAuth': grpc.unary_unary_rpc_method_handler(
+                    servicer.RefreshAuth,
+                    request_deserializer=meta_dot_v1_dot_session__pb2.RefreshAuthRequest.FromString,
+                    response_serializer=meta_dot_v1_dot_session__pb2.RefreshAuthResponse.SerializeToString,
+            ),
+            'GetAuthSnapshot': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAuthSnapshot,
+                    request_deserializer=meta_dot_v1_dot_session__pb2.GetAuthSnapshotRequest.FromString,
+                    response_serializer=meta_dot_v1_dot_session__pb2.GetAuthSnapshotResponse.SerializeToString,
             ),
             'CloseSession': grpc.unary_unary_rpc_method_handler(
                     servicer.CloseSession,
@@ -157,6 +189,60 @@ class SessionService(object):
             '/meta.v1.SessionService/Connect',
             meta_dot_v1_dot_session__pb2.ConnectRequest.SerializeToString,
             meta_dot_v1_dot_session__pb2.ConnectResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RefreshAuth(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/meta.v1.SessionService/RefreshAuth',
+            meta_dot_v1_dot_session__pb2.RefreshAuthRequest.SerializeToString,
+            meta_dot_v1_dot_session__pb2.RefreshAuthResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAuthSnapshot(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/meta.v1.SessionService/GetAuthSnapshot',
+            meta_dot_v1_dot_session__pb2.GetAuthSnapshotRequest.SerializeToString,
+            meta_dot_v1_dot_session__pb2.GetAuthSnapshotResponse.FromString,
             options,
             channel_credentials,
             insecure,

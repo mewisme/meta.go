@@ -5,11 +5,13 @@ import (
 	"errors"
 	"testing"
 
+	"go.mewis.me/meta.go/auth"
 	"go.mewis.me/meta.go/model"
 )
 
 type fakeClient struct {
 	account      model.User
+	snapshot     auth.AuthSnapshot
 	health       model.HealthSnapshot
 	connects     int
 	closes       int
@@ -21,6 +23,11 @@ func (f *fakeClient) Connect(context.Context) error {
 	f.connects++
 	return nil
 }
+
+func (f *fakeClient) RefreshAuth(_ context.Context, _ *auth.Source) (auth.AuthSnapshot, error) {
+	return f.snapshot, nil
+}
+func (f *fakeClient) AuthSnapshot(context.Context) (auth.AuthSnapshot, error) { return f.snapshot, nil }
 
 func (f *fakeClient) Close() error {
 	f.closes++

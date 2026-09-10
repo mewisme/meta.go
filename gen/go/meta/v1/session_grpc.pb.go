@@ -22,6 +22,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	SessionService_CreateSession_FullMethodName   = "/meta.v1.SessionService/CreateSession"
 	SessionService_Connect_FullMethodName         = "/meta.v1.SessionService/Connect"
+	SessionService_RefreshAuth_FullMethodName     = "/meta.v1.SessionService/RefreshAuth"
+	SessionService_GetAuthSnapshot_FullMethodName = "/meta.v1.SessionService/GetAuthSnapshot"
 	SessionService_CloseSession_FullMethodName    = "/meta.v1.SessionService/CloseSession"
 	SessionService_GetHealth_FullMethodName       = "/meta.v1.SessionService/GetHealth"
 	SessionService_SubscribeEvents_FullMethodName = "/meta.v1.SessionService/SubscribeEvents"
@@ -33,6 +35,8 @@ const (
 type SessionServiceClient interface {
 	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error)
 	Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (*ConnectResponse, error)
+	RefreshAuth(ctx context.Context, in *RefreshAuthRequest, opts ...grpc.CallOption) (*RefreshAuthResponse, error)
+	GetAuthSnapshot(ctx context.Context, in *GetAuthSnapshotRequest, opts ...grpc.CallOption) (*GetAuthSnapshotResponse, error)
 	CloseSession(ctx context.Context, in *CloseSessionRequest, opts ...grpc.CallOption) (*CloseSessionResponse, error)
 	GetHealth(ctx context.Context, in *GetHealthRequest, opts ...grpc.CallOption) (*GetHealthResponse, error)
 	SubscribeEvents(ctx context.Context, in *SubscribeEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeEventsResponse], error)
@@ -60,6 +64,26 @@ func (c *sessionServiceClient) Connect(ctx context.Context, in *ConnectRequest, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ConnectResponse)
 	err := c.cc.Invoke(ctx, SessionService_Connect_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionServiceClient) RefreshAuth(ctx context.Context, in *RefreshAuthRequest, opts ...grpc.CallOption) (*RefreshAuthResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RefreshAuthResponse)
+	err := c.cc.Invoke(ctx, SessionService_RefreshAuth_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionServiceClient) GetAuthSnapshot(ctx context.Context, in *GetAuthSnapshotRequest, opts ...grpc.CallOption) (*GetAuthSnapshotResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAuthSnapshotResponse)
+	err := c.cc.Invoke(ctx, SessionService_GetAuthSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +135,8 @@ type SessionService_SubscribeEventsClient = grpc.ServerStreamingClient[Subscribe
 type SessionServiceServer interface {
 	CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error)
 	Connect(context.Context, *ConnectRequest) (*ConnectResponse, error)
+	RefreshAuth(context.Context, *RefreshAuthRequest) (*RefreshAuthResponse, error)
+	GetAuthSnapshot(context.Context, *GetAuthSnapshotRequest) (*GetAuthSnapshotResponse, error)
 	CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error)
 	GetHealth(context.Context, *GetHealthRequest) (*GetHealthResponse, error)
 	SubscribeEvents(*SubscribeEventsRequest, grpc.ServerStreamingServer[SubscribeEventsResponse]) error
@@ -129,6 +155,12 @@ func (UnimplementedSessionServiceServer) CreateSession(context.Context, *CreateS
 }
 func (UnimplementedSessionServiceServer) Connect(context.Context, *ConnectRequest) (*ConnectResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Connect not implemented")
+}
+func (UnimplementedSessionServiceServer) RefreshAuth(context.Context, *RefreshAuthRequest) (*RefreshAuthResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RefreshAuth not implemented")
+}
+func (UnimplementedSessionServiceServer) GetAuthSnapshot(context.Context, *GetAuthSnapshotRequest) (*GetAuthSnapshotResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAuthSnapshot not implemented")
 }
 func (UnimplementedSessionServiceServer) CloseSession(context.Context, *CloseSessionRequest) (*CloseSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CloseSession not implemented")
@@ -196,6 +228,42 @@ func _SessionService_Connect_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SessionService_RefreshAuth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefreshAuthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServiceServer).RefreshAuth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionService_RefreshAuth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServiceServer).RefreshAuth(ctx, req.(*RefreshAuthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionService_GetAuthSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAuthSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServiceServer).GetAuthSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionService_GetAuthSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServiceServer).GetAuthSnapshot(ctx, req.(*GetAuthSnapshotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SessionService_CloseSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CloseSessionRequest)
 	if err := dec(in); err != nil {
@@ -257,6 +325,14 @@ var SessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Connect",
 			Handler:    _SessionService_Connect_Handler,
+		},
+		{
+			MethodName: "RefreshAuth",
+			Handler:    _SessionService_RefreshAuth_Handler,
+		},
+		{
+			MethodName: "GetAuthSnapshot",
+			Handler:    _SessionService_GetAuthSnapshot_Handler,
 		},
 		{
 			MethodName: "CloseSession",

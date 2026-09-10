@@ -81,7 +81,7 @@ func stableErrorCode(err error) string {
 		{session.ErrNotFound, "session_not_found"}, {session.ErrClosed, "session_closed"},
 		{fberrors.ErrUnauthorized, "unauthorized"}, {fberrors.ErrSessionExpired, "session_expired"},
 		{fberrors.ErrCheckpointRequired, "checkpoint_required"}, {fberrors.ErrRateLimited, "rate_limited"},
-		{fberrors.ErrInvalidInput, "invalid_input"}, {fberrors.ErrNotConnected, "not_connected"},
+		{fberrors.ErrAccountMismatch, "account_mismatch"}, {fberrors.ErrInvalidInput, "invalid_input"}, {fberrors.ErrNotConnected, "not_connected"},
 		{fberrors.ErrE2EENotReady, "e2ee_not_ready"}, {fberrors.ErrUnsupported, "unsupported"},
 		{fberrors.ErrProtocolChanged, "protocol_changed"}, {fberrors.ErrPermissionDenied, "permission_denied"},
 		{context.Canceled, "canceled"}, {context.DeadlineExceeded, "deadline_exceeded"},

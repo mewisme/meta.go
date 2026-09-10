@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"go.mewis.me/meta.go/auth"
 	fberrors "go.mewis.me/meta.go/errors"
 	metav1 "go.mewis.me/meta.go/gen/go/meta/v1"
 	"go.mewis.me/meta.go/internal/runtime/session"
@@ -21,6 +23,9 @@ import (
 
 type runtimeFakeClient struct {
 	account   model.User
+	snapshot  auth.AuthSnapshot
+	refreshes int
+	lastAuth  *auth.Source
 	health    model.HealthSnapshot
 	connects  int
 	closes    int
@@ -34,6 +39,15 @@ type runtimeFakeClient struct {
 func (f *runtimeFakeClient) Connect(context.Context) error {
 	f.connects++
 	return nil
+}
+
+func (f *runtimeFakeClient) RefreshAuth(_ context.Context, source *auth.Source) (auth.AuthSnapshot, error) {
+	f.refreshes++
+	f.lastAuth = source
+	return f.snapshot, nil
+}
+func (f *runtimeFakeClient) AuthSnapshot(context.Context) (auth.AuthSnapshot, error) {
+	return f.snapshot, nil
 }
 
 func (f *runtimeFakeClient) Close() error {
@@ -143,6 +157,29 @@ func TestRuntimeSessionLifecycle(t *testing.T) {
 	if firstEvent.Event.GetSequence() != 1 || !firstEvent.Event.GetReady().GetIsNewSession() || secondEvent.Event.GetSequence() != 2 || secondEvent.Event.GetReaction().GetMessageId() != "m1" {
 		t.Fatalf("unexpected streamed events: %#v %#v", firstEvent, secondEvent)
 	}
+	fake.snapshot = auth.AuthSnapshot{Cookies: auth.Cookies{"c_user": "42", "xs": "fresh"}, AppState: auth.AppState{{Key: "c_user", Value: "42"}, {Key: "xs", Value: "fresh"}}, Session: auth.Session{FBID: "42", Name: "Mew", Username: "mew", DTSG: "d", Jazoest: "j", LSD: "l", SessionID: "facebook-session", ClientRevision: 7, BootstrappedAt: time.Unix(1_700_000_000, 0).UTC()}}
+	refresh, err := sessions.RefreshAuth(ctx, &metav1.RefreshAuthRequest{SessionId: created.SessionId, Auth: &metav1.SessionAuth{Source: &metav1.SessionAuth_AppState{AppState: &metav1.AppState{Cookies: []*metav1.AppStateCookie{{Key: "c_user", Value: "42"}, {Key: "xs", Value: "fresh"}}}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fake.refreshes != 1 || fake.lastAuth == nil || len(fake.lastAuth.AppState) != 2 || refresh.GetSnapshot().GetCookies().GetValues()["xs"] != "fresh" || refresh.GetSnapshot().GetSession().GetSessionId() != "facebook-session" || sess.SubscriberCount() != 1 {
+		t.Fatalf("unexpected auth refresh state: refresh=%#v calls=%d auth=%#v subscribers=%d", refresh, fake.refreshes, fake.lastAuth, sess.SubscriberCount())
+	}
+	fake.emit(model.Event{Kind: model.EventReconnected})
+	thirdEvent, err := stream.Recv()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if thirdEvent.Event.GetSequence() != 3 || thirdEvent.Event.GetReconnected() == nil {
+		t.Fatalf("event stream did not survive refresh: %#v", thirdEvent)
+	}
+	snapshot, err := sessions.GetAuthSnapshot(ctx, &metav1.GetAuthSnapshotRequest{SessionId: created.SessionId})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.GetSnapshot().GetSession().GetAccountId() != "42" || snapshot.GetSnapshot().GetAppState().GetCookies()[1].GetValue() != "fresh" {
+		t.Fatalf("unexpected auth snapshot: %#v", snapshot)
+	}
 	health, err := sessions.GetHealth(ctx, &metav1.GetHealthRequest{SessionId: created.SessionId})
 	if err != nil {
 		t.Fatal(err)
@@ -170,6 +207,46 @@ func TestRuntimeSessionLifecycle(t *testing.T) {
 	}
 }
 
+func TestCreateSessionAcceptsNewAuthAndRejectsConflict(t *testing.T) {
+	tests := []struct {
+		name  string
+		auth  *metav1.SessionAuth
+		check func(*auth.Source) bool
+	}{
+		{"cookies", &metav1.SessionAuth{Source: &metav1.SessionAuth_Cookies{Cookies: &metav1.CookieMap{Values: map[string]string{"c_user": "1", "xs": "x"}}}}, func(source *auth.Source) bool { return source != nil && source.Cookies["xs"] == "x" }},
+		{"appstate", &metav1.SessionAuth{Source: &metav1.SessionAuth_AppState{AppState: &metav1.AppState{Cookies: []*metav1.AppStateCookie{{Key: "c_user", Value: "1"}, {Key: "xs", Value: "x"}}}}}, func(source *auth.Source) bool { return source != nil && len(source.AppState) == 2 }},
+		{"credentials", &metav1.SessionAuth{Source: &metav1.SessionAuth_Credentials{Credentials: &metav1.Credentials{Identifier: "user", Password: "pw", SecondFactor: &metav1.Credentials_Otp{Otp: "123456"}}}}, func(source *auth.Source) bool {
+			return source != nil && source.Credentials != nil && source.Credentials.OTP == "123456"
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var captured session.Config
+			manager := session.NewManager(func(config session.Config) (session.Client, error) {
+				captured = config
+				return &runtimeFakeClient{}, nil
+			})
+			service := &sessionService{server: &Server{sessions: manager}}
+			created, err := service.CreateSession(t.Context(), &metav1.CreateSessionRequest{Auth: test.auth})
+			if err != nil || created.GetSessionId() == "" || !test.check(captured.Auth) || captured.Cookies != nil {
+				t.Fatalf("unexpected create result: response=%#v config=%#v err=%v", created, captured, err)
+			}
+			_ = manager.CloseAll()
+		})
+	}
+
+	manager := session.NewManager(func(session.Config) (session.Client, error) { return &runtimeFakeClient{}, nil })
+	service := &sessionService{server: &Server{sessions: manager}}
+	for _, request := range []*metav1.CreateSessionRequest{
+		{},
+		{Cookies: map[string]string{"c_user": "1", "xs": "x"}, Auth: tests[0].auth},
+	} {
+		if _, err := service.CreateSession(t.Context(), request); status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("expected invalid argument for %#v, got %v", request, err)
+		}
+	}
+}
+
 func TestListenRejectsNonLoopback(t *testing.T) {
 	for _, address := range []string{"0.0.0.0:0", ":0", "192.0.2.1:0"} {
 		if listener, err := Listen(address); err == nil {
@@ -191,6 +268,19 @@ func TestNewGeneratesToken(t *testing.T) {
 	}
 	if len(runtimeServer.Token()) < 32 {
 		t.Fatalf("unexpected generated token length: %d", len(runtimeServer.Token()))
+	}
+}
+
+func TestRuntimeCapabilitiesIncludeAuthFeatures(t *testing.T) {
+	capabilities := RuntimeCapabilities()
+	for _, capability := range []string{"session.auth.app_state", "session.auth.credentials", "session.auth.refresh"} {
+		if !slices.Contains(capabilities, capability) {
+			t.Fatalf("missing runtime capability %q", capability)
+		}
+	}
+	capabilities[0] = "mutated"
+	if RuntimeCapabilities()[0] == "mutated" {
+		t.Fatal("runtime capabilities must return a copy")
 	}
 }
 

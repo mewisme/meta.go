@@ -23,12 +23,13 @@ _sym_db = _symbol_database.Default()
 
 
 from google.protobuf import duration_pb2 as google_dot_protobuf_dot_duration__pb2
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 from meta.v1 import common_pb2 as meta_dot_v1_dot_common__pb2
 from meta.v1 import events_pb2 as meta_dot_v1_dot_events__pb2
 from meta.v1 import health_pb2 as meta_dot_v1_dot_health__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15meta/v1/session.proto\x12\x07meta.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x14meta/v1/common.proto\x1a\x14meta/v1/events.proto\x1a\x14meta/v1/health.proto\"\x84\x02\n\x14\x43reateSessionRequest\x12\x44\n\x07\x63ookies\x18\x01 \x03(\x0b\x32*.meta.v1.CreateSessionRequest.CookiesEntryR\x07\x63ookies\x12\x12\n\x04\x65\x32\x65\x65\x18\x02 \x01(\x08R\x04\x65\x32\x65\x65\x12!\n\x0c\x65vent_buffer\x18\x03 \x01(\rR\x0b\x65ventBuffer\x12\x33\n\x07timeout\x18\x04 \x01(\x0b\x32\x19.google.protobuf.DurationR\x07timeout\x1a:\n\x0c\x43ookiesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"6\n\x15\x43reateSessionResponse\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"/\n\x0e\x43onnectRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"=\n\x0f\x43onnectResponse\x12*\n\x07\x61\x63\x63ount\x18\x01 \x01(\x0b\x32\x10.meta.v1.AccountR\x07\x61\x63\x63ount\"4\n\x13\x43loseSessionRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"\x16\n\x14\x43loseSessionResponse\"1\n\x10GetHealthRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"D\n\x11GetHealthResponse\x12/\n\x06health\x18\x01 \x01(\x0b\x32\x17.meta.v1.HealthSnapshotR\x06health\"O\n\x16SubscribeEventsRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n\x06\x62uffer\x18\x02 \x01(\rR\x06\x62uffer\"?\n\x17SubscribeEventsResponse\x12$\n\x05\x65vent\x18\x01 \x01(\x0b\x32\x0e.meta.v1.EventR\x05\x65vent2\x87\x03\n\x0eSessionService\x12N\n\rCreateSession\x12\x1d.meta.v1.CreateSessionRequest\x1a\x1e.meta.v1.CreateSessionResponse\x12<\n\x07\x43onnect\x12\x17.meta.v1.ConnectRequest\x1a\x18.meta.v1.ConnectResponse\x12K\n\x0c\x43loseSession\x12\x1c.meta.v1.CloseSessionRequest\x1a\x1d.meta.v1.CloseSessionResponse\x12\x42\n\tGetHealth\x12\x19.meta.v1.GetHealthRequest\x1a\x1a.meta.v1.GetHealthResponse\x12V\n\x0fSubscribeEvents\x12\x1f.meta.v1.SubscribeEventsRequest\x1a .meta.v1.SubscribeEventsResponse0\x01\x42+Z)go.mewis.me/meta.go/gen/go/meta/v1;metav1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15meta/v1/session.proto\x12\x07meta.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14meta/v1/common.proto\x1a\x14meta/v1/events.proto\x1a\x14meta/v1/health.proto\"\xae\x02\n\x14\x43reateSessionRequest\x12\x44\n\x07\x63ookies\x18\x01 \x03(\x0b\x32*.meta.v1.CreateSessionRequest.CookiesEntryR\x07\x63ookies\x12\x12\n\x04\x65\x32\x65\x65\x18\x02 \x01(\x08R\x04\x65\x32\x65\x65\x12!\n\x0c\x65vent_buffer\x18\x03 \x01(\rR\x0b\x65ventBuffer\x12\x33\n\x07timeout\x18\x04 \x01(\x0b\x32\x19.google.protobuf.DurationR\x07timeout\x12(\n\x04\x61uth\x18\x05 \x01(\x0b\x32\x14.meta.v1.SessionAuthR\x04\x61uth\x1a:\n\x0c\x43ookiesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"6\n\x15\x43reateSessionResponse\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"/\n\x0e\x43onnectRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"=\n\x0f\x43onnectResponse\x12*\n\x07\x61\x63\x63ount\x18\x01 \x01(\x0b\x32\x10.meta.v1.AccountR\x07\x61\x63\x63ount\"\x84\x01\n\x0b\x43redentials\x12\x1e\n\nidentifier\x18\x01 \x01(\tR\nidentifier\x12\x1a\n\x08password\x18\x02 \x01(\tR\x08password\x12\x14\n\x04totp\x18\x03 \x01(\tH\x00R\x04totp\x12\x12\n\x03otp\x18\x04 \x01(\tH\x00R\x03otpB\x0f\n\rsecond_factor\"\xb6\x01\n\x0e\x41ppStateCookie\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value\x12\x16\n\x06\x64omain\x18\x03 \x01(\tR\x06\x64omain\x12\x12\n\x04path\x18\x04 \x01(\tR\x04path\x12\x1b\n\thost_only\x18\x05 \x01(\x08R\x08hostOnly\x12\x16\n\x06secure\x18\x06 \x01(\x08R\x06secure\x12\x1b\n\thttp_only\x18\x07 \x01(\x08R\x08httpOnly\"=\n\x08\x41ppState\x12\x31\n\x07\x63ookies\x18\x01 \x03(\x0b\x32\x17.meta.v1.AppStateCookieR\x07\x63ookies\"~\n\tCookieMap\x12\x36\n\x06values\x18\x01 \x03(\x0b\x32\x1e.meta.v1.CookieMap.ValuesEntryR\x06values\x1a\x39\n\x0bValuesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"\xb3\x01\n\x0bSessionAuth\x12.\n\x07\x63ookies\x18\x01 \x01(\x0b\x32\x12.meta.v1.CookieMapH\x00R\x07\x63ookies\x12\x30\n\tapp_state\x18\x02 \x01(\x0b\x32\x11.meta.v1.AppStateH\x00R\x08\x61ppState\x12\x38\n\x0b\x63redentials\x18\x03 \x01(\x0b\x32\x14.meta.v1.CredentialsH\x00R\x0b\x63redentialsB\x08\n\x06source\"\xa7\x02\n\x0f\x46\x61\x63\x65\x62ookSession\x12\x1d\n\naccount_id\x18\x01 \x01(\tR\taccountId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n\x08username\x18\x03 \x01(\tR\x08username\x12\x12\n\x04\x64tsg\x18\x04 \x01(\tR\x04\x64tsg\x12\x18\n\x07jazoest\x18\x05 \x01(\tR\x07jazoest\x12\x10\n\x03lsd\x18\x06 \x01(\tR\x03lsd\x12\x1d\n\nsession_id\x18\x07 \x01(\tR\tsessionId\x12\'\n\x0f\x63lient_revision\x18\x08 \x01(\x03R\x0e\x63lientRevision\x12=\n\x0crefreshed_at\x18\t \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x0brefreshedAt\"\xa0\x01\n\x0c\x41uthSnapshot\x12,\n\x07\x63ookies\x18\x01 \x01(\x0b\x32\x12.meta.v1.CookieMapR\x07\x63ookies\x12.\n\tapp_state\x18\x02 \x01(\x0b\x32\x11.meta.v1.AppStateR\x08\x61ppState\x12\x32\n\x07session\x18\x03 \x01(\x0b\x32\x18.meta.v1.FacebookSessionR\x07session\"]\n\x12RefreshAuthRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\x12(\n\x04\x61uth\x18\x02 \x01(\x0b\x32\x14.meta.v1.SessionAuthR\x04\x61uth\"H\n\x13RefreshAuthResponse\x12\x31\n\x08snapshot\x18\x01 \x01(\x0b\x32\x15.meta.v1.AuthSnapshotR\x08snapshot\"7\n\x16GetAuthSnapshotRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"L\n\x17GetAuthSnapshotResponse\x12\x31\n\x08snapshot\x18\x01 \x01(\x0b\x32\x15.meta.v1.AuthSnapshotR\x08snapshot\"4\n\x13\x43loseSessionRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"\x16\n\x14\x43loseSessionResponse\"1\n\x10GetHealthRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\"D\n\x11GetHealthResponse\x12/\n\x06health\x18\x01 \x01(\x0b\x32\x17.meta.v1.HealthSnapshotR\x06health\"O\n\x16SubscribeEventsRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n\x06\x62uffer\x18\x02 \x01(\rR\x06\x62uffer\"?\n\x17SubscribeEventsResponse\x12$\n\x05\x65vent\x18\x01 \x01(\x0b\x32\x0e.meta.v1.EventR\x05\x65vent2\xa7\x04\n\x0eSessionService\x12N\n\rCreateSession\x12\x1d.meta.v1.CreateSessionRequest\x1a\x1e.meta.v1.CreateSessionResponse\x12<\n\x07\x43onnect\x12\x17.meta.v1.ConnectRequest\x1a\x18.meta.v1.ConnectResponse\x12H\n\x0bRefreshAuth\x12\x1b.meta.v1.RefreshAuthRequest\x1a\x1c.meta.v1.RefreshAuthResponse\x12T\n\x0fGetAuthSnapshot\x12\x1f.meta.v1.GetAuthSnapshotRequest\x1a .meta.v1.GetAuthSnapshotResponse\x12K\n\x0c\x43loseSession\x12\x1c.meta.v1.CloseSessionRequest\x1a\x1d.meta.v1.CloseSessionResponse\x12\x42\n\tGetHealth\x12\x19.meta.v1.GetHealthRequest\x1a\x1a.meta.v1.GetHealthResponse\x12V\n\x0fSubscribeEvents\x12\x1f.meta.v1.SubscribeEventsRequest\x1a .meta.v1.SubscribeEventsResponse0\x01\x42+Z)go.mewis.me/meta.go/gen/go/meta/v1;metav1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,28 +39,54 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z)go.mewis.me/meta.go/gen/go/meta/v1;metav1'
   _globals['_CREATESESSIONREQUEST_COOKIESENTRY']._loaded_options = None
   _globals['_CREATESESSIONREQUEST_COOKIESENTRY']._serialized_options = b'8\001'
-  _globals['_CREATESESSIONREQUEST']._serialized_start=133
-  _globals['_CREATESESSIONREQUEST']._serialized_end=393
-  _globals['_CREATESESSIONREQUEST_COOKIESENTRY']._serialized_start=335
-  _globals['_CREATESESSIONREQUEST_COOKIESENTRY']._serialized_end=393
-  _globals['_CREATESESSIONRESPONSE']._serialized_start=395
-  _globals['_CREATESESSIONRESPONSE']._serialized_end=449
-  _globals['_CONNECTREQUEST']._serialized_start=451
-  _globals['_CONNECTREQUEST']._serialized_end=498
-  _globals['_CONNECTRESPONSE']._serialized_start=500
-  _globals['_CONNECTRESPONSE']._serialized_end=561
-  _globals['_CLOSESESSIONREQUEST']._serialized_start=563
-  _globals['_CLOSESESSIONREQUEST']._serialized_end=615
-  _globals['_CLOSESESSIONRESPONSE']._serialized_start=617
-  _globals['_CLOSESESSIONRESPONSE']._serialized_end=639
-  _globals['_GETHEALTHREQUEST']._serialized_start=641
-  _globals['_GETHEALTHREQUEST']._serialized_end=690
-  _globals['_GETHEALTHRESPONSE']._serialized_start=692
-  _globals['_GETHEALTHRESPONSE']._serialized_end=760
-  _globals['_SUBSCRIBEEVENTSREQUEST']._serialized_start=762
-  _globals['_SUBSCRIBEEVENTSREQUEST']._serialized_end=841
-  _globals['_SUBSCRIBEEVENTSRESPONSE']._serialized_start=843
-  _globals['_SUBSCRIBEEVENTSRESPONSE']._serialized_end=906
-  _globals['_SESSIONSERVICE']._serialized_start=909
-  _globals['_SESSIONSERVICE']._serialized_end=1300
+  _globals['_COOKIEMAP_VALUESENTRY']._loaded_options = None
+  _globals['_COOKIEMAP_VALUESENTRY']._serialized_options = b'8\001'
+  _globals['_CREATESESSIONREQUEST']._serialized_start=166
+  _globals['_CREATESESSIONREQUEST']._serialized_end=468
+  _globals['_CREATESESSIONREQUEST_COOKIESENTRY']._serialized_start=410
+  _globals['_CREATESESSIONREQUEST_COOKIESENTRY']._serialized_end=468
+  _globals['_CREATESESSIONRESPONSE']._serialized_start=470
+  _globals['_CREATESESSIONRESPONSE']._serialized_end=524
+  _globals['_CONNECTREQUEST']._serialized_start=526
+  _globals['_CONNECTREQUEST']._serialized_end=573
+  _globals['_CONNECTRESPONSE']._serialized_start=575
+  _globals['_CONNECTRESPONSE']._serialized_end=636
+  _globals['_CREDENTIALS']._serialized_start=639
+  _globals['_CREDENTIALS']._serialized_end=771
+  _globals['_APPSTATECOOKIE']._serialized_start=774
+  _globals['_APPSTATECOOKIE']._serialized_end=956
+  _globals['_APPSTATE']._serialized_start=958
+  _globals['_APPSTATE']._serialized_end=1019
+  _globals['_COOKIEMAP']._serialized_start=1021
+  _globals['_COOKIEMAP']._serialized_end=1147
+  _globals['_COOKIEMAP_VALUESENTRY']._serialized_start=1090
+  _globals['_COOKIEMAP_VALUESENTRY']._serialized_end=1147
+  _globals['_SESSIONAUTH']._serialized_start=1150
+  _globals['_SESSIONAUTH']._serialized_end=1329
+  _globals['_FACEBOOKSESSION']._serialized_start=1332
+  _globals['_FACEBOOKSESSION']._serialized_end=1627
+  _globals['_AUTHSNAPSHOT']._serialized_start=1630
+  _globals['_AUTHSNAPSHOT']._serialized_end=1790
+  _globals['_REFRESHAUTHREQUEST']._serialized_start=1792
+  _globals['_REFRESHAUTHREQUEST']._serialized_end=1885
+  _globals['_REFRESHAUTHRESPONSE']._serialized_start=1887
+  _globals['_REFRESHAUTHRESPONSE']._serialized_end=1959
+  _globals['_GETAUTHSNAPSHOTREQUEST']._serialized_start=1961
+  _globals['_GETAUTHSNAPSHOTREQUEST']._serialized_end=2016
+  _globals['_GETAUTHSNAPSHOTRESPONSE']._serialized_start=2018
+  _globals['_GETAUTHSNAPSHOTRESPONSE']._serialized_end=2094
+  _globals['_CLOSESESSIONREQUEST']._serialized_start=2096
+  _globals['_CLOSESESSIONREQUEST']._serialized_end=2148
+  _globals['_CLOSESESSIONRESPONSE']._serialized_start=2150
+  _globals['_CLOSESESSIONRESPONSE']._serialized_end=2172
+  _globals['_GETHEALTHREQUEST']._serialized_start=2174
+  _globals['_GETHEALTHREQUEST']._serialized_end=2223
+  _globals['_GETHEALTHRESPONSE']._serialized_start=2225
+  _globals['_GETHEALTHRESPONSE']._serialized_end=2293
+  _globals['_SUBSCRIBEEVENTSREQUEST']._serialized_start=2295
+  _globals['_SUBSCRIBEEVENTSREQUEST']._serialized_end=2374
+  _globals['_SUBSCRIBEEVENTSRESPONSE']._serialized_start=2376
+  _globals['_SUBSCRIBEEVENTSRESPONSE']._serialized_end=2439
+  _globals['_SESSIONSERVICE']._serialized_start=2442
+  _globals['_SESSIONSERVICE']._serialized_end=2993
 # @@protoc_insertion_point(module_scope)

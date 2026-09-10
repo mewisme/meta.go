@@ -3,6 +3,7 @@ syntax = "proto3";
 package meta.v1;
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
 import "meta/v1/common.proto";
 import "meta/v1/events.proto";
 import "meta/v1/health.proto";
@@ -12,6 +13,8 @@ option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
 service SessionService {
   rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
   rpc Connect(ConnectRequest) returns (ConnectResponse);
+  rpc RefreshAuth(RefreshAuthRequest) returns (RefreshAuthResponse);
+  rpc GetAuthSnapshot(GetAuthSnapshotRequest) returns (GetAuthSnapshotResponse);
   rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse);
   rpc GetHealth(GetHealthRequest) returns (GetHealthResponse);
   rpc SubscribeEvents(SubscribeEventsRequest) returns (stream SubscribeEventsResponse);
@@ -22,6 +25,7 @@ message CreateSessionRequest {
   bool e2ee = 2;
   uint32 event_buffer = 3;
   google.protobuf.Duration timeout = 4;
+  SessionAuth auth = 5;
 }
 
 message CreateSessionResponse {
@@ -34,6 +38,76 @@ message ConnectRequest {
 
 message ConnectResponse {
   Account account = 1;
+}
+
+message Credentials {
+  string identifier = 1;
+  string password = 2;
+  oneof second_factor {
+    string totp = 3;
+    string otp = 4;
+  }
+}
+
+message AppStateCookie {
+  string key = 1;
+  string value = 2;
+  string domain = 3;
+  string path = 4;
+  bool host_only = 5;
+  bool secure = 6;
+  bool http_only = 7;
+}
+
+message AppState {
+  repeated AppStateCookie cookies = 1;
+}
+
+message CookieMap {
+  map<string, string> values = 1;
+}
+
+message SessionAuth {
+  oneof source {
+    CookieMap cookies = 1;
+    AppState app_state = 2;
+    Credentials credentials = 3;
+  }
+}
+
+message FacebookSession {
+  string account_id = 1;
+  string name = 2;
+  string username = 3;
+  string dtsg = 4;
+  string jazoest = 5;
+  string lsd = 6;
+  string session_id = 7;
+  int64 client_revision = 8;
+  google.protobuf.Timestamp refreshed_at = 9;
+}
+
+message AuthSnapshot {
+  CookieMap cookies = 1;
+  AppState app_state = 2;
+  FacebookSession session = 3;
+}
+
+message RefreshAuthRequest {
+  string session_id = 1;
+  SessionAuth auth = 2;
+}
+
+message RefreshAuthResponse {
+  AuthSnapshot snapshot = 1;
+}
+
+message GetAuthSnapshotRequest {
+  string session_id = 1;
+}
+
+message GetAuthSnapshotResponse {
+  AuthSnapshot snapshot = 1;
 }
 
 message CloseSessionRequest {

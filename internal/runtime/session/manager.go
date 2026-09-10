@@ -21,6 +21,7 @@ var (
 
 type Config struct {
 	Cookies     auth.Cookies
+	Auth        *auth.Source
 	E2EE        bool
 	EventBuffer int
 	Timeout     time.Duration
@@ -102,6 +103,8 @@ type Facebook interface {
 
 type Client interface {
 	Connect(context.Context) error
+	RefreshAuth(context.Context, *auth.Source) (auth.AuthSnapshot, error)
+	AuthSnapshot(context.Context) (auth.AuthSnapshot, error)
 	Close() error
 	Health() model.HealthSnapshot
 	Account() model.User
@@ -117,7 +120,21 @@ type Factory func(Config) (Client, error)
 type managedClient struct{ client *metago.Client }
 
 func newManagedClient(config Config) (Client, error) {
-	opts := []metago.Option{metago.WithCookies(config.Cookies), metago.WithE2EE(config.E2EE)}
+	opts := []metago.Option{metago.WithE2EE(config.E2EE)}
+	if config.Auth == nil {
+		opts = append(opts, metago.WithCookies(config.Cookies))
+	} else {
+		switch {
+		case config.Auth.Cookies != nil:
+			opts = append(opts, metago.WithCookies(config.Auth.Cookies))
+		case config.Auth.AppState != nil:
+			opts = append(opts, metago.WithAppState(config.Auth.AppState))
+		case config.Auth.Credentials != nil:
+			opts = append(opts, metago.WithCredentials(*config.Auth.Credentials))
+		default:
+			return nil, config.Auth.Validate()
+		}
+	}
 	if config.EventBuffer > 0 {
 		opts = append(opts, metago.WithEventBuffer(config.EventBuffer))
 	}
@@ -132,13 +149,19 @@ func newManagedClient(config Config) (Client, error) {
 }
 
 func (c *managedClient) Connect(ctx context.Context) error { return c.client.Connect(ctx) }
-func (c *managedClient) Close() error                      { return c.client.Close() }
-func (c *managedClient) Health() model.HealthSnapshot      { return c.client.Health() }
-func (c *managedClient) Account() model.User               { return c.client.Account() }
-func (c *managedClient) MessengerService() Messenger       { return c.client.Messenger }
-func (c *managedClient) ThreadService() Threads            { return c.client.Threads }
-func (c *managedClient) E2EEService() E2EE                 { return c.client.Messenger }
-func (c *managedClient) FacebookService() Facebook         { return c.client.Facebook }
+func (c *managedClient) RefreshAuth(ctx context.Context, source *auth.Source) (auth.AuthSnapshot, error) {
+	return c.client.RefreshAuth(ctx, source)
+}
+func (c *managedClient) AuthSnapshot(ctx context.Context) (auth.AuthSnapshot, error) {
+	return c.client.AuthSnapshot(ctx)
+}
+func (c *managedClient) Close() error                 { return c.client.Close() }
+func (c *managedClient) Health() model.HealthSnapshot { return c.client.Health() }
+func (c *managedClient) Account() model.User          { return c.client.Account() }
+func (c *managedClient) MessengerService() Messenger  { return c.client.Messenger }
+func (c *managedClient) ThreadService() Threads       { return c.client.Threads }
+func (c *managedClient) E2EEService() E2EE            { return c.client.Messenger }
+func (c *managedClient) FacebookService() Facebook    { return c.client.Facebook }
 func (c *managedClient) Subscribe(handler func(model.Event)) func() {
 	return c.client.On("", handler)
 }
@@ -165,6 +188,20 @@ func (s *Session) Connect(ctx context.Context) (model.User, error) {
 		return model.User{}, err
 	}
 	return s.client.Account(), nil
+}
+
+func (s *Session) RefreshAuth(ctx context.Context, source *auth.Source) (auth.AuthSnapshot, error) {
+	if s == nil || s.closed.Load() {
+		return auth.AuthSnapshot{}, ErrClosed
+	}
+	return s.client.RefreshAuth(ctx, source)
+}
+
+func (s *Session) AuthSnapshot(ctx context.Context) (auth.AuthSnapshot, error) {
+	if s == nil || s.closed.Load() {
+		return auth.AuthSnapshot{}, ErrClosed
+	}
+	return s.client.AuthSnapshot(ctx)
 }
 
 func (s *Session) Health() model.HealthSnapshot {

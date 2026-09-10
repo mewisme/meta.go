@@ -14,6 +14,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -29,6 +30,7 @@ type CreateSessionRequest struct {
 	E2Ee          bool                   `protobuf:"varint,2,opt,name=e2ee,proto3" json:"e2ee,omitempty"`
 	EventBuffer   uint32                 `protobuf:"varint,3,opt,name=event_buffer,json=eventBuffer,proto3" json:"event_buffer,omitempty"`
 	Timeout       *durationpb.Duration   `protobuf:"bytes,4,opt,name=timeout,proto3" json:"timeout,omitempty"`
+	Auth          *SessionAuth           `protobuf:"bytes,5,opt,name=auth,proto3" json:"auth,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -87,6 +89,13 @@ func (x *CreateSessionRequest) GetEventBuffer() uint32 {
 func (x *CreateSessionRequest) GetTimeout() *durationpb.Duration {
 	if x != nil {
 		return x.Timeout
+	}
+	return nil
+}
+
+func (x *CreateSessionRequest) GetAuth() *SessionAuth {
+	if x != nil {
+		return x.Auth
 	}
 	return nil
 }
@@ -223,6 +232,734 @@ func (x *ConnectResponse) GetAccount() *Account {
 	return nil
 }
 
+type Credentials struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Identifier string                 `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"`
+	Password   string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	// Types that are valid to be assigned to SecondFactor:
+	//
+	//	*Credentials_Totp
+	//	*Credentials_Otp
+	SecondFactor  isCredentials_SecondFactor `protobuf_oneof:"second_factor"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Credentials) Reset() {
+	*x = Credentials{}
+	mi := &file_meta_v1_session_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Credentials) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Credentials) ProtoMessage() {}
+
+func (x *Credentials) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Credentials.ProtoReflect.Descriptor instead.
+func (*Credentials) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Credentials) GetIdentifier() string {
+	if x != nil {
+		return x.Identifier
+	}
+	return ""
+}
+
+func (x *Credentials) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *Credentials) GetSecondFactor() isCredentials_SecondFactor {
+	if x != nil {
+		return x.SecondFactor
+	}
+	return nil
+}
+
+func (x *Credentials) GetTotp() string {
+	if x != nil {
+		if x, ok := x.SecondFactor.(*Credentials_Totp); ok {
+			return x.Totp
+		}
+	}
+	return ""
+}
+
+func (x *Credentials) GetOtp() string {
+	if x != nil {
+		if x, ok := x.SecondFactor.(*Credentials_Otp); ok {
+			return x.Otp
+		}
+	}
+	return ""
+}
+
+type isCredentials_SecondFactor interface {
+	isCredentials_SecondFactor()
+}
+
+type Credentials_Totp struct {
+	Totp string `protobuf:"bytes,3,opt,name=totp,proto3,oneof"`
+}
+
+type Credentials_Otp struct {
+	Otp string `protobuf:"bytes,4,opt,name=otp,proto3,oneof"`
+}
+
+func (*Credentials_Totp) isCredentials_SecondFactor() {}
+
+func (*Credentials_Otp) isCredentials_SecondFactor() {}
+
+type AppStateCookie struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Domain        string                 `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
+	Path          string                 `protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
+	HostOnly      bool                   `protobuf:"varint,5,opt,name=host_only,json=hostOnly,proto3" json:"host_only,omitempty"`
+	Secure        bool                   `protobuf:"varint,6,opt,name=secure,proto3" json:"secure,omitempty"`
+	HttpOnly      bool                   `protobuf:"varint,7,opt,name=http_only,json=httpOnly,proto3" json:"http_only,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AppStateCookie) Reset() {
+	*x = AppStateCookie{}
+	mi := &file_meta_v1_session_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppStateCookie) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppStateCookie) ProtoMessage() {}
+
+func (x *AppStateCookie) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppStateCookie.ProtoReflect.Descriptor instead.
+func (*AppStateCookie) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AppStateCookie) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *AppStateCookie) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *AppStateCookie) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *AppStateCookie) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *AppStateCookie) GetHostOnly() bool {
+	if x != nil {
+		return x.HostOnly
+	}
+	return false
+}
+
+func (x *AppStateCookie) GetSecure() bool {
+	if x != nil {
+		return x.Secure
+	}
+	return false
+}
+
+func (x *AppStateCookie) GetHttpOnly() bool {
+	if x != nil {
+		return x.HttpOnly
+	}
+	return false
+}
+
+type AppState struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cookies       []*AppStateCookie      `protobuf:"bytes,1,rep,name=cookies,proto3" json:"cookies,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AppState) Reset() {
+	*x = AppState{}
+	mi := &file_meta_v1_session_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppState) ProtoMessage() {}
+
+func (x *AppState) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppState.ProtoReflect.Descriptor instead.
+func (*AppState) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AppState) GetCookies() []*AppStateCookie {
+	if x != nil {
+		return x.Cookies
+	}
+	return nil
+}
+
+type CookieMap struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Values        map[string]string      `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CookieMap) Reset() {
+	*x = CookieMap{}
+	mi := &file_meta_v1_session_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CookieMap) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CookieMap) ProtoMessage() {}
+
+func (x *CookieMap) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CookieMap.ProtoReflect.Descriptor instead.
+func (*CookieMap) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CookieMap) GetValues() map[string]string {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+type SessionAuth struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Source:
+	//
+	//	*SessionAuth_Cookies
+	//	*SessionAuth_AppState
+	//	*SessionAuth_Credentials
+	Source        isSessionAuth_Source `protobuf_oneof:"source"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionAuth) Reset() {
+	*x = SessionAuth{}
+	mi := &file_meta_v1_session_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionAuth) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionAuth) ProtoMessage() {}
+
+func (x *SessionAuth) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionAuth.ProtoReflect.Descriptor instead.
+func (*SessionAuth) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SessionAuth) GetSource() isSessionAuth_Source {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+func (x *SessionAuth) GetCookies() *CookieMap {
+	if x != nil {
+		if x, ok := x.Source.(*SessionAuth_Cookies); ok {
+			return x.Cookies
+		}
+	}
+	return nil
+}
+
+func (x *SessionAuth) GetAppState() *AppState {
+	if x != nil {
+		if x, ok := x.Source.(*SessionAuth_AppState); ok {
+			return x.AppState
+		}
+	}
+	return nil
+}
+
+func (x *SessionAuth) GetCredentials() *Credentials {
+	if x != nil {
+		if x, ok := x.Source.(*SessionAuth_Credentials); ok {
+			return x.Credentials
+		}
+	}
+	return nil
+}
+
+type isSessionAuth_Source interface {
+	isSessionAuth_Source()
+}
+
+type SessionAuth_Cookies struct {
+	Cookies *CookieMap `protobuf:"bytes,1,opt,name=cookies,proto3,oneof"`
+}
+
+type SessionAuth_AppState struct {
+	AppState *AppState `protobuf:"bytes,2,opt,name=app_state,json=appState,proto3,oneof"`
+}
+
+type SessionAuth_Credentials struct {
+	Credentials *Credentials `protobuf:"bytes,3,opt,name=credentials,proto3,oneof"`
+}
+
+func (*SessionAuth_Cookies) isSessionAuth_Source() {}
+
+func (*SessionAuth_AppState) isSessionAuth_Source() {}
+
+func (*SessionAuth_Credentials) isSessionAuth_Source() {}
+
+type FacebookSession struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AccountId      string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Username       string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	Dtsg           string                 `protobuf:"bytes,4,opt,name=dtsg,proto3" json:"dtsg,omitempty"`
+	Jazoest        string                 `protobuf:"bytes,5,opt,name=jazoest,proto3" json:"jazoest,omitempty"`
+	Lsd            string                 `protobuf:"bytes,6,opt,name=lsd,proto3" json:"lsd,omitempty"`
+	SessionId      string                 `protobuf:"bytes,7,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ClientRevision int64                  `protobuf:"varint,8,opt,name=client_revision,json=clientRevision,proto3" json:"client_revision,omitempty"`
+	RefreshedAt    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=refreshed_at,json=refreshedAt,proto3" json:"refreshed_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *FacebookSession) Reset() {
+	*x = FacebookSession{}
+	mi := &file_meta_v1_session_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FacebookSession) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FacebookSession) ProtoMessage() {}
+
+func (x *FacebookSession) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FacebookSession.ProtoReflect.Descriptor instead.
+func (*FacebookSession) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *FacebookSession) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+func (x *FacebookSession) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *FacebookSession) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *FacebookSession) GetDtsg() string {
+	if x != nil {
+		return x.Dtsg
+	}
+	return ""
+}
+
+func (x *FacebookSession) GetJazoest() string {
+	if x != nil {
+		return x.Jazoest
+	}
+	return ""
+}
+
+func (x *FacebookSession) GetLsd() string {
+	if x != nil {
+		return x.Lsd
+	}
+	return ""
+}
+
+func (x *FacebookSession) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *FacebookSession) GetClientRevision() int64 {
+	if x != nil {
+		return x.ClientRevision
+	}
+	return 0
+}
+
+func (x *FacebookSession) GetRefreshedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RefreshedAt
+	}
+	return nil
+}
+
+type AuthSnapshot struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cookies       *CookieMap             `protobuf:"bytes,1,opt,name=cookies,proto3" json:"cookies,omitempty"`
+	AppState      *AppState              `protobuf:"bytes,2,opt,name=app_state,json=appState,proto3" json:"app_state,omitempty"`
+	Session       *FacebookSession       `protobuf:"bytes,3,opt,name=session,proto3" json:"session,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthSnapshot) Reset() {
+	*x = AuthSnapshot{}
+	mi := &file_meta_v1_session_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthSnapshot) ProtoMessage() {}
+
+func (x *AuthSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthSnapshot.ProtoReflect.Descriptor instead.
+func (*AuthSnapshot) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AuthSnapshot) GetCookies() *CookieMap {
+	if x != nil {
+		return x.Cookies
+	}
+	return nil
+}
+
+func (x *AuthSnapshot) GetAppState() *AppState {
+	if x != nil {
+		return x.AppState
+	}
+	return nil
+}
+
+func (x *AuthSnapshot) GetSession() *FacebookSession {
+	if x != nil {
+		return x.Session
+	}
+	return nil
+}
+
+type RefreshAuthRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Auth          *SessionAuth           `protobuf:"bytes,2,opt,name=auth,proto3" json:"auth,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshAuthRequest) Reset() {
+	*x = RefreshAuthRequest{}
+	mi := &file_meta_v1_session_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshAuthRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshAuthRequest) ProtoMessage() {}
+
+func (x *RefreshAuthRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshAuthRequest.ProtoReflect.Descriptor instead.
+func (*RefreshAuthRequest) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RefreshAuthRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *RefreshAuthRequest) GetAuth() *SessionAuth {
+	if x != nil {
+		return x.Auth
+	}
+	return nil
+}
+
+type RefreshAuthResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Snapshot      *AuthSnapshot          `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshAuthResponse) Reset() {
+	*x = RefreshAuthResponse{}
+	mi := &file_meta_v1_session_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshAuthResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshAuthResponse) ProtoMessage() {}
+
+func (x *RefreshAuthResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshAuthResponse.ProtoReflect.Descriptor instead.
+func (*RefreshAuthResponse) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *RefreshAuthResponse) GetSnapshot() *AuthSnapshot {
+	if x != nil {
+		return x.Snapshot
+	}
+	return nil
+}
+
+type GetAuthSnapshotRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAuthSnapshotRequest) Reset() {
+	*x = GetAuthSnapshotRequest{}
+	mi := &file_meta_v1_session_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAuthSnapshotRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAuthSnapshotRequest) ProtoMessage() {}
+
+func (x *GetAuthSnapshotRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAuthSnapshotRequest.ProtoReflect.Descriptor instead.
+func (*GetAuthSnapshotRequest) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetAuthSnapshotRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type GetAuthSnapshotResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Snapshot      *AuthSnapshot          `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAuthSnapshotResponse) Reset() {
+	*x = GetAuthSnapshotResponse{}
+	mi := &file_meta_v1_session_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAuthSnapshotResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAuthSnapshotResponse) ProtoMessage() {}
+
+func (x *GetAuthSnapshotResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_v1_session_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAuthSnapshotResponse.ProtoReflect.Descriptor instead.
+func (*GetAuthSnapshotResponse) Descriptor() ([]byte, []int) {
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetAuthSnapshotResponse) GetSnapshot() *AuthSnapshot {
+	if x != nil {
+		return x.Snapshot
+	}
+	return nil
+}
+
 type CloseSessionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -232,7 +969,7 @@ type CloseSessionRequest struct {
 
 func (x *CloseSessionRequest) Reset() {
 	*x = CloseSessionRequest{}
-	mi := &file_meta_v1_session_proto_msgTypes[4]
+	mi := &file_meta_v1_session_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -244,7 +981,7 @@ func (x *CloseSessionRequest) String() string {
 func (*CloseSessionRequest) ProtoMessage() {}
 
 func (x *CloseSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_session_proto_msgTypes[4]
+	mi := &file_meta_v1_session_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -257,7 +994,7 @@ func (x *CloseSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseSessionRequest.ProtoReflect.Descriptor instead.
 func (*CloseSessionRequest) Descriptor() ([]byte, []int) {
-	return file_meta_v1_session_proto_rawDescGZIP(), []int{4}
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CloseSessionRequest) GetSessionId() string {
@@ -275,7 +1012,7 @@ type CloseSessionResponse struct {
 
 func (x *CloseSessionResponse) Reset() {
 	*x = CloseSessionResponse{}
-	mi := &file_meta_v1_session_proto_msgTypes[5]
+	mi := &file_meta_v1_session_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -287,7 +1024,7 @@ func (x *CloseSessionResponse) String() string {
 func (*CloseSessionResponse) ProtoMessage() {}
 
 func (x *CloseSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_session_proto_msgTypes[5]
+	mi := &file_meta_v1_session_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -300,7 +1037,7 @@ func (x *CloseSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseSessionResponse.ProtoReflect.Descriptor instead.
 func (*CloseSessionResponse) Descriptor() ([]byte, []int) {
-	return file_meta_v1_session_proto_rawDescGZIP(), []int{5}
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{16}
 }
 
 type GetHealthRequest struct {
@@ -312,7 +1049,7 @@ type GetHealthRequest struct {
 
 func (x *GetHealthRequest) Reset() {
 	*x = GetHealthRequest{}
-	mi := &file_meta_v1_session_proto_msgTypes[6]
+	mi := &file_meta_v1_session_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +1061,7 @@ func (x *GetHealthRequest) String() string {
 func (*GetHealthRequest) ProtoMessage() {}
 
 func (x *GetHealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_session_proto_msgTypes[6]
+	mi := &file_meta_v1_session_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +1074,7 @@ func (x *GetHealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetHealthRequest.ProtoReflect.Descriptor instead.
 func (*GetHealthRequest) Descriptor() ([]byte, []int) {
-	return file_meta_v1_session_proto_rawDescGZIP(), []int{6}
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetHealthRequest) GetSessionId() string {
@@ -356,7 +1093,7 @@ type GetHealthResponse struct {
 
 func (x *GetHealthResponse) Reset() {
 	*x = GetHealthResponse{}
-	mi := &file_meta_v1_session_proto_msgTypes[7]
+	mi := &file_meta_v1_session_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -368,7 +1105,7 @@ func (x *GetHealthResponse) String() string {
 func (*GetHealthResponse) ProtoMessage() {}
 
 func (x *GetHealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_session_proto_msgTypes[7]
+	mi := &file_meta_v1_session_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -381,7 +1118,7 @@ func (x *GetHealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetHealthResponse.ProtoReflect.Descriptor instead.
 func (*GetHealthResponse) Descriptor() ([]byte, []int) {
-	return file_meta_v1_session_proto_rawDescGZIP(), []int{7}
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetHealthResponse) GetHealth() *HealthSnapshot {
@@ -401,7 +1138,7 @@ type SubscribeEventsRequest struct {
 
 func (x *SubscribeEventsRequest) Reset() {
 	*x = SubscribeEventsRequest{}
-	mi := &file_meta_v1_session_proto_msgTypes[8]
+	mi := &file_meta_v1_session_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -413,7 +1150,7 @@ func (x *SubscribeEventsRequest) String() string {
 func (*SubscribeEventsRequest) ProtoMessage() {}
 
 func (x *SubscribeEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_session_proto_msgTypes[8]
+	mi := &file_meta_v1_session_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -426,7 +1163,7 @@ func (x *SubscribeEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeEventsRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeEventsRequest) Descriptor() ([]byte, []int) {
-	return file_meta_v1_session_proto_rawDescGZIP(), []int{8}
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SubscribeEventsRequest) GetSessionId() string {
@@ -452,7 +1189,7 @@ type SubscribeEventsResponse struct {
 
 func (x *SubscribeEventsResponse) Reset() {
 	*x = SubscribeEventsResponse{}
-	mi := &file_meta_v1_session_proto_msgTypes[9]
+	mi := &file_meta_v1_session_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -464,7 +1201,7 @@ func (x *SubscribeEventsResponse) String() string {
 func (*SubscribeEventsResponse) ProtoMessage() {}
 
 func (x *SubscribeEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_v1_session_proto_msgTypes[9]
+	mi := &file_meta_v1_session_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -477,7 +1214,7 @@ func (x *SubscribeEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeEventsResponse.ProtoReflect.Descriptor instead.
 func (*SubscribeEventsResponse) Descriptor() ([]byte, []int) {
-	return file_meta_v1_session_proto_rawDescGZIP(), []int{9}
+	return file_meta_v1_session_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SubscribeEventsResponse) GetEvent() *Event {
@@ -491,12 +1228,13 @@ var File_meta_v1_session_proto protoreflect.FileDescriptor
 
 const file_meta_v1_session_proto_rawDesc = "" +
 	"\n" +
-	"\x15meta/v1/session.proto\x12\ameta.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x14meta/v1/common.proto\x1a\x14meta/v1/events.proto\x1a\x14meta/v1/health.proto\"\x84\x02\n" +
+	"\x15meta/v1/session.proto\x12\ameta.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14meta/v1/common.proto\x1a\x14meta/v1/events.proto\x1a\x14meta/v1/health.proto\"\xae\x02\n" +
 	"\x14CreateSessionRequest\x12D\n" +
 	"\acookies\x18\x01 \x03(\v2*.meta.v1.CreateSessionRequest.CookiesEntryR\acookies\x12\x12\n" +
 	"\x04e2ee\x18\x02 \x01(\bR\x04e2ee\x12!\n" +
 	"\fevent_buffer\x18\x03 \x01(\rR\veventBuffer\x123\n" +
-	"\atimeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x1a:\n" +
+	"\atimeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12(\n" +
+	"\x04auth\x18\x05 \x01(\v2\x14.meta.v1.SessionAuthR\x04auth\x1a:\n" +
 	"\fCookiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"6\n" +
@@ -507,7 +1245,62 @@ const file_meta_v1_session_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\"=\n" +
 	"\x0fConnectResponse\x12*\n" +
-	"\aaccount\x18\x01 \x01(\v2\x10.meta.v1.AccountR\aaccount\"4\n" +
+	"\aaccount\x18\x01 \x01(\v2\x10.meta.v1.AccountR\aaccount\"\x84\x01\n" +
+	"\vCredentials\x12\x1e\n" +
+	"\n" +
+	"identifier\x18\x01 \x01(\tR\n" +
+	"identifier\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x14\n" +
+	"\x04totp\x18\x03 \x01(\tH\x00R\x04totp\x12\x12\n" +
+	"\x03otp\x18\x04 \x01(\tH\x00R\x03otpB\x0f\n" +
+	"\rsecond_factor\"\xb6\x01\n" +
+	"\x0eAppStateCookie\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x12\x16\n" +
+	"\x06domain\x18\x03 \x01(\tR\x06domain\x12\x12\n" +
+	"\x04path\x18\x04 \x01(\tR\x04path\x12\x1b\n" +
+	"\thost_only\x18\x05 \x01(\bR\bhostOnly\x12\x16\n" +
+	"\x06secure\x18\x06 \x01(\bR\x06secure\x12\x1b\n" +
+	"\thttp_only\x18\a \x01(\bR\bhttpOnly\"=\n" +
+	"\bAppState\x121\n" +
+	"\acookies\x18\x01 \x03(\v2\x17.meta.v1.AppStateCookieR\acookies\"~\n" +
+	"\tCookieMap\x126\n" +
+	"\x06values\x18\x01 \x03(\v2\x1e.meta.v1.CookieMap.ValuesEntryR\x06values\x1a9\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb3\x01\n" +
+	"\vSessionAuth\x12.\n" +
+	"\acookies\x18\x01 \x01(\v2\x12.meta.v1.CookieMapH\x00R\acookies\x120\n" +
+	"\tapp_state\x18\x02 \x01(\v2\x11.meta.v1.AppStateH\x00R\bappState\x128\n" +
+	"\vcredentials\x18\x03 \x01(\v2\x14.meta.v1.CredentialsH\x00R\vcredentialsB\b\n" +
+	"\x06source\"\xa7\x02\n" +
+	"\x0fFacebookSession\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x01 \x01(\tR\taccountId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x12\n" +
+	"\x04dtsg\x18\x04 \x01(\tR\x04dtsg\x12\x18\n" +
+	"\ajazoest\x18\x05 \x01(\tR\ajazoest\x12\x10\n" +
+	"\x03lsd\x18\x06 \x01(\tR\x03lsd\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\a \x01(\tR\tsessionId\x12'\n" +
+	"\x0fclient_revision\x18\b \x01(\x03R\x0eclientRevision\x12=\n" +
+	"\frefreshed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vrefreshedAt\"\xa0\x01\n" +
+	"\fAuthSnapshot\x12,\n" +
+	"\acookies\x18\x01 \x01(\v2\x12.meta.v1.CookieMapR\acookies\x12.\n" +
+	"\tapp_state\x18\x02 \x01(\v2\x11.meta.v1.AppStateR\bappState\x122\n" +
+	"\asession\x18\x03 \x01(\v2\x18.meta.v1.FacebookSessionR\asession\"]\n" +
+	"\x12RefreshAuthRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12(\n" +
+	"\x04auth\x18\x02 \x01(\v2\x14.meta.v1.SessionAuthR\x04auth\"H\n" +
+	"\x13RefreshAuthResponse\x121\n" +
+	"\bsnapshot\x18\x01 \x01(\v2\x15.meta.v1.AuthSnapshotR\bsnapshot\"7\n" +
+	"\x16GetAuthSnapshotRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"L\n" +
+	"\x17GetAuthSnapshotResponse\x121\n" +
+	"\bsnapshot\x18\x01 \x01(\v2\x15.meta.v1.AuthSnapshotR\bsnapshot\"4\n" +
 	"\x13CloseSessionRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\"\x16\n" +
@@ -522,10 +1315,12 @@ const file_meta_v1_session_proto_rawDesc = "" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +
 	"\x06buffer\x18\x02 \x01(\rR\x06buffer\"?\n" +
 	"\x17SubscribeEventsResponse\x12$\n" +
-	"\x05event\x18\x01 \x01(\v2\x0e.meta.v1.EventR\x05event2\x87\x03\n" +
+	"\x05event\x18\x01 \x01(\v2\x0e.meta.v1.EventR\x05event2\xa7\x04\n" +
 	"\x0eSessionService\x12N\n" +
 	"\rCreateSession\x12\x1d.meta.v1.CreateSessionRequest\x1a\x1e.meta.v1.CreateSessionResponse\x12<\n" +
-	"\aConnect\x12\x17.meta.v1.ConnectRequest\x1a\x18.meta.v1.ConnectResponse\x12K\n" +
+	"\aConnect\x12\x17.meta.v1.ConnectRequest\x1a\x18.meta.v1.ConnectResponse\x12H\n" +
+	"\vRefreshAuth\x12\x1b.meta.v1.RefreshAuthRequest\x1a\x1c.meta.v1.RefreshAuthResponse\x12T\n" +
+	"\x0fGetAuthSnapshot\x12\x1f.meta.v1.GetAuthSnapshotRequest\x1a .meta.v1.GetAuthSnapshotResponse\x12K\n" +
 	"\fCloseSession\x12\x1c.meta.v1.CloseSessionRequest\x1a\x1d.meta.v1.CloseSessionResponse\x12B\n" +
 	"\tGetHealth\x12\x19.meta.v1.GetHealthRequest\x1a\x1a.meta.v1.GetHealthResponse\x12V\n" +
 	"\x0fSubscribeEvents\x12\x1f.meta.v1.SubscribeEventsRequest\x1a .meta.v1.SubscribeEventsResponse0\x01B+Z)go.mewis.me/meta.go/gen/go/meta/v1;metav1b\x06proto3"
@@ -542,45 +1337,75 @@ func file_meta_v1_session_proto_rawDescGZIP() []byte {
 	return file_meta_v1_session_proto_rawDescData
 }
 
-var file_meta_v1_session_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_meta_v1_session_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_meta_v1_session_proto_goTypes = []any{
 	(*CreateSessionRequest)(nil),    // 0: meta.v1.CreateSessionRequest
 	(*CreateSessionResponse)(nil),   // 1: meta.v1.CreateSessionResponse
 	(*ConnectRequest)(nil),          // 2: meta.v1.ConnectRequest
 	(*ConnectResponse)(nil),         // 3: meta.v1.ConnectResponse
-	(*CloseSessionRequest)(nil),     // 4: meta.v1.CloseSessionRequest
-	(*CloseSessionResponse)(nil),    // 5: meta.v1.CloseSessionResponse
-	(*GetHealthRequest)(nil),        // 6: meta.v1.GetHealthRequest
-	(*GetHealthResponse)(nil),       // 7: meta.v1.GetHealthResponse
-	(*SubscribeEventsRequest)(nil),  // 8: meta.v1.SubscribeEventsRequest
-	(*SubscribeEventsResponse)(nil), // 9: meta.v1.SubscribeEventsResponse
-	nil,                             // 10: meta.v1.CreateSessionRequest.CookiesEntry
-	(*durationpb.Duration)(nil),     // 11: google.protobuf.Duration
-	(*Account)(nil),                 // 12: meta.v1.Account
-	(*HealthSnapshot)(nil),          // 13: meta.v1.HealthSnapshot
-	(*Event)(nil),                   // 14: meta.v1.Event
+	(*Credentials)(nil),             // 4: meta.v1.Credentials
+	(*AppStateCookie)(nil),          // 5: meta.v1.AppStateCookie
+	(*AppState)(nil),                // 6: meta.v1.AppState
+	(*CookieMap)(nil),               // 7: meta.v1.CookieMap
+	(*SessionAuth)(nil),             // 8: meta.v1.SessionAuth
+	(*FacebookSession)(nil),         // 9: meta.v1.FacebookSession
+	(*AuthSnapshot)(nil),            // 10: meta.v1.AuthSnapshot
+	(*RefreshAuthRequest)(nil),      // 11: meta.v1.RefreshAuthRequest
+	(*RefreshAuthResponse)(nil),     // 12: meta.v1.RefreshAuthResponse
+	(*GetAuthSnapshotRequest)(nil),  // 13: meta.v1.GetAuthSnapshotRequest
+	(*GetAuthSnapshotResponse)(nil), // 14: meta.v1.GetAuthSnapshotResponse
+	(*CloseSessionRequest)(nil),     // 15: meta.v1.CloseSessionRequest
+	(*CloseSessionResponse)(nil),    // 16: meta.v1.CloseSessionResponse
+	(*GetHealthRequest)(nil),        // 17: meta.v1.GetHealthRequest
+	(*GetHealthResponse)(nil),       // 18: meta.v1.GetHealthResponse
+	(*SubscribeEventsRequest)(nil),  // 19: meta.v1.SubscribeEventsRequest
+	(*SubscribeEventsResponse)(nil), // 20: meta.v1.SubscribeEventsResponse
+	nil,                             // 21: meta.v1.CreateSessionRequest.CookiesEntry
+	nil,                             // 22: meta.v1.CookieMap.ValuesEntry
+	(*durationpb.Duration)(nil),     // 23: google.protobuf.Duration
+	(*Account)(nil),                 // 24: meta.v1.Account
+	(*timestamppb.Timestamp)(nil),   // 25: google.protobuf.Timestamp
+	(*HealthSnapshot)(nil),          // 26: meta.v1.HealthSnapshot
+	(*Event)(nil),                   // 27: meta.v1.Event
 }
 var file_meta_v1_session_proto_depIdxs = []int32{
-	10, // 0: meta.v1.CreateSessionRequest.cookies:type_name -> meta.v1.CreateSessionRequest.CookiesEntry
-	11, // 1: meta.v1.CreateSessionRequest.timeout:type_name -> google.protobuf.Duration
-	12, // 2: meta.v1.ConnectResponse.account:type_name -> meta.v1.Account
-	13, // 3: meta.v1.GetHealthResponse.health:type_name -> meta.v1.HealthSnapshot
-	14, // 4: meta.v1.SubscribeEventsResponse.event:type_name -> meta.v1.Event
-	0,  // 5: meta.v1.SessionService.CreateSession:input_type -> meta.v1.CreateSessionRequest
-	2,  // 6: meta.v1.SessionService.Connect:input_type -> meta.v1.ConnectRequest
-	4,  // 7: meta.v1.SessionService.CloseSession:input_type -> meta.v1.CloseSessionRequest
-	6,  // 8: meta.v1.SessionService.GetHealth:input_type -> meta.v1.GetHealthRequest
-	8,  // 9: meta.v1.SessionService.SubscribeEvents:input_type -> meta.v1.SubscribeEventsRequest
-	1,  // 10: meta.v1.SessionService.CreateSession:output_type -> meta.v1.CreateSessionResponse
-	3,  // 11: meta.v1.SessionService.Connect:output_type -> meta.v1.ConnectResponse
-	5,  // 12: meta.v1.SessionService.CloseSession:output_type -> meta.v1.CloseSessionResponse
-	7,  // 13: meta.v1.SessionService.GetHealth:output_type -> meta.v1.GetHealthResponse
-	9,  // 14: meta.v1.SessionService.SubscribeEvents:output_type -> meta.v1.SubscribeEventsResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	21, // 0: meta.v1.CreateSessionRequest.cookies:type_name -> meta.v1.CreateSessionRequest.CookiesEntry
+	23, // 1: meta.v1.CreateSessionRequest.timeout:type_name -> google.protobuf.Duration
+	8,  // 2: meta.v1.CreateSessionRequest.auth:type_name -> meta.v1.SessionAuth
+	24, // 3: meta.v1.ConnectResponse.account:type_name -> meta.v1.Account
+	5,  // 4: meta.v1.AppState.cookies:type_name -> meta.v1.AppStateCookie
+	22, // 5: meta.v1.CookieMap.values:type_name -> meta.v1.CookieMap.ValuesEntry
+	7,  // 6: meta.v1.SessionAuth.cookies:type_name -> meta.v1.CookieMap
+	6,  // 7: meta.v1.SessionAuth.app_state:type_name -> meta.v1.AppState
+	4,  // 8: meta.v1.SessionAuth.credentials:type_name -> meta.v1.Credentials
+	25, // 9: meta.v1.FacebookSession.refreshed_at:type_name -> google.protobuf.Timestamp
+	7,  // 10: meta.v1.AuthSnapshot.cookies:type_name -> meta.v1.CookieMap
+	6,  // 11: meta.v1.AuthSnapshot.app_state:type_name -> meta.v1.AppState
+	9,  // 12: meta.v1.AuthSnapshot.session:type_name -> meta.v1.FacebookSession
+	8,  // 13: meta.v1.RefreshAuthRequest.auth:type_name -> meta.v1.SessionAuth
+	10, // 14: meta.v1.RefreshAuthResponse.snapshot:type_name -> meta.v1.AuthSnapshot
+	10, // 15: meta.v1.GetAuthSnapshotResponse.snapshot:type_name -> meta.v1.AuthSnapshot
+	26, // 16: meta.v1.GetHealthResponse.health:type_name -> meta.v1.HealthSnapshot
+	27, // 17: meta.v1.SubscribeEventsResponse.event:type_name -> meta.v1.Event
+	0,  // 18: meta.v1.SessionService.CreateSession:input_type -> meta.v1.CreateSessionRequest
+	2,  // 19: meta.v1.SessionService.Connect:input_type -> meta.v1.ConnectRequest
+	11, // 20: meta.v1.SessionService.RefreshAuth:input_type -> meta.v1.RefreshAuthRequest
+	13, // 21: meta.v1.SessionService.GetAuthSnapshot:input_type -> meta.v1.GetAuthSnapshotRequest
+	15, // 22: meta.v1.SessionService.CloseSession:input_type -> meta.v1.CloseSessionRequest
+	17, // 23: meta.v1.SessionService.GetHealth:input_type -> meta.v1.GetHealthRequest
+	19, // 24: meta.v1.SessionService.SubscribeEvents:input_type -> meta.v1.SubscribeEventsRequest
+	1,  // 25: meta.v1.SessionService.CreateSession:output_type -> meta.v1.CreateSessionResponse
+	3,  // 26: meta.v1.SessionService.Connect:output_type -> meta.v1.ConnectResponse
+	12, // 27: meta.v1.SessionService.RefreshAuth:output_type -> meta.v1.RefreshAuthResponse
+	14, // 28: meta.v1.SessionService.GetAuthSnapshot:output_type -> meta.v1.GetAuthSnapshotResponse
+	16, // 29: meta.v1.SessionService.CloseSession:output_type -> meta.v1.CloseSessionResponse
+	18, // 30: meta.v1.SessionService.GetHealth:output_type -> meta.v1.GetHealthResponse
+	20, // 31: meta.v1.SessionService.SubscribeEvents:output_type -> meta.v1.SubscribeEventsResponse
+	25, // [25:32] is the sub-list for method output_type
+	18, // [18:25] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_meta_v1_session_proto_init() }
@@ -591,13 +1416,22 @@ func file_meta_v1_session_proto_init() {
 	file_meta_v1_common_proto_init()
 	file_meta_v1_events_proto_init()
 	file_meta_v1_health_proto_init()
+	file_meta_v1_session_proto_msgTypes[4].OneofWrappers = []any{
+		(*Credentials_Totp)(nil),
+		(*Credentials_Otp)(nil),
+	}
+	file_meta_v1_session_proto_msgTypes[8].OneofWrappers = []any{
+		(*SessionAuth_Cookies)(nil),
+		(*SessionAuth_AppState)(nil),
+		(*SessionAuth_Credentials)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meta_v1_session_proto_rawDesc), len(file_meta_v1_session_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

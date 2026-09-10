@@ -8,6 +8,7 @@
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 import type { CallContext, CallOptions } from "nice-grpc-common";
 import { Duration } from "../../google/protobuf/duration.js";
+import { Timestamp } from "../../google/protobuf/timestamp.js";
 import { Account } from "./common.js";
 import { Event } from "./events.js";
 import { HealthSnapshot } from "./health.js";
@@ -19,6 +20,7 @@ export interface CreateSessionRequest {
   e2ee: boolean;
   eventBuffer: number;
   timeout: Duration | undefined;
+  auth: SessionAuth | undefined;
 }
 
 export interface CreateSessionRequest_CookiesEntry {
@@ -36,6 +38,77 @@ export interface ConnectRequest {
 
 export interface ConnectResponse {
   account: Account | undefined;
+}
+
+export interface Credentials {
+  identifier: string;
+  password: string;
+  secondFactor: { $case: "totp"; value: string } | { $case: "otp"; value: string } | undefined;
+}
+
+export interface AppStateCookie {
+  key: string;
+  value: string;
+  domain: string;
+  path: string;
+  hostOnly: boolean;
+  secure: boolean;
+  httpOnly: boolean;
+}
+
+export interface AppState {
+  cookies: AppStateCookie[];
+}
+
+export interface CookieMap {
+  values: { [key: string]: string };
+}
+
+export interface CookieMap_ValuesEntry {
+  key: string;
+  value: string;
+}
+
+export interface SessionAuth {
+  source: { $case: "cookies"; value: CookieMap } | { $case: "appState"; value: AppState } | {
+    $case: "credentials";
+    value: Credentials;
+  } | undefined;
+}
+
+export interface FacebookSession {
+  accountId: string;
+  name: string;
+  username: string;
+  dtsg: string;
+  jazoest: string;
+  lsd: string;
+  sessionId: string;
+  clientRevision: bigint;
+  refreshedAt: Date | undefined;
+}
+
+export interface AuthSnapshot {
+  cookies: CookieMap | undefined;
+  appState: AppState | undefined;
+  session: FacebookSession | undefined;
+}
+
+export interface RefreshAuthRequest {
+  sessionId: string;
+  auth: SessionAuth | undefined;
+}
+
+export interface RefreshAuthResponse {
+  snapshot: AuthSnapshot | undefined;
+}
+
+export interface GetAuthSnapshotRequest {
+  sessionId: string;
+}
+
+export interface GetAuthSnapshotResponse {
+  snapshot: AuthSnapshot | undefined;
 }
 
 export interface CloseSessionRequest {
@@ -63,7 +136,7 @@ export interface SubscribeEventsResponse {
 }
 
 function createBaseCreateSessionRequest(): CreateSessionRequest {
-  return { cookies: {}, e2ee: false, eventBuffer: 0, timeout: undefined };
+  return { cookies: {}, e2ee: false, eventBuffer: 0, timeout: undefined, auth: undefined };
 }
 
 export const CreateSessionRequest: MessageFns<CreateSessionRequest> = {
@@ -79,6 +152,9 @@ export const CreateSessionRequest: MessageFns<CreateSessionRequest> = {
     }
     if (message.timeout !== undefined) {
       Duration.encode(message.timeout, writer.uint32(34).fork()).join();
+    }
+    if (message.auth !== undefined) {
+      SessionAuth.encode(message.auth, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -131,6 +207,14 @@ export const CreateSessionRequest: MessageFns<CreateSessionRequest> = {
             message.timeout = Duration.decode(reader, reader.uint32());
             continue;
           }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.auth = SessionAuth.decode(reader, reader.uint32());
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -166,6 +250,7 @@ export const CreateSessionRequest: MessageFns<CreateSessionRequest> = {
         ? globalThis.Number(object.event_buffer)
         : 0,
       timeout: isSet(object.timeout) ? Duration.fromJSON(object.timeout) : undefined,
+      auth: isSet(object.auth) ? SessionAuth.fromJSON(object.auth) : undefined,
     };
   },
 
@@ -189,6 +274,9 @@ export const CreateSessionRequest: MessageFns<CreateSessionRequest> = {
     if (message.timeout !== undefined) {
       obj.timeout = Duration.toJSON(message.timeout);
     }
+    if (message.auth !== undefined) {
+      obj.auth = SessionAuth.toJSON(message.auth);
+    }
     return obj;
   },
 
@@ -210,6 +298,9 @@ export const CreateSessionRequest: MessageFns<CreateSessionRequest> = {
     message.eventBuffer = object.eventBuffer ?? 0;
     message.timeout = (object.timeout !== undefined && object.timeout !== null)
       ? Duration.fromPartial(object.timeout)
+      : undefined;
+    message.auth = (object.auth !== undefined && object.auth !== null)
+      ? SessionAuth.fromPartial(object.auth)
       : undefined;
     return message;
   },
@@ -510,6 +601,1332 @@ export const ConnectResponse: MessageFns<ConnectResponse> = {
     const message = createBaseConnectResponse();
     message.account = (object.account !== undefined && object.account !== null)
       ? Account.fromPartial(object.account)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseCredentials(): Credentials {
+  return { identifier: "", password: "", secondFactor: undefined };
+}
+
+export const Credentials: MessageFns<Credentials> = {
+  encode(message: Credentials, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.identifier !== "") {
+      writer.uint32(10).string(message.identifier);
+    }
+    if (message.password !== "") {
+      writer.uint32(18).string(message.password);
+    }
+    switch (message.secondFactor?.$case) {
+      case "totp":
+        writer.uint32(26).string(message.secondFactor.value);
+        break;
+      case "otp":
+        writer.uint32(34).string(message.secondFactor.value);
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Credentials {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCredentials();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.identifier = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.password = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.secondFactor = { $case: "totp", value: reader.string() };
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.secondFactor = { $case: "otp", value: reader.string() };
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): Credentials {
+    return {
+      identifier: isSet(object.identifier) ? globalThis.String(object.identifier) : "",
+      password: isSet(object.password) ? globalThis.String(object.password) : "",
+      secondFactor: isSet(object.totp)
+        ? { $case: "totp", value: globalThis.String(object.totp) }
+        : isSet(object.otp)
+        ? { $case: "otp", value: globalThis.String(object.otp) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: Credentials): unknown {
+    const obj: any = {};
+    if (message.identifier !== "") {
+      obj.identifier = message.identifier;
+    }
+    if (message.password !== "") {
+      obj.password = message.password;
+    }
+    if (message.secondFactor?.$case === "totp") {
+      obj.totp = message.secondFactor.value;
+    } else if (message.secondFactor?.$case === "otp") {
+      obj.otp = message.secondFactor.value;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<Credentials>): Credentials {
+    return Credentials.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<Credentials>): Credentials {
+    const message = createBaseCredentials();
+    message.identifier = object.identifier ?? "";
+    message.password = object.password ?? "";
+    switch (object.secondFactor?.$case) {
+      case "totp": {
+        if (object.secondFactor?.value !== undefined && object.secondFactor?.value !== null) {
+          message.secondFactor = { $case: "totp", value: object.secondFactor.value };
+        }
+        break;
+      }
+      case "otp": {
+        if (object.secondFactor?.value !== undefined && object.secondFactor?.value !== null) {
+          message.secondFactor = { $case: "otp", value: object.secondFactor.value };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseAppStateCookie(): AppStateCookie {
+  return { key: "", value: "", domain: "", path: "", hostOnly: false, secure: false, httpOnly: false };
+}
+
+export const AppStateCookie: MessageFns<AppStateCookie> = {
+  encode(message: AppStateCookie, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    if (message.domain !== "") {
+      writer.uint32(26).string(message.domain);
+    }
+    if (message.path !== "") {
+      writer.uint32(34).string(message.path);
+    }
+    if (message.hostOnly !== false) {
+      writer.uint32(40).bool(message.hostOnly);
+    }
+    if (message.secure !== false) {
+      writer.uint32(48).bool(message.secure);
+    }
+    if (message.httpOnly !== false) {
+      writer.uint32(56).bool(message.httpOnly);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AppStateCookie {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAppStateCookie();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.key = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.value = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.domain = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.path = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
+
+            message.hostOnly = reader.bool();
+            continue;
+          }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
+
+            message.secure = reader.bool();
+            continue;
+          }
+          case 7: {
+            if (tag !== 56) {
+              break;
+            }
+
+            message.httpOnly = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): AppStateCookie {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+      domain: isSet(object.domain) ? globalThis.String(object.domain) : "",
+      path: isSet(object.path) ? globalThis.String(object.path) : "",
+      hostOnly: isSet(object.hostOnly)
+        ? globalThis.Boolean(object.hostOnly)
+        : isSet(object.host_only)
+        ? globalThis.Boolean(object.host_only)
+        : false,
+      secure: isSet(object.secure) ? globalThis.Boolean(object.secure) : false,
+      httpOnly: isSet(object.httpOnly)
+        ? globalThis.Boolean(object.httpOnly)
+        : isSet(object.http_only)
+        ? globalThis.Boolean(object.http_only)
+        : false,
+    };
+  },
+
+  toJSON(message: AppStateCookie): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    if (message.domain !== "") {
+      obj.domain = message.domain;
+    }
+    if (message.path !== "") {
+      obj.path = message.path;
+    }
+    if (message.hostOnly !== false) {
+      obj.hostOnly = message.hostOnly;
+    }
+    if (message.secure !== false) {
+      obj.secure = message.secure;
+    }
+    if (message.httpOnly !== false) {
+      obj.httpOnly = message.httpOnly;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<AppStateCookie>): AppStateCookie {
+    return AppStateCookie.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<AppStateCookie>): AppStateCookie {
+    const message = createBaseAppStateCookie();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    message.domain = object.domain ?? "";
+    message.path = object.path ?? "";
+    message.hostOnly = object.hostOnly ?? false;
+    message.secure = object.secure ?? false;
+    message.httpOnly = object.httpOnly ?? false;
+    return message;
+  },
+};
+
+function createBaseAppState(): AppState {
+  return { cookies: [] };
+}
+
+export const AppState: MessageFns<AppState> = {
+  encode(message: AppState, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.cookies) {
+      AppStateCookie.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AppState {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAppState();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.cookies.push(AppStateCookie.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): AppState {
+    return {
+      cookies: globalThis.Array.isArray(object?.cookies)
+        ? object.cookies.map((e: any) => AppStateCookie.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: AppState): unknown {
+    const obj: any = {};
+    if (message.cookies?.length) {
+      obj.cookies = message.cookies.map((e) => AppStateCookie.toJSON(e));
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<AppState>): AppState {
+    return AppState.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<AppState>): AppState {
+    const message = createBaseAppState();
+    message.cookies = object.cookies?.map((e) => AppStateCookie.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseCookieMap(): CookieMap {
+  return { values: {} };
+}
+
+export const CookieMap: MessageFns<CookieMap> = {
+  encode(message: CookieMap, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    globalThis.Object.entries(message.values).forEach(([key, value]: [string, string]) => {
+      CookieMap_ValuesEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).join();
+    });
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CookieMap {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCookieMap();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            const entry1 = CookieMap_ValuesEntry.decode(reader, reader.uint32());
+            if (entry1.value !== undefined) {
+              message.values[entry1.key] = entry1.value;
+            }
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): CookieMap {
+    return {
+      values: isObject(object.values)
+        ? (globalThis.Object.entries(object.values) as [string, any][]).reduce(
+          (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+            globalThis.Object.defineProperty(acc, key, {
+              value: globalThis.String(value),
+              enumerable: true,
+              configurable: true,
+              writable: true,
+            });
+            return acc;
+          },
+          {},
+        )
+        : {},
+    };
+  },
+
+  toJSON(message: CookieMap): unknown {
+    const obj: any = {};
+    if (message.values) {
+      const entries = globalThis.Object.entries(message.values) as [string, string][];
+      if (entries.length > 0) {
+        obj.values = {};
+        entries.forEach(([k, v]) => {
+          obj.values[k] = v;
+        });
+      }
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<CookieMap>): CookieMap {
+    return CookieMap.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<CookieMap>): CookieMap {
+    const message = createBaseCookieMap();
+    message.values = (globalThis.Object.entries(object.values ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    return message;
+  },
+};
+
+function createBaseCookieMap_ValuesEntry(): CookieMap_ValuesEntry {
+  return { key: "", value: "" };
+}
+
+export const CookieMap_ValuesEntry: MessageFns<CookieMap_ValuesEntry> = {
+  encode(message: CookieMap_ValuesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CookieMap_ValuesEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCookieMap_ValuesEntry();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.key = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.value = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): CookieMap_ValuesEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: CookieMap_ValuesEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<CookieMap_ValuesEntry>): CookieMap_ValuesEntry {
+    return CookieMap_ValuesEntry.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<CookieMap_ValuesEntry>): CookieMap_ValuesEntry {
+    const message = createBaseCookieMap_ValuesEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseSessionAuth(): SessionAuth {
+  return { source: undefined };
+}
+
+export const SessionAuth: MessageFns<SessionAuth> = {
+  encode(message: SessionAuth, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    switch (message.source?.$case) {
+      case "cookies":
+        CookieMap.encode(message.source.value, writer.uint32(10).fork()).join();
+        break;
+      case "appState":
+        AppState.encode(message.source.value, writer.uint32(18).fork()).join();
+        break;
+      case "credentials":
+        Credentials.encode(message.source.value, writer.uint32(26).fork()).join();
+        break;
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SessionAuth {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseSessionAuth();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.source = { $case: "cookies", value: CookieMap.decode(reader, reader.uint32()) };
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.source = { $case: "appState", value: AppState.decode(reader, reader.uint32()) };
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.source = { $case: "credentials", value: Credentials.decode(reader, reader.uint32()) };
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): SessionAuth {
+    return {
+      source: isSet(object.cookies)
+        ? { $case: "cookies", value: CookieMap.fromJSON(object.cookies) }
+        : isSet(object.appState)
+        ? { $case: "appState", value: AppState.fromJSON(object.appState) }
+        : isSet(object.app_state)
+        ? { $case: "appState", value: AppState.fromJSON(object.app_state) }
+        : isSet(object.credentials)
+        ? { $case: "credentials", value: Credentials.fromJSON(object.credentials) }
+        : undefined,
+    };
+  },
+
+  toJSON(message: SessionAuth): unknown {
+    const obj: any = {};
+    if (message.source?.$case === "cookies") {
+      obj.cookies = CookieMap.toJSON(message.source.value);
+    } else if (message.source?.$case === "appState") {
+      obj.appState = AppState.toJSON(message.source.value);
+    } else if (message.source?.$case === "credentials") {
+      obj.credentials = Credentials.toJSON(message.source.value);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<SessionAuth>): SessionAuth {
+    return SessionAuth.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<SessionAuth>): SessionAuth {
+    const message = createBaseSessionAuth();
+    switch (object.source?.$case) {
+      case "cookies": {
+        if (object.source?.value !== undefined && object.source?.value !== null) {
+          message.source = { $case: "cookies", value: CookieMap.fromPartial(object.source.value) };
+        }
+        break;
+      }
+      case "appState": {
+        if (object.source?.value !== undefined && object.source?.value !== null) {
+          message.source = { $case: "appState", value: AppState.fromPartial(object.source.value) };
+        }
+        break;
+      }
+      case "credentials": {
+        if (object.source?.value !== undefined && object.source?.value !== null) {
+          message.source = { $case: "credentials", value: Credentials.fromPartial(object.source.value) };
+        }
+        break;
+      }
+    }
+    return message;
+  },
+};
+
+function createBaseFacebookSession(): FacebookSession {
+  return {
+    accountId: "",
+    name: "",
+    username: "",
+    dtsg: "",
+    jazoest: "",
+    lsd: "",
+    sessionId: "",
+    clientRevision: 0n,
+    refreshedAt: undefined,
+  };
+}
+
+export const FacebookSession: MessageFns<FacebookSession> = {
+  encode(message: FacebookSession, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.accountId !== "") {
+      writer.uint32(10).string(message.accountId);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.username !== "") {
+      writer.uint32(26).string(message.username);
+    }
+    if (message.dtsg !== "") {
+      writer.uint32(34).string(message.dtsg);
+    }
+    if (message.jazoest !== "") {
+      writer.uint32(42).string(message.jazoest);
+    }
+    if (message.lsd !== "") {
+      writer.uint32(50).string(message.lsd);
+    }
+    if (message.sessionId !== "") {
+      writer.uint32(58).string(message.sessionId);
+    }
+    if (message.clientRevision !== 0n) {
+      if (BigInt.asIntN(64, message.clientRevision) !== message.clientRevision) {
+        throw new globalThis.Error("value provided for field message.clientRevision of type int64 too large");
+      }
+      writer.uint32(64).int64(message.clientRevision);
+    }
+    if (message.refreshedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.refreshedAt), writer.uint32(74).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FacebookSession {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseFacebookSession();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.accountId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.username = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.dtsg = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.jazoest = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.lsd = reader.string();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.sessionId = reader.string();
+            continue;
+          }
+          case 8: {
+            if (tag !== 64) {
+              break;
+            }
+
+            message.clientRevision = reader.int64() as bigint;
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.refreshedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): FacebookSession {
+    return {
+      accountId: isSet(object.accountId)
+        ? globalThis.String(object.accountId)
+        : isSet(object.account_id)
+        ? globalThis.String(object.account_id)
+        : "",
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      username: isSet(object.username) ? globalThis.String(object.username) : "",
+      dtsg: isSet(object.dtsg) ? globalThis.String(object.dtsg) : "",
+      jazoest: isSet(object.jazoest) ? globalThis.String(object.jazoest) : "",
+      lsd: isSet(object.lsd) ? globalThis.String(object.lsd) : "",
+      sessionId: isSet(object.sessionId)
+        ? globalThis.String(object.sessionId)
+        : isSet(object.session_id)
+        ? globalThis.String(object.session_id)
+        : "",
+      clientRevision: isSet(object.clientRevision)
+        ? BigInt(object.clientRevision)
+        : isSet(object.client_revision)
+        ? BigInt(object.client_revision)
+        : 0n,
+      refreshedAt: isSet(object.refreshedAt)
+        ? fromJsonTimestamp(object.refreshedAt)
+        : isSet(object.refreshed_at)
+        ? fromJsonTimestamp(object.refreshed_at)
+        : undefined,
+    };
+  },
+
+  toJSON(message: FacebookSession): unknown {
+    const obj: any = {};
+    if (message.accountId !== "") {
+      obj.accountId = message.accountId;
+    }
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.username !== "") {
+      obj.username = message.username;
+    }
+    if (message.dtsg !== "") {
+      obj.dtsg = message.dtsg;
+    }
+    if (message.jazoest !== "") {
+      obj.jazoest = message.jazoest;
+    }
+    if (message.lsd !== "") {
+      obj.lsd = message.lsd;
+    }
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
+    if (message.clientRevision !== 0n) {
+      obj.clientRevision = message.clientRevision.toString();
+    }
+    if (message.refreshedAt !== undefined) {
+      obj.refreshedAt = message.refreshedAt.toISOString();
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<FacebookSession>): FacebookSession {
+    return FacebookSession.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<FacebookSession>): FacebookSession {
+    const message = createBaseFacebookSession();
+    message.accountId = object.accountId ?? "";
+    message.name = object.name ?? "";
+    message.username = object.username ?? "";
+    message.dtsg = object.dtsg ?? "";
+    message.jazoest = object.jazoest ?? "";
+    message.lsd = object.lsd ?? "";
+    message.sessionId = object.sessionId ?? "";
+    message.clientRevision = (object.clientRevision !== undefined && object.clientRevision !== null)
+      ? BigInt(object.clientRevision)
+      : 0n;
+    message.refreshedAt = object.refreshedAt ?? undefined;
+    return message;
+  },
+};
+
+function createBaseAuthSnapshot(): AuthSnapshot {
+  return { cookies: undefined, appState: undefined, session: undefined };
+}
+
+export const AuthSnapshot: MessageFns<AuthSnapshot> = {
+  encode(message: AuthSnapshot, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.cookies !== undefined) {
+      CookieMap.encode(message.cookies, writer.uint32(10).fork()).join();
+    }
+    if (message.appState !== undefined) {
+      AppState.encode(message.appState, writer.uint32(18).fork()).join();
+    }
+    if (message.session !== undefined) {
+      FacebookSession.encode(message.session, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AuthSnapshot {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAuthSnapshot();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.cookies = CookieMap.decode(reader, reader.uint32());
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.appState = AppState.decode(reader, reader.uint32());
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.session = FacebookSession.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): AuthSnapshot {
+    return {
+      cookies: isSet(object.cookies) ? CookieMap.fromJSON(object.cookies) : undefined,
+      appState: isSet(object.appState)
+        ? AppState.fromJSON(object.appState)
+        : isSet(object.app_state)
+        ? AppState.fromJSON(object.app_state)
+        : undefined,
+      session: isSet(object.session) ? FacebookSession.fromJSON(object.session) : undefined,
+    };
+  },
+
+  toJSON(message: AuthSnapshot): unknown {
+    const obj: any = {};
+    if (message.cookies !== undefined) {
+      obj.cookies = CookieMap.toJSON(message.cookies);
+    }
+    if (message.appState !== undefined) {
+      obj.appState = AppState.toJSON(message.appState);
+    }
+    if (message.session !== undefined) {
+      obj.session = FacebookSession.toJSON(message.session);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<AuthSnapshot>): AuthSnapshot {
+    return AuthSnapshot.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<AuthSnapshot>): AuthSnapshot {
+    const message = createBaseAuthSnapshot();
+    message.cookies = (object.cookies !== undefined && object.cookies !== null)
+      ? CookieMap.fromPartial(object.cookies)
+      : undefined;
+    message.appState = (object.appState !== undefined && object.appState !== null)
+      ? AppState.fromPartial(object.appState)
+      : undefined;
+    message.session = (object.session !== undefined && object.session !== null)
+      ? FacebookSession.fromPartial(object.session)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseRefreshAuthRequest(): RefreshAuthRequest {
+  return { sessionId: "", auth: undefined };
+}
+
+export const RefreshAuthRequest: MessageFns<RefreshAuthRequest> = {
+  encode(message: RefreshAuthRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sessionId !== "") {
+      writer.uint32(10).string(message.sessionId);
+    }
+    if (message.auth !== undefined) {
+      SessionAuth.encode(message.auth, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RefreshAuthRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseRefreshAuthRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.sessionId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.auth = SessionAuth.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): RefreshAuthRequest {
+    return {
+      sessionId: isSet(object.sessionId)
+        ? globalThis.String(object.sessionId)
+        : isSet(object.session_id)
+        ? globalThis.String(object.session_id)
+        : "",
+      auth: isSet(object.auth) ? SessionAuth.fromJSON(object.auth) : undefined,
+    };
+  },
+
+  toJSON(message: RefreshAuthRequest): unknown {
+    const obj: any = {};
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
+    if (message.auth !== undefined) {
+      obj.auth = SessionAuth.toJSON(message.auth);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RefreshAuthRequest>): RefreshAuthRequest {
+    return RefreshAuthRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RefreshAuthRequest>): RefreshAuthRequest {
+    const message = createBaseRefreshAuthRequest();
+    message.sessionId = object.sessionId ?? "";
+    message.auth = (object.auth !== undefined && object.auth !== null)
+      ? SessionAuth.fromPartial(object.auth)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseRefreshAuthResponse(): RefreshAuthResponse {
+  return { snapshot: undefined };
+}
+
+export const RefreshAuthResponse: MessageFns<RefreshAuthResponse> = {
+  encode(message: RefreshAuthResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.snapshot !== undefined) {
+      AuthSnapshot.encode(message.snapshot, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RefreshAuthResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseRefreshAuthResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.snapshot = AuthSnapshot.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): RefreshAuthResponse {
+    return { snapshot: isSet(object.snapshot) ? AuthSnapshot.fromJSON(object.snapshot) : undefined };
+  },
+
+  toJSON(message: RefreshAuthResponse): unknown {
+    const obj: any = {};
+    if (message.snapshot !== undefined) {
+      obj.snapshot = AuthSnapshot.toJSON(message.snapshot);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RefreshAuthResponse>): RefreshAuthResponse {
+    return RefreshAuthResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RefreshAuthResponse>): RefreshAuthResponse {
+    const message = createBaseRefreshAuthResponse();
+    message.snapshot = (object.snapshot !== undefined && object.snapshot !== null)
+      ? AuthSnapshot.fromPartial(object.snapshot)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseGetAuthSnapshotRequest(): GetAuthSnapshotRequest {
+  return { sessionId: "" };
+}
+
+export const GetAuthSnapshotRequest: MessageFns<GetAuthSnapshotRequest> = {
+  encode(message: GetAuthSnapshotRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sessionId !== "") {
+      writer.uint32(10).string(message.sessionId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetAuthSnapshotRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetAuthSnapshotRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.sessionId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): GetAuthSnapshotRequest {
+    return {
+      sessionId: isSet(object.sessionId)
+        ? globalThis.String(object.sessionId)
+        : isSet(object.session_id)
+        ? globalThis.String(object.session_id)
+        : "",
+    };
+  },
+
+  toJSON(message: GetAuthSnapshotRequest): unknown {
+    const obj: any = {};
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<GetAuthSnapshotRequest>): GetAuthSnapshotRequest {
+    return GetAuthSnapshotRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<GetAuthSnapshotRequest>): GetAuthSnapshotRequest {
+    const message = createBaseGetAuthSnapshotRequest();
+    message.sessionId = object.sessionId ?? "";
+    return message;
+  },
+};
+
+function createBaseGetAuthSnapshotResponse(): GetAuthSnapshotResponse {
+  return { snapshot: undefined };
+}
+
+export const GetAuthSnapshotResponse: MessageFns<GetAuthSnapshotResponse> = {
+  encode(message: GetAuthSnapshotResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.snapshot !== undefined) {
+      AuthSnapshot.encode(message.snapshot, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetAuthSnapshotResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetAuthSnapshotResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.snapshot = AuthSnapshot.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): GetAuthSnapshotResponse {
+    return { snapshot: isSet(object.snapshot) ? AuthSnapshot.fromJSON(object.snapshot) : undefined };
+  },
+
+  toJSON(message: GetAuthSnapshotResponse): unknown {
+    const obj: any = {};
+    if (message.snapshot !== undefined) {
+      obj.snapshot = AuthSnapshot.toJSON(message.snapshot);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<GetAuthSnapshotResponse>): GetAuthSnapshotResponse {
+    return GetAuthSnapshotResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<GetAuthSnapshotResponse>): GetAuthSnapshotResponse {
+    const message = createBaseGetAuthSnapshotResponse();
+    message.snapshot = (object.snapshot !== undefined && object.snapshot !== null)
+      ? AuthSnapshot.fromPartial(object.snapshot)
       : undefined;
     return message;
   },
@@ -959,6 +2376,22 @@ export const SessionServiceDefinition = {
       responseStream: false,
       options: {},
     },
+    refreshAuth: {
+      name: "RefreshAuth",
+      requestType: RefreshAuthRequest as typeof RefreshAuthRequest,
+      requestStream: false,
+      responseType: RefreshAuthResponse as typeof RefreshAuthResponse,
+      responseStream: false,
+      options: {},
+    },
+    getAuthSnapshot: {
+      name: "GetAuthSnapshot",
+      requestType: GetAuthSnapshotRequest as typeof GetAuthSnapshotRequest,
+      requestStream: false,
+      responseType: GetAuthSnapshotResponse as typeof GetAuthSnapshotResponse,
+      responseStream: false,
+      options: {},
+    },
     closeSession: {
       name: "CloseSession",
       requestType: CloseSessionRequest as typeof CloseSessionRequest,
@@ -992,6 +2425,14 @@ export interface SessionServiceImplementation<CallContextExt = {}> {
     context: CallContext & CallContextExt,
   ): Promise<DeepPartial<CreateSessionResponse>>;
   connect(request: ConnectRequest, context: CallContext & CallContextExt): Promise<DeepPartial<ConnectResponse>>;
+  refreshAuth(
+    request: RefreshAuthRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<RefreshAuthResponse>>;
+  getAuthSnapshot(
+    request: GetAuthSnapshotRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<GetAuthSnapshotResponse>>;
   closeSession(
     request: CloseSessionRequest,
     context: CallContext & CallContextExt,
@@ -1009,6 +2450,14 @@ export interface SessionServiceClient<CallOptionsExt = {}> {
     options?: CallOptions & CallOptionsExt,
   ): Promise<CreateSessionResponse>;
   connect(request: DeepPartial<ConnectRequest>, options?: CallOptions & CallOptionsExt): Promise<ConnectResponse>;
+  refreshAuth(
+    request: DeepPartial<RefreshAuthRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<RefreshAuthResponse>;
+  getAuthSnapshot(
+    request: DeepPartial<GetAuthSnapshotRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<GetAuthSnapshotResponse>;
   closeSession(
     request: DeepPartial<CloseSessionRequest>,
     options?: CallOptions & CallOptionsExt,
@@ -1028,6 +2477,28 @@ export type DeepPartial<T> = T extends bigint ? string | number | bigint
   : T extends { $case: string; value: unknown } ? { $case: T["$case"]; value?: DeepPartial<T["value"]> }
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
+
+function toTimestamp(date: Date): Timestamp {
+  const seconds = BigInt(Math.trunc(date.getTime() / 1_000));
+  const nanos = (date.getTime() % 1_000) * 1_000_000;
+  return { seconds, nanos };
+}
+
+function fromTimestamp(t: Timestamp): Date {
+  let millis = (globalThis.Number(t.seconds.toString()) || 0) * 1_000;
+  millis += (t.nanos || 0) / 1_000_000;
+  return new globalThis.Date(millis);
+}
+
+function fromJsonTimestamp(o: any): Date {
+  if (o instanceof globalThis.Date) {
+    return o;
+  } else if (typeof o === "string") {
+    return new globalThis.Date(o);
+  } else {
+    return fromTimestamp(Timestamp.fromJSON(o));
+  }
+}
 
 function isObject(value: any): boolean {
   return typeof value === "object" && value !== null;

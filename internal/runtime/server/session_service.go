@@ -21,8 +21,14 @@ type sessionService struct {
 }
 
 func (s *sessionService) CreateSession(ctx context.Context, req *metav1.CreateSessionRequest) (*metav1.CreateSessionResponse, error) {
-	if req == nil || len(req.Cookies) == 0 {
-		return nil, grpcError(fmt.Errorf("%w: cookies are required", fberrors.ErrInvalidInput))
+	if req == nil {
+		return nil, grpcError(fmt.Errorf("%w: request is required", fberrors.ErrInvalidInput))
+	}
+	if len(req.Cookies) > 0 && req.Auth != nil {
+		return nil, grpcError(fmt.Errorf("%w: legacy cookies and auth cannot both be set", fberrors.ErrInvalidInput))
+	}
+	if len(req.Cookies) == 0 && req.Auth == nil {
+		return nil, grpcError(fmt.Errorf("%w: authentication is required", fberrors.ErrInvalidInput))
 	}
 	if req.EventBuffer > maxSessionEventBuffer {
 		return nil, grpcError(fmt.Errorf("%w: event buffer cannot exceed %d", fberrors.ErrInvalidInput, maxSessionEventBuffer))
@@ -34,15 +40,56 @@ func (s *sessionService) CreateSession(ctx context.Context, req *metav1.CreateSe
 		}
 		timeout = req.Timeout.AsDuration()
 	}
-	cookies := make(auth.Cookies, len(req.Cookies))
-	for key, value := range req.Cookies {
-		cookies[key] = value
+	config := session.Config{E2EE: req.E2Ee, EventBuffer: int(req.EventBuffer), Timeout: timeout}
+	if req.Auth != nil {
+		source, err := authSourceFromProto(req.Auth)
+		if err != nil {
+			return nil, grpcError(err)
+		}
+		config.Auth = &source
+	} else {
+		config.Cookies = make(auth.Cookies, len(req.Cookies))
+		for key, value := range req.Cookies {
+			config.Cookies[key] = value
+		}
 	}
-	created, err := s.server.sessions.Create(session.Config{Cookies: cookies, E2EE: req.E2Ee, EventBuffer: int(req.EventBuffer), Timeout: timeout})
+	created, err := s.server.sessions.Create(config)
 	if err != nil {
 		return nil, grpcError(err)
 	}
 	return &metav1.CreateSessionResponse{SessionId: created.ID()}, nil
+}
+
+func (s *sessionService) RefreshAuth(ctx context.Context, req *metav1.RefreshAuthRequest) (*metav1.RefreshAuthResponse, error) {
+	sess, err := s.session(req.GetSessionId())
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	var source *auth.Source
+	if req.GetAuth() != nil {
+		parsed, err := authSourceFromProto(req.GetAuth())
+		if err != nil {
+			return nil, grpcError(err)
+		}
+		source = &parsed
+	}
+	snapshot, err := sess.RefreshAuth(ctx, source)
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	return &metav1.RefreshAuthResponse{Snapshot: authSnapshotToProto(snapshot)}, nil
+}
+
+func (s *sessionService) GetAuthSnapshot(ctx context.Context, req *metav1.GetAuthSnapshotRequest) (*metav1.GetAuthSnapshotResponse, error) {
+	sess, err := s.session(req.GetSessionId())
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	snapshot, err := sess.AuthSnapshot(ctx)
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	return &metav1.GetAuthSnapshotResponse{Snapshot: authSnapshotToProto(snapshot)}, nil
 }
 
 func (s *sessionService) Connect(ctx context.Context, req *metav1.ConnectRequest) (*metav1.ConnectResponse, error) {

@@ -35,7 +35,7 @@ func run(args []string) int {
 		return 1
 	}
 	defer listener.Close()
-	runtimeServer, err := server.New(server.Config{Token: os.Getenv("META_RUNTIME_TOKEN"), Capabilities: []string{"e2ee.media", "e2ee.text", "facebook.marketplace", "facebook.notifications", "facebook.posts", "facebook.profile", "facebook.search", "facebook.social", "messenger.controls", "messenger.media", "messenger.notes", "messenger.polls", "messenger.search", "messenger.send", "messenger.threads", "runtime.info", "session.events", "session.health", "session.lifecycle"}})
+	runtimeServer, err := server.New(server.Config{Token: os.Getenv("META_RUNTIME_TOKEN"), Capabilities: server.RuntimeCapabilities()})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1

@@ -20,6 +20,10 @@ const (
 	ProtocolMinor        = 0
 )
 
+var runtimeCapabilities = []string{"e2ee.media", "e2ee.text", "facebook.marketplace", "facebook.notifications", "facebook.posts", "facebook.profile", "facebook.search", "facebook.social", "messenger.controls", "messenger.media", "messenger.notes", "messenger.polls", "messenger.search", "messenger.send", "messenger.threads", "runtime.info", "session.auth.app_state", "session.auth.credentials", "session.auth.refresh", "session.events", "session.health", "session.lifecycle"}
+
+func RuntimeCapabilities() []string { return append([]string(nil), runtimeCapabilities...) }
+
 type Config struct {
 	Token        string
 	Sessions     *session.Manager
