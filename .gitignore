@@ -9,3 +9,5 @@ go.work.sum
 *.test
 
 /meta.exe
+node_modules/
+/sdk/node/dist/

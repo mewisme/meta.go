@@ -28,6 +28,20 @@ generate() {
   "$BIN_DIR/goimports" -local go.mewis.me/meta.go -w "$ROOT/gen/go/meta/v1"
 }
 
+generate_node() {
+  image_dir=$(mktemp -d)
+  image="$image_dir/image.binpb"
+  status=0
+  (
+    cd "$ROOT"
+    run_buf lint
+    run_buf build --exclude-source-info -o "$image"
+    run_buf generate "$image" --template sdk/node/buf.gen.yaml
+  ) || status=$?
+  rm -rf "$image_dir"
+  return "$status"
+}
+
 case "${1:-check}" in
   generate)
     generate
@@ -39,13 +53,21 @@ case "${1:-check}" in
     baseline=${2:-.git#branch=main}
     run_buf breaking --against "$baseline"
     ;;
+  generate-node)
+    generate_node
+    ;;
+  check-node)
+    generate_node
+    git -C "$ROOT" diff --exit-code -- sdk/node/src/gen
+    test -z "$(git -C "$ROOT" ls-files --others --exclude-standard -- sdk/node/src/gen)"
+    ;;
   check)
     generate
     git -C "$ROOT" diff --exit-code -- proto gen/go buf.yaml buf.gen.yaml
     test -z "$(git -C "$ROOT" ls-files --others --exclude-standard -- proto gen/go)"
     ;;
   *)
-    echo "usage: $0 {generate|lint|breaking [baseline]|check}" >&2
+    echo "usage: $0 {generate|generate-node|lint|breaking [baseline]|check|check-node}" >&2
     exit 2
     ;;
 esac

@@ -1,0 +1,8 @@
+export * as common from "./gen/meta/v1/common.js"
+export * as e2ee from "./gen/meta/v1/e2ee.js"
+export * as events from "./gen/meta/v1/events.js"
+export * as facebook from "./gen/meta/v1/facebook.js"
+export * as health from "./gen/meta/v1/health.js"
+export * as messenger from "./gen/meta/v1/messenger.js"
+export * as runtime from "./gen/meta/v1/runtime.js"
+export * as session from "./gen/meta/v1/session.js"

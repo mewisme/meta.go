@@ -63,6 +63,28 @@ jobs:
       - shell: bash
         run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build ./...
 
+  node-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: sdk/node/pnpm-lock.yaml
+      - run: pnpm --dir sdk/node install --frozen-lockfile
+      - run: pnpm --dir sdk/node check
+      - run: pnpm --dir sdk/node build
+      - working-directory: sdk/node
+        run: npm pack --dry-run
+
   release-config:
     runs-on: ubuntu-latest
     steps:

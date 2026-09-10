@@ -1,0 +1,48 @@
+{
+  "name": "@meewmeew/meta",
+  "version": "0.0.0",
+  "packageManager": "pnpm@11.25.0",
+  "description": "Node.js and TypeScript SDK for the meta.go runtime",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "generate": "../../scripts/proto.sh generate-node",
+    "check:generated": "../../scripts/proto.sh check-node",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "tsx --test test/**/*.test.ts",
+    "check": "pnpm check:generated && pnpm typecheck && pnpm test",
+    "prepack": "pnpm build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mewisme/meta.go.git",
+    "directory": "sdk/node"
+  },
+  "license": "AGPL-3.0-only",
+  "publishConfig": {"access": "public"},
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.14.1",
+    "nice-grpc": "^2.1.17",
+    "nice-grpc-common": "^2.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3"
+  }
+}
