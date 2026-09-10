@@ -131,8 +131,87 @@ jobs:
           version: "0.12.10"
       - run: pnpm --dir sdk/node install --frozen-lockfile
       - run: uv sync --directory sdk/python --frozen --all-groups
-      - run: pnpm --dir sdk/node exec tsx --test test/runtime.test.ts test/distribution.test.ts
-      - run: uv run --directory sdk/python pytest -q tests/test_runtime.py tests/test_distribution.py
+      - name: Resolve host runtime target
+        id: target
+        shell: bash
+        run: |
+          platform=$(node -p 'process.platform')
+          arch=$(node -p 'process.arch')
+          case "$arch" in
+            x64) goarch=amd64 ;;
+            arm64) goarch=arm64 ;;
+            *) echo "unsupported runner architecture: $arch" >&2; exit 1 ;;
+          esac
+          case "$platform" in
+            linux) goos=linux; python_target="linux-${arch}-manylinux"; ext="" ;;
+            darwin) goos=darwin; python_target="darwin-${arch}"; ext="" ;;
+            win32) goos=windows; python_target="win32-${arch}"; ext=".exe" ;;
+            *) echo "unsupported runner platform: $platform" >&2; exit 1 ;;
+          esac
+          {
+            echo "node_target=${platform}-${arch}"
+            echo "python_target=$python_target"
+            echo "goos=$goos"
+            echo "goarch=$goarch"
+            echo "ext=$ext"
+          } >> "$GITHUB_OUTPUT"
+      - name: Build host runtime
+        shell: bash
+        run: |
+          mkdir -p .cgm/runtime-lifecycle/node .cgm/runtime-lifecycle/python
+          output="$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/meta-runtime${{ steps.target.outputs.ext }}"
+          CGO_ENABLED=0 GOOS=${{ steps.target.outputs.goos }} GOARCH=${{ steps.target.outputs.goarch }} go build -trimpath -o "$output" ./cmd/meta-runtime
+          test -s "$output"
+      - name: Pack Node SDK and bundled runtime
+        shell: bash
+        run: |
+          version=0.0.0
+          runtime="$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/meta-runtime${{ steps.target.outputs.ext }}"
+          node sdk/node/scripts/prepare-release.mjs "$version"
+          node sdk/node/scripts/package-runtime.mjs --target "${{ steps.target.outputs.node_target }}" --version "$version" --binary "$runtime" --out-dir .cgm/runtime-lifecycle/node
+          pnpm -C sdk/node pack --pack-destination ../../.cgm/runtime-lifecycle/node --silent
+          python3 scripts/validate-release.py --version "$version" --node-dir sdk/node --node-sdk-archive "$(find .cgm/runtime-lifecycle/node -maxdepth 1 -type f -name 'meewmeew-meta-*.tgz' ! -name 'meewmeew-meta-runtime-*' -print -quit)"
+      - name: Install and launch packed Node SDK
+        shell: bash
+        run: |
+          install="$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/node-install"
+          mkdir -p "$install"
+          printf '{"private":true,"type":"module"}\n' > "$install/package.json"
+          root=$(find "$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/node" -maxdepth 1 -type f -name 'meewmeew-meta-*.tgz' ! -name 'meewmeew-meta-runtime-*' -print -quit)
+          runtime=$(find "$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/node" -maxdepth 1 -type f -name 'meewmeew-meta-runtime-*.tgz' -print -quit)
+          pnpm --dir "$install" add --ignore-scripts --config.optional=false "$runtime" "$root"
+          cd "$install"
+          node --input-type=module -e 'import {MetaClient} from "@meewmeew/meta"; const client = await MetaClient.create({mode:"managed", env:{META_RUNTIME_PATH:"", PATH:""}}); if (client.info()?.protocol?.major !== 1) throw new Error("runtime protocol mismatch"); await client.close()'
+      - name: Pack Python SDK and bundled runtime
+        shell: bash
+        run: |
+          version=0.0.0
+          runtime="$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/meta-runtime${{ steps.target.outputs.ext }}"
+          python3 sdk/python/scripts/prepare-release.py "$version"
+          python3 sdk/python/scripts/package-runtime.py --target "${{ steps.target.outputs.python_target }}" --version "$version" --binary "$runtime" --out-dir .cgm/runtime-lifecycle/python
+          uv build --directory sdk/python --wheel --out-dir "$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/python"
+          python3 scripts/validate-release.py --version "$version" --python-dir sdk/python --python-sdk-wheel "$(find .cgm/runtime-lifecycle/python -maxdepth 1 -type f -name 'mewisme_meta-*.whl' ! -name 'mewisme_meta_runtime-*' -print -quit)"
+      - name: Install and launch packed Python SDK
+        shell: bash
+        run: |
+          venv="$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/python-venv"
+          uv venv "$venv"
+          python="$venv/bin/python"
+          if [ "${{ runner.os }}" = "Windows" ]; then python="$venv/Scripts/python.exe"; fi
+          runtime=$(find "$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/python" -maxdepth 1 -type f -name 'mewisme_meta_runtime-*.whl' -print -quit)
+          root=$(find "$GITHUB_WORKSPACE/.cgm/runtime-lifecycle/python" -maxdepth 1 -type f -name 'mewisme_meta-*.whl' ! -name 'mewisme_meta_runtime-*' -print -quit)
+          uv pip install --python "$python" "$runtime" "$root"
+          "$python" - <<'PY'
+          import asyncio
+          from mewisme_meta import MetaClient
+
+          async def main() -> None:
+              client = await MetaClient.managed(env={"META_RUNTIME_PATH": "", "PATH": ""})
+              assert client.info is not None and client.info.protocol.major == 1
+              await client.close()
+
+          asyncio.run(main())
+          PY
 
   release-config:
     runs-on: ubuntu-latest
@@ -149,3 +228,4 @@ jobs:
           distribution: goreleaser
           version: v2.18.1
           args: check
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@latest

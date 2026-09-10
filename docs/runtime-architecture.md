@@ -152,16 +152,31 @@ Generation must be reproducible without requiring globally installed tools. CI l
 
 ## Runtime distribution
 
-GoReleaser publishes `meta-runtime` as a standalone executable for Linux, macOS and Windows on amd64 and arm64. Runtime executables are included in the same SHA-256 checksum manifest and provenance flow as the normal CLI release artifacts.
+The release workflow publishes `meta-runtime` as a standalone executable for Linux, macOS and Windows on amd64 and arm64. It builds each runtime binary once and reuses that exact binary for the standalone GitHub asset and the package-manager runtime artifacts; GoReleaser remains responsible for the Go CLI archives.
 
-Node and Python use verified lazy download instead of bundling every platform binary into each SDK package. Managed runtime selection is deterministic:
+Node uses six platform packages named `@meewmeew/meta-runtime-{linux,darwin,win32}-{x64,arm64}`. The root `@meewmeew/meta` package pins all six as exact-version optional dependencies; npm/pnpm selects the package matching the current `os`/`cpu`. Each platform package contains only package metadata, license/readme material and one executable, with no postinstall script or runtime dependency.
+
+Python uses one distribution name, `mewisme-meta-runtime`, published as platform-specific wheels. macOS and Windows publish x64/arm64 wheels; Linux publishes both manylinux and musllinux x64/arm64 wheels from the same statically linked Go binary. The root `mewisme-meta` package pins the runtime distribution to the exact same version and pip selects the compatible wheel.
+
+Managed runtime selection is deterministic in both SDKs:
 
 1. explicit SDK runtime path;
 2. `META_RUNTIME_PATH`;
-3. an installed `meta-runtime` on `PATH`;
-4. the runtime release matching the SDK package version, or an explicit runtime-version override.
+3. the matching bundled platform package/wheel;
+4. an installed `meta-runtime` on `PATH`;
+5. fail locally with `RuntimeLaunchError`.
 
-Downloaded executables are selected from the host OS/architecture, verified against the release checksum manifest before execution and cached by runtime version plus target. SDK package and runtime release versions may advance independently at the protocol level, but the default managed download pins the same release version for reproducibility. The runtime protocol-major handshake and capability checks remain the final compatibility boundary. External runtime mode never downloads or launches a process.
+Managed mode never downloads a runtime on first launch. Bundled runtime resolution precedes `PATH` so the normal install uses the runtime built from the same release tag, while explicit path/environment overrides remain available for development and deployment. External runtime mode never resolves, downloads or launches a process. The runtime protocol-major handshake and capability checks remain the final compatibility boundary.
+
+CI packages and installs the root SDK plus the matching runtime artifact on Linux, macOS and Windows, clears `META_RUNTIME_PATH` and `PATH` for runtime resolution, and performs a real managed-runtime protocol handshake. This locks the no-network-first-launch contract at the installed-package boundary rather than only testing source-tree resolution.
+
+## Authentication lifecycle
+
+Runtime sessions accept one authentication source: cookies, AppState, or credentials. Credentials require identifier/password plus exactly one of TOTP or OTP. The runtime keeps legacy v1 cookie-only requests compatible while newer SDKs use the additive `SessionAuth` contract and capability checks for AppState, credentials and hot refresh.
+
+`RefreshAuth` updates authentication in place. A connected session keeps the same Go client/engine, runtime session ID, event broker, subscriber set and event sequence. Candidate auth is validated before mutation, connected sessions reject a different Facebook account, and failures restore the prior cookie/browser state. A successful refresh does not force websocket reconnection; the current socket remains live and any later natural reconnect reads the refreshed mutable cookie jar.
+
+Node and Python expose the same refresh/snapshot semantics. Existing event streams remain open across cookie/AppState/session refresh, and snapshots return normalized cookies/AppState plus Facebook web-session metadata for persistence.
 
 ## Compatibility policy
 
