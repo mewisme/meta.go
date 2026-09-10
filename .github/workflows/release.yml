@@ -15,6 +15,9 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  GOWORK: off
+
 jobs:
   release:
     runs-on: ubuntu-latest

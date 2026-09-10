@@ -1,5 +1,7 @@
 .cgm/
 *baseline*
+go.work
+go.work.sum
 
 /fbgo
 /dist/
