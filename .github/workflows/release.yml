@@ -103,7 +103,7 @@ jobs:
           output="runtime/meta-runtime_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.ext }}"
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -trimpath -ldflags "-s -w -X go.mewis.me/meta.go.Version=${VERSION} -X go.mewis.me/meta.go.Commit=${GITHUB_SHA}" -o "$output" ./cmd/meta-runtime
           test -s "$output"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: runtime-${{ matrix.id }}
           path: runtime/*
@@ -121,7 +121,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: runtime-${{ matrix.target }}
           path: runtime
@@ -133,7 +133,7 @@ jobs:
           corepack prepare pnpm@11.25.0 --activate
           binary=$(find runtime -type f -name 'meta-runtime*' -print -quit)
           node sdk/node/scripts/package-runtime.mjs --target "${{ matrix.target }}" --version "$VERSION" --binary "$binary" --out-dir dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: node-runtime-${{ matrix.target }}
           path: dist/*.tgz
@@ -164,7 +164,7 @@ jobs:
             runtime: win32-arm64
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: runtime-${{ matrix.runtime }}
           path: runtime
@@ -174,7 +174,7 @@ jobs:
         run: |
           binary=$(find runtime -type f -name 'meta-runtime*' -print -quit)
           python3 sdk/python/scripts/package-runtime.py --target "${{ matrix.target }}" --version "$VERSION" --binary "$binary" --out-dir dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: python-runtime-${{ matrix.target }}
           path: dist/*.whl
@@ -200,7 +200,7 @@ jobs:
           mkdir -p dist
           pnpm -C sdk/node pack --pack-destination ../../dist --silent
           python3 scripts/validate-release.py --version "$VERSION" --node-sdk-archive "$(find dist -name '*.tgz' -print -quit)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: node-sdk
           path: dist/*.tgz
@@ -223,7 +223,7 @@ jobs:
           python3 scripts/validate-release.py --version "$VERSION" --python-dir sdk/python
           uv build --directory sdk/python --out-dir "$GITHUB_WORKSPACE/dist"
           python3 scripts/validate-release.py --version "$VERSION" --python-sdk-wheel "$(find dist -name '*.whl' -print -quit)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: python-sdk
           path: dist/*
@@ -234,7 +234,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: node-runtime-*
           path: dist
@@ -248,7 +248,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: python-runtime-*
           path: dist
@@ -270,7 +270,7 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: node-runtime-*
           path: dist
@@ -285,7 +285,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: python-runtime-*
           path: dist
@@ -307,7 +307,7 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: node-sdk
           path: dist
@@ -321,7 +321,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: python-sdk
           path: dist
@@ -345,7 +345,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: runtime-*
           path: runtime-dist
@@ -358,7 +358,7 @@ jobs:
           sha256sum meta-runtime_* > "meta-runtime_${VERSION}_checksums.txt"
       - name: Install Syft
         id: syft
-        uses: anchore/sbom-action/download-syft@v0.24.0
+        uses: anchore/sbom-action/download-syft@v0.24.2
       - name: Add Syft to PATH
         run: dirname '${{ steps.syft.outputs.cmd }}' >> "$GITHUB_PATH"
       - name: Release Go CLI
