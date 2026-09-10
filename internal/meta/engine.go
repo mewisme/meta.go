@@ -91,6 +91,9 @@ type backend interface {
 	GetThread(context.Context, model.ID) (*model.Thread, error)
 	CreatePoll(context.Context, model.ID, string, []string) error
 	VotePoll(context.Context, model.ID, model.ID, []model.ID) error
+	ListPinnedMessages(context.Context, model.ID) ([]model.PinnedMessage, error)
+	FetchPollDetails(context.Context, model.ID) (*model.PollDetails, error)
+	SearchThreadMessages(context.Context, model.MessageSearchRequest) (*model.MessageSearchPage, error)
 	MuteThread(context.Context, model.ID, time.Duration) error
 	MuteThreadCalls(context.Context, model.ID, time.Duration) error
 	SetThreadApprovalMode(context.Context, model.ID, bool) error
@@ -429,6 +432,33 @@ func (e *Engine) VotePoll(ctx context.Context, threadID, pollID model.ID, option
 	ctx, cancel := e.requestContext(ctx)
 	defer cancel()
 	return e.backend.VotePoll(ctx, threadID, pollID, optionIDs)
+}
+
+func (e *Engine) ListPinnedMessages(ctx context.Context, threadID model.ID) ([]model.PinnedMessage, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.ListPinnedMessages(ctx, threadID)
+}
+
+func (e *Engine) FetchPollDetails(ctx context.Context, pollID model.ID) (*model.PollDetails, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.FetchPollDetails(ctx, pollID)
+}
+
+func (e *Engine) SearchThreadMessages(ctx context.Context, req model.MessageSearchRequest) (*model.MessageSearchPage, error) {
+	if !e.connected.Load() {
+		return nil, ErrNotConnected
+	}
+	ctx, cancel := e.requestContext(ctx)
+	defer cancel()
+	return e.backend.SearchThreadMessages(ctx, req)
 }
 
 func (e *Engine) MuteThread(ctx context.Context, threadID model.ID, duration time.Duration) error {

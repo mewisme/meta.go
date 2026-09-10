@@ -153,6 +153,70 @@ type ThreadList struct {
 	SyncSequenceID int64    `json:"syncSequenceId"`
 }
 
+type PinnedMessage struct {
+	ThreadID       ID        `json:"threadId"`
+	MessageID      ID        `json:"messageId"`
+	PinnedAt       time.Time `json:"pinnedAt,omitempty"`
+	AuthorityLevel int64     `json:"authorityLevel,omitempty"`
+}
+
+type PollDetails struct {
+	ID                         ID           `json:"id"`
+	ThreadID                   ID           `json:"threadId,omitempty"`
+	Title                      string       `json:"title,omitempty"`
+	LastUpdateMessageID        ID           `json:"lastUpdateMessageId,omitempty"`
+	LastUpdateMessageTimestamp time.Time    `json:"lastUpdateMessageTimestamp,omitempty"`
+	LastUpdateMessageEventType int64        `json:"lastUpdateMessageEventType,omitempty"`
+	Options                    []PollOption `json:"options"`
+	Votes                      []PollVote   `json:"votes"`
+}
+
+type PollOption struct {
+	ID                       ID        `json:"id"`
+	Text                     string    `json:"text"`
+	SortKeyVotingTimestamp   time.Time `json:"sortKeyVotingTimestamp,omitempty"`
+	SortKeyCreationTimestamp time.Time `json:"sortKeyCreationTimestamp,omitempty"`
+}
+
+type PollVote struct {
+	OptionID  ID        `json:"optionId"`
+	ContactID ID        `json:"contactId,omitempty"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
+	VoteCount int64     `json:"voteCount,omitempty"`
+	ThreadID  ID        `json:"threadId,omitempty"`
+	MessageID ID        `json:"messageId,omitempty"`
+}
+
+type MessageSearchRequest struct {
+	ThreadID ID
+	Query    string
+	Cursor   *string
+}
+
+type MessageSearchHighlight struct {
+	Offset int `json:"offset"`
+	Length int `json:"length"`
+}
+
+type MessageSearchResult struct {
+	MessageID       ID                       `json:"messageId"`
+	ThreadID        ID                       `json:"threadId"`
+	ThreadType      string                   `json:"threadType,omitempty"`
+	GlobalIndex     int64                    `json:"globalIndex"`
+	SenderName      string                   `json:"senderName,omitempty"`
+	SenderAvatarURL string                   `json:"senderAvatarUrl,omitempty"`
+	Timestamp       time.Time                `json:"timestamp,omitempty"`
+	Text            string                   `json:"text,omitempty"`
+	Highlights      []MessageSearchHighlight `json:"highlights,omitempty"`
+}
+
+type MessageSearchPage struct {
+	Results     []MessageSearchResult `json:"results"`
+	ResultCount int64                 `json:"resultCount"`
+	HasNextPage bool                  `json:"hasNextPage"`
+	NextCursor  *string               `json:"nextCursor,omitempty"`
+}
+
 type Attachment struct {
 	ID          ID                  `json:"id,omitempty"`
 	Type        string              `json:"type"`

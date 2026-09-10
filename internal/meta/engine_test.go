@@ -68,8 +68,17 @@ func (f *fakeBackend) ListThreads(context.Context, int) (model.ThreadList, error
 func (f *fakeBackend) GetThread(context.Context, model.ID) (*model.Thread, error) {
 	return &model.Thread{ID: "10"}, nil
 }
-func (f *fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error     { return nil }
-func (f *fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error   { return nil }
+func (f *fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error   { return nil }
+func (f *fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error { return nil }
+func (f *fakeBackend) ListPinnedMessages(context.Context, model.ID) ([]model.PinnedMessage, error) {
+	return nil, nil
+}
+func (f *fakeBackend) FetchPollDetails(context.Context, model.ID) (*model.PollDetails, error) {
+	return nil, nil
+}
+func (f *fakeBackend) SearchThreadMessages(context.Context, model.MessageSearchRequest) (*model.MessageSearchPage, error) {
+	return nil, nil
+}
 func (f *fakeBackend) MuteThread(context.Context, model.ID, time.Duration) error        { return nil }
 func (f *fakeBackend) MuteThreadCalls(context.Context, model.ID, time.Duration) error   { return nil }
 func (f *fakeBackend) SetThreadApprovalMode(context.Context, model.ID, bool) error      { return nil }
@@ -278,6 +287,15 @@ func (b *blockingBackend) GetThread(context.Context, model.ID) (*model.Thread, e
 }
 func (b *blockingBackend) CreatePoll(context.Context, model.ID, string, []string) error   { return nil }
 func (b *blockingBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error { return nil }
+func (b *blockingBackend) ListPinnedMessages(context.Context, model.ID) ([]model.PinnedMessage, error) {
+	return nil, nil
+}
+func (b *blockingBackend) FetchPollDetails(context.Context, model.ID) (*model.PollDetails, error) {
+	return nil, nil
+}
+func (b *blockingBackend) SearchThreadMessages(context.Context, model.MessageSearchRequest) (*model.MessageSearchPage, error) {
+	return nil, nil
+}
 func (b *blockingBackend) MuteThread(context.Context, model.ID, time.Duration) error      { return nil }
 func (b *blockingBackend) MuteThreadCalls(context.Context, model.ID, time.Duration) error { return nil }
 func (b *blockingBackend) SetThreadApprovalMode(context.Context, model.ID, bool) error    { return nil }

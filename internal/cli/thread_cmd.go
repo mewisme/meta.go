@@ -16,7 +16,7 @@ import (
 
 func newThreadCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{Use: "thread", Short: "Thread query and administration"}
-	cmd.AddCommand(newThreadListCommand(opts), newThreadGetCommand(opts), newThreadPollCommand(opts), newThreadMuteCommand(opts), newThreadCallsMuteCommand(opts), newThreadApprovalCommand(opts), newThreadArchiveCommand(opts), newThreadPinCommand(opts), newThreadPhotoCommand(opts), newThreadDeleteCommand(opts), newThreadCreateDMCommand(opts), newThreadSearchCommand(opts), newThreadContactCommand(opts), newThreadAdminCommand(opts), newThreadNameCommand(opts), newThreadEmojiCommand(opts), newThreadNicknameCommand(opts))
+	cmd.AddCommand(newThreadListCommand(opts), newThreadGetCommand(opts), newThreadPollCommand(opts), newThreadPinnedCommand(opts), newThreadSearchMessagesCommand(opts), newThreadMuteCommand(opts), newThreadCallsMuteCommand(opts), newThreadApprovalCommand(opts), newThreadArchiveCommand(opts), newThreadPinCommand(opts), newThreadPhotoCommand(opts), newThreadDeleteCommand(opts), newThreadCreateDMCommand(opts), newThreadSearchCommand(opts), newThreadContactCommand(opts), newThreadAdminCommand(opts), newThreadNameCommand(opts), newThreadEmojiCommand(opts), newThreadNicknameCommand(opts))
 	return cmd
 }
 
@@ -105,7 +105,83 @@ func newThreadPollCommand(opts *options) *cobra.Command {
 		}
 		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, map[string]bool{"updated": true}, "poll updated")
 	}}
-	cmd.AddCommand(create, vote)
+	info := &cobra.Command{Use: "info <poll-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		c, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+		details, err := c.Threads.PollDetails(cmd.Context(), model.ID(args[0]))
+		if err != nil {
+			return err
+		}
+		return writeValue(cmd.OutOrStdout(), opts.json, opts.jqo, details, details.ID.String()+"\t"+details.Title)
+	}}
+	cmd.AddCommand(create, vote, info)
+	return cmd
+}
+
+func newThreadPinnedCommand(opts *options) *cobra.Command {
+	return &cobra.Command{Use: "pinned <thread-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		c, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+		items, err := c.Threads.PinnedMessages(cmd.Context(), model.ID(args[0]))
+		if err != nil {
+			return err
+		}
+		if opts.json {
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, items, "")
+		}
+		for _, item := range items {
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\n", item.MessageID, item.PinnedAt.Format(time.RFC3339))
+		}
+		return nil
+	}}
+}
+
+func newThreadSearchMessagesCommand(opts *options) *cobra.Command {
+	cursor := ""
+	cmd := &cobra.Command{Use: "search-messages <thread-id> <query>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		r, err := loadRuntime(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		c, err := r.client(cmd.Context(), opts)
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+		req := model.MessageSearchRequest{ThreadID: model.ID(args[0]), Query: args[1]}
+		if cmd.Flags().Changed("cursor") {
+			req.Cursor = &cursor
+		}
+		page, err := c.Threads.SearchMessages(cmd.Context(), req)
+		if err != nil {
+			return err
+		}
+		if opts.json {
+			return writeValue(cmd.OutOrStdout(), true, opts.jqo, page, "")
+		}
+		for _, item := range page.Results {
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\n", item.MessageID, item.SenderName, item.Text)
+		}
+		if page.NextCursor != nil {
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "next_cursor\t%s\n", *page.NextCursor)
+		}
+		return nil
+	}}
+	cmd.Flags().StringVar(&cursor, "cursor", "", "opaque message-search cursor")
 	return cmd
 }
 

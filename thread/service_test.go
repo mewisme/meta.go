@@ -19,8 +19,17 @@ func (*fakeBackend) ListThreads(context.Context, int) (model.ThreadList, error) 
 func (*fakeBackend) GetThread(context.Context, model.ID) (*model.Thread, error) {
 	return &model.Thread{ID: "1"}, nil
 }
-func (*fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error     { return nil }
-func (*fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error   { return nil }
+func (*fakeBackend) CreatePoll(context.Context, model.ID, string, []string) error   { return nil }
+func (*fakeBackend) VotePoll(context.Context, model.ID, model.ID, []model.ID) error { return nil }
+func (*fakeBackend) ListPinnedMessages(context.Context, model.ID) ([]model.PinnedMessage, error) {
+	return []model.PinnedMessage{{ThreadID: "1", MessageID: "mid.1"}}, nil
+}
+func (*fakeBackend) FetchPollDetails(context.Context, model.ID) (*model.PollDetails, error) {
+	return &model.PollDetails{ID: "2", ThreadID: "1", Options: []model.PollOption{{ID: "3", Text: "A"}}}, nil
+}
+func (*fakeBackend) SearchThreadMessages(context.Context, model.MessageSearchRequest) (*model.MessageSearchPage, error) {
+	return &model.MessageSearchPage{Results: []model.MessageSearchResult{{MessageID: "mid.1", ThreadID: "1", Text: "hello"}}, ResultCount: 1}, nil
+}
 func (*fakeBackend) MuteThread(context.Context, model.ID, time.Duration) error        { return nil }
 func (*fakeBackend) MuteThreadCalls(context.Context, model.ID, time.Duration) error   { return nil }
 func (*fakeBackend) SetThreadApprovalMode(context.Context, model.ID, bool) error      { return nil }
@@ -65,6 +74,20 @@ func TestServiceValidationAndDelegation(t *testing.T) {
 	}
 	if err := service.VotePoll(context.Background(), "1", "2", []model.ID{"3"}); err != nil {
 		t.Fatal(err)
+	}
+	if pins, err := service.PinnedMessages(context.Background(), "1"); err != nil || len(pins) != 1 || pins[0].MessageID != "mid.1" {
+		t.Fatalf("unexpected pins: %#v %v", pins, err)
+	}
+	if details, err := service.PollDetails(context.Background(), "2"); err != nil || details.ID != "2" || len(details.Options) != 1 {
+		t.Fatalf("unexpected poll details: %#v %v", details, err)
+	}
+	page, err := service.SearchMessages(context.Background(), model.MessageSearchRequest{ThreadID: "1", Query: " hello "})
+	if err != nil || page.ResultCount != 1 || len(page.Results) != 1 {
+		t.Fatalf("unexpected message search: %#v %v", page, err)
+	}
+	emptyCursor := " "
+	if _, err := service.SearchMessages(context.Background(), model.MessageSearchRequest{ThreadID: "1", Query: "hello", Cursor: &emptyCursor}); !errors.Is(err, fberrors.ErrInvalidInput) {
+		t.Fatalf("expected invalid cursor, got %v", err)
 	}
 	if err := service.Mute(context.Background(), "1", -time.Second); err != nil {
 		t.Fatal(err)

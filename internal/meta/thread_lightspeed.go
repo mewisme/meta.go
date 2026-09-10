@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mewis.me/meta-extra/pkg/messagix"
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 	"go.mewis.me/meta-extra/pkg/messagix/socket"
 	"go.mewis.me/meta-extra/pkg/messagix/table"
@@ -43,6 +44,99 @@ func (b *messagixBackend) VotePoll(ctx context.Context, threadID, pollID model.I
 	}
 	_, err = b.client.ExecuteTasks(ctx, &socket.UpdatePollTask{ThreadKey: thread, PollID: poll, SelectedOptions: selected, SyncGroup: 1})
 	return err
+}
+
+func (b *messagixBackend) ListPinnedMessages(_ context.Context, threadID model.ID) ([]model.PinnedMessage, error) {
+	thread, err := parsePositiveID(threadID, "thread")
+	if err != nil {
+		return nil, err
+	}
+	items, err := b.client.ListPinnedMessages(thread)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.PinnedMessage, 0, len(items))
+	for _, item := range items {
+		result = append(result, model.PinnedMessage{ThreadID: id64(item.ThreadKey), MessageID: model.ID(item.MessageID), PinnedAt: unixMilli(item.PinnedTimestampMS), AuthorityLevel: item.AuthorityLevel})
+	}
+	return result, nil
+}
+
+func (b *messagixBackend) FetchPollDetails(ctx context.Context, pollID model.ID) (*model.PollDetails, error) {
+	poll, err := parsePositiveID(pollID, "poll")
+	if err != nil {
+		return nil, err
+	}
+	details, err := b.client.FetchPollDetails(ctx, poll)
+	if err != nil {
+		return nil, err
+	}
+	return normalizePollDetails(details), nil
+}
+
+func normalizePollDetails(details *messagix.PollDetails) *model.PollDetails {
+	if details == nil {
+		return nil
+	}
+	result := &model.PollDetails{ID: id64(details.ID), ThreadID: id64(details.ThreadKey), Title: details.Title, LastUpdateMessageID: model.ID(details.LastUpdateMessageID), LastUpdateMessageTimestamp: unixMilli(details.LastUpdateMessageTimestampMS), LastUpdateMessageEventType: details.LastUpdateMessageEventType, Options: make([]model.PollOption, 0, len(details.Options)), Votes: make([]model.PollVote, 0, len(details.Votes))}
+	for _, option := range details.Options {
+		result.Options = append(result.Options, model.PollOption{ID: id64(option.ID), Text: option.Text, SortKeyVotingTimestamp: unixMilli(option.SortKeyVotingTimestamp), SortKeyCreationTimestamp: unixMilli(option.SortKeyCreationTimestamp)})
+	}
+	for _, vote := range details.Votes {
+		result.Votes = append(result.Votes, model.PollVote{OptionID: id64(vote.OptionID), ContactID: id64(vote.ContactID), Timestamp: unixMilli(vote.TimestampMS), VoteCount: vote.VoteCount, ThreadID: id64(vote.ThreadKey), MessageID: model.ID(vote.MessageID)})
+	}
+	return result
+}
+
+func (b *messagixBackend) SearchThreadMessages(ctx context.Context, req model.MessageSearchRequest) (*model.MessageSearchPage, error) {
+	thread, err := parsePositiveID(req.ThreadID, "thread")
+	if err != nil {
+		return nil, err
+	}
+	page, err := b.client.SearchMessages(ctx, messagix.MessageSearchRequest{ThreadKey: thread, Query: req.Query, Cursor: req.Cursor})
+	if err != nil {
+		return nil, err
+	}
+	return normalizeMessageSearchPage(page), nil
+}
+
+func normalizeMessageSearchPage(page *messagix.MessageSearchPage) *model.MessageSearchPage {
+	if page == nil {
+		return nil
+	}
+	result := &model.MessageSearchPage{Results: make([]model.MessageSearchResult, 0, len(page.Results)), ResultCount: page.ResultCount, HasNextPage: page.HasNextPage, NextCursor: page.NextCursor}
+	for _, item := range page.Results {
+		highlights := make([]model.MessageSearchHighlight, 0, len(item.Highlights))
+		for _, highlight := range item.Highlights {
+			highlights = append(highlights, model.MessageSearchHighlight{Offset: highlight.Offset, Length: highlight.Length})
+		}
+		result.Results = append(result.Results, model.MessageSearchResult{MessageID: model.ID(item.MessageID), ThreadID: id64(item.ThreadKey), ThreadType: messengerThreadType(item.ThreadType), GlobalIndex: item.GlobalIndex, SenderName: item.SenderName, SenderAvatarURL: item.SenderAvatarURL, Timestamp: unixMilli(item.TimestampMS), Text: item.Text, Highlights: highlights})
+	}
+	return result
+}
+
+func messengerThreadType(value table.ThreadType) string {
+	switch value {
+	case table.ONE_TO_ONE:
+		return "oneToOne"
+	case table.GROUP_THREAD:
+		return "group"
+	case table.ROOM:
+		return "room"
+	case table.MARKETPLACE:
+		return "marketplace"
+	case table.AI_BOT:
+		return "aiBot"
+	default:
+		return "unknown"
+	}
+}
+
+func unixMilli(value int64) time.Time {
+	if value <= 0 {
+		return time.Time{}
+	}
+	return time.UnixMilli(value)
 }
 
 func (b *messagixBackend) MuteThread(ctx context.Context, threadID model.ID, duration time.Duration) error {

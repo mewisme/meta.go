@@ -19,6 +19,9 @@ type Backend interface {
 	GetThread(context.Context, model.ID) (*model.Thread, error)
 	CreatePoll(context.Context, model.ID, string, []string) error
 	VotePoll(context.Context, model.ID, model.ID, []model.ID) error
+	ListPinnedMessages(context.Context, model.ID) ([]model.PinnedMessage, error)
+	FetchPollDetails(context.Context, model.ID) (*model.PollDetails, error)
+	SearchThreadMessages(context.Context, model.MessageSearchRequest) (*model.MessageSearchPage, error)
 	MuteThread(context.Context, model.ID, time.Duration) error
 	MuteThreadCalls(context.Context, model.ID, time.Duration) error
 	SetThreadApprovalMode(context.Context, model.ID, bool) error
@@ -93,6 +96,40 @@ func (s *Service) VotePoll(ctx context.Context, threadID, pollID model.ID, optio
 		}
 	}
 	return s.backend.VotePoll(ctx, threadID, pollID, optionIDs)
+}
+
+func (s *Service) PinnedMessages(ctx context.Context, threadID model.ID) ([]model.PinnedMessage, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	if threadID.Empty() {
+		return nil, invalid("thread ID is required")
+	}
+	return s.backend.ListPinnedMessages(ctx, threadID)
+}
+
+func (s *Service) PollDetails(ctx context.Context, pollID model.ID) (*model.PollDetails, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	if pollID.Empty() {
+		return nil, invalid("poll ID is required")
+	}
+	return s.backend.FetchPollDetails(ctx, pollID)
+}
+
+func (s *Service) SearchMessages(ctx context.Context, req model.MessageSearchRequest) (*model.MessageSearchPage, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	req.Query = strings.TrimSpace(req.Query)
+	if req.ThreadID.Empty() || req.Query == "" {
+		return nil, invalid("thread ID and search query are required")
+	}
+	if req.Cursor != nil && strings.TrimSpace(*req.Cursor) == "" {
+		return nil, invalid("message search cursor cannot be empty")
+	}
+	return s.backend.SearchThreadMessages(ctx, req)
 }
 
 // Mute mutes a thread for duration. Zero unmutes; any negative duration mutes indefinitely.
