@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"go.mau.fi/whatsmeow/proto/waMediaTransport"
-	"go.mewis.me/fbgo/model"
 	"go.mewis.me/meta-extra/pkg/messagix"
 	"go.mewis.me/meta-extra/pkg/messagix/table"
+	"go.mewis.me/meta.go/model"
 )
 
 func TestEmitTableNormalizesRealtimeEvents(t *testing.T) {

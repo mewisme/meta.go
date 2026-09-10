@@ -1,6 +1,6 @@
 # Feature matrix
 
-This matrix describes the supported library capabilities of fbgo.
+This matrix describes the supported library capabilities of meta.go.
 
 ## Authentication and runtime
 
@@ -56,4 +56,4 @@ This matrix describes the supported library capabilities of fbgo.
 
 ## Architecture differences
 
-fbgo implements these capabilities directly in Go. Process bridges, Python subprocesses and runtime JSON-RPC layers are not part of the production architecture.
+meta.go implements these capabilities directly in Go. Process bridges, Python subprocesses and runtime JSON-RPC layers are not part of the production architecture.

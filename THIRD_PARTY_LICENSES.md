@@ -1,6 +1,6 @@
 # Third-party licenses
 
-This inventory covers direct Go dependencies used by fbgo. Release SBOMs provide the complete dependency graph. Update this file whenever direct dependencies change.
+This inventory covers direct Go dependencies used by meta.go. Release SBOMs provide the complete dependency graph. Update this file whenever direct dependencies change.
 
 | Module | Version | License |
 | --- | --- | --- |

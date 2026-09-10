@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/internal/fsutil"
-	"go.mewis.me/fbgo/messenger"
-	"go.mewis.me/fbgo/model"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/internal/fsutil"
+	"go.mewis.me/meta.go/messenger"
+	"go.mewis.me/meta.go/model"
 )
 
 func newMessengerCommand(opts *options) *cobra.Command {

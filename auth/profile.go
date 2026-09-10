@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mewis.me/fbgo/storage"
+	"go.mewis.me/meta.go/storage"
 )
 
 const (

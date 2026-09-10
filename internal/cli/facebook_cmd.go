@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	fberrors "go.mewis.me/fbgo/errors"
-	facebookservice "go.mewis.me/fbgo/facebook"
-	"go.mewis.me/fbgo/model"
+	fberrors "go.mewis.me/meta.go/errors"
+	facebookservice "go.mewis.me/meta.go/facebook"
+	"go.mewis.me/meta.go/model"
 )
 
 func newFacebookCommand(opts *options) *cobra.Command {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	fberrors "go.mewis.me/fbgo/errors"
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
+	fberrors "go.mewis.me/meta.go/errors"
 )
 
 func TestParseHomepage(t *testing.T) {

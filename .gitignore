@@ -3,9 +3,9 @@
 go.work
 go.work.sum
 
-/fbgo
+/meta
 /dist/
 /coverage.out
 *.test
 
-/fbgo.exe
+/meta.exe

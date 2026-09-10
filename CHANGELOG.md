@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to fbgo are documented here.
+All notable changes to meta.go are documented here.
 
 ## Unreleased
 

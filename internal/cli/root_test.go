@@ -10,33 +10,33 @@ import (
 	"strings"
 	"testing"
 
-	"go.mewis.me/fbgo"
-	"go.mewis.me/fbgo/auth"
-	"go.mewis.me/fbgo/config"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta.go"
+	"go.mewis.me/meta.go/auth"
+	"go.mewis.me/meta.go/config"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/model"
 )
 
 func TestWriteVersionText(t *testing.T) {
 	var out bytes.Buffer
-	info := fbgo.VersionInfo{Version: "v1.2.3", Commit: "abc", GoVersion: "go1.test"}
+	info := meta.VersionInfo{Version: "v1.2.3", Commit: "abc", GoVersion: "go1.test"}
 	if err := writeVersion(&out, false, "", info); err != nil {
 		t.Fatal(err)
 	}
-	if got := out.String(); got != "fbgo v1.2.3 (abc) go1.test\n" {
+	if got := out.String(); got != "meta v1.2.3 (abc) go1.test\n" {
 		t.Fatalf("unexpected output: %q", got)
 	}
 }
 
 func TestWriteVersionJSON(t *testing.T) {
 	var out bytes.Buffer
-	info := fbgo.VersionInfo{Version: "v1.2.3", Commit: "abc", GoVersion: "go1.test"}
+	info := meta.VersionInfo{Version: "v1.2.3", Commit: "abc", GoVersion: "go1.test"}
 	if err := writeVersion(&out, true, "", info); err != nil {
 		t.Fatal(err)
 	}
 	var decoded struct {
 		OK   bool             `json:"ok"`
-		Data fbgo.VersionInfo `json:"data"`
+		Data meta.VersionInfo `json:"data"`
 	}
 	if err := json.Unmarshal(out.Bytes(), &decoded); err != nil {
 		t.Fatal(err)
@@ -109,8 +109,8 @@ func TestCLIConfigProfileAuthWorkflow(t *testing.T) {
 	if _, err := os.Stat(configPath); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("FBGO_CONFIG", configPath)
-	t.Setenv("FBGO_MASTER_KEY", strings.Repeat("01", 32))
+	t.Setenv("META_CONFIG", configPath)
+	t.Setenv("META_MASTER_KEY", strings.Repeat("01", 32))
 	if _, err := run("", "profile", "create", "default"); err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestGlobalOptionValidation(t *testing.T) {
 
 func TestProfileResolutionPrecedence(t *testing.T) {
 	r := &appRuntime{config: config.Config{DefaultProfile: "configured"}}
-	t.Setenv("FBGO_PROFILE", "environment")
+	t.Setenv("META_PROFILE", "environment")
 	if got := r.profileName(&options{}); got != "environment" {
 		t.Fatalf("env profile not selected: %q", got)
 	}
@@ -214,7 +214,7 @@ func TestConfigInitExistingExplicitPathReturnsUsage(t *testing.T) {
 func TestConfigInitRefusesDifferentSecondDefaultFormat(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", root)
-	dir := filepath.Join(root, "fbgo")
+	dir := filepath.Join(root, "meta")
 	if _, err := config.InitDefault(dir); err != nil {
 		t.Fatal(err)
 	}

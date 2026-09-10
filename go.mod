@@ -1,4 +1,4 @@
-module go.mewis.me/fbgo
+module go.mewis.me/meta.go
 
 go 1.27.0
 

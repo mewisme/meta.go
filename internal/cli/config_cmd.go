@@ -10,12 +10,12 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"go.mewis.me/fbgo/config"
-	fberrors "go.mewis.me/fbgo/errors"
+	"go.mewis.me/meta.go/config"
+	fberrors "go.mewis.me/meta.go/errors"
 )
 
 func newConfigCommand(opts *options) *cobra.Command {
-	cmd := &cobra.Command{Use: "config", Short: "Manage fbgo configuration"}
+	cmd := &cobra.Command{Use: "config", Short: "Manage meta configuration"}
 	cmd.AddCommand(newConfigInitCommand(opts), newConfigShowCommand(opts), newConfigPathCommand(opts), newConfigSetCommand(opts))
 	return cmd
 }
@@ -27,7 +27,7 @@ func newConfigInitCommand(opts *options) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		explicit := strings.TrimSpace(opts.config) != "" || strings.TrimSpace(os.Getenv("FBGO_CONFIG")) != ""
+		explicit := strings.TrimSpace(opts.config) != "" || strings.TrimSpace(os.Getenv("META_CONFIG")) != ""
 		created := path
 		if explicit {
 			ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")

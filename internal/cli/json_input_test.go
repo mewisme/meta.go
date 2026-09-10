@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	fberrors "go.mewis.me/fbgo/errors"
+	fberrors "go.mewis.me/meta.go/errors"
 )
 
 func TestDecodeJSONInputRequiresSingleJQValue(t *testing.T) {

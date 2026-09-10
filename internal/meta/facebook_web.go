@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"go.mewis.me/fbgo/internal/protocol"
-	"go.mewis.me/fbgo/internal/webapi"
-	"go.mewis.me/fbgo/model"
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
+	"go.mewis.me/meta.go/internal/protocol"
+	"go.mewis.me/meta.go/internal/webapi"
+	"go.mewis.me/meta.go/model"
 )
 
 func (b *messagixBackend) GetFacebookUser(ctx context.Context, userID model.ID) (*model.FacebookUser, error) {

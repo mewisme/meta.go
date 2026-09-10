@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"go.mewis.me/fbgo/internal/webapi"
+	"go.mewis.me/meta.go/internal/webapi"
 )
 
 type MediaDownload struct {

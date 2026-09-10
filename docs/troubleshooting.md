@@ -18,7 +18,7 @@ The encrypted transport is not authenticated. Check `client.Health().E2EE`, conf
 
 ## Corrupt E2EE state
 
-fbgo rejects invalid state rather than replacing it. Restore a known-good encrypted state backup. Generate a new device only when deliberately rotating the identity.
+meta.go rejects invalid state rather than replacing it. Restore a known-good encrypted state backup. Generate a new device only when deliberately rotating the identity.
 
 ## Media download rejected
 
@@ -26,7 +26,7 @@ The secure downloader rejects unsafe URLs, private/special-use addresses, unsafe
 
 ## Requests time out
 
-`fbgo.WithTimeout` sets the default request timeout when a caller context has no deadline. A caller-supplied context deadline takes precedence.
+`meta.WithTimeout` sets the default request timeout when a caller context has no deadline. A caller-supplied context deadline takes precedence.
 
 ## Event drops
 
@@ -34,4 +34,4 @@ The secure downloader rejects unsafe URLs, private/special-use addresses, unsafe
 
 ## Useful diagnostics
 
-Inspect `client.Health()` and `fbgo.ClassifyError(err)`. These are designed to expose operational state without requiring secret-bearing logs.
+Inspect `client.Health()` and `meta.ClassifyError(err)`. These are designed to expose operational state without requiring secret-bearing logs.

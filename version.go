@@ -1,4 +1,4 @@
-package fbgo
+package meta
 
 import "runtime"
 

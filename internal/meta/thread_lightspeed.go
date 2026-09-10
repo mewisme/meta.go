@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"go.mewis.me/fbgo/model"
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 	"go.mewis.me/meta-extra/pkg/messagix/socket"
 	"go.mewis.me/meta-extra/pkg/messagix/table"
+	"go.mewis.me/meta.go/model"
 )
 
 func (b *messagixBackend) CreatePoll(ctx context.Context, threadID model.ID, question string, options []string) error {

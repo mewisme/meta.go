@@ -16,13 +16,13 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/internal/protocol"
 	"go.mewis.me/meta-extra/pkg/messagix"
 	"go.mewis.me/meta-extra/pkg/messagix/bloks"
 	metaCookies "go.mewis.me/meta-extra/pkg/messagix/cookies"
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/internal/protocol"
 	"maunium.net/go/mautrix/bridgev2"
 )
 

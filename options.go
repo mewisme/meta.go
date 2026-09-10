@@ -1,20 +1,20 @@
-package fbgo
+package meta
 
 import (
 	"log/slog"
 	"net/http"
 	"time"
 
-	"go.mewis.me/fbgo/auth"
-	"go.mewis.me/fbgo/internal/logging"
-	"go.mewis.me/fbgo/storage"
+	"go.mewis.me/meta.go/auth"
+	"go.mewis.me/meta.go/internal/logging"
+	"go.mewis.me/meta.go/storage"
 )
 
 // Option configures a Client.
 type Option func(*Client)
 
-// WithHTTPClient supplies the HTTP transport used by fbgo. Client-level cookie
-// and redirect policies are intentionally managed by fbgo and are not reused.
+// WithHTTPClient supplies the HTTP transport used by meta. Client-level cookie
+// and redirect policies are intentionally managed by meta and are not reused.
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(client *Client) {
 		if httpClient != nil {
@@ -24,7 +24,7 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
-// WithLogger replaces the structured logger used by fbgo.
+// WithLogger replaces the structured logger used by meta.
 func WithLogger(logger *slog.Logger) Option {
 	return func(client *Client) {
 		if logger != nil {

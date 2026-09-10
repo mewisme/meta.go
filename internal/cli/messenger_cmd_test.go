@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta.go/model"
 )
 
 func TestMessengerTypingAndReadCommandsExist(t *testing.T) {

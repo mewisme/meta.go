@@ -1,11 +1,11 @@
-# fbgo
+# meta.go
 
-`fbgo` is a Go-first Facebook Messenger and Facebook automation library with regular Messenger and end-to-end encrypted messaging support.
+`meta.go` is a Go-first Facebook Messenger and Facebook automation library with regular Messenger and end-to-end encrypted messaging support.
 
 Canonical module path:
 
 ```text
-go.mewis.me/fbgo
+go.mewis.me/meta.go
 ```
 
 ## Highlights
@@ -23,9 +23,9 @@ See the complete [feature matrix](docs/features.md).
 ## Library quick start
 
 ```go
-client, err := fbgo.NewClient(
-	fbgo.WithCookies(auth.Cookies{"c_user": "...", "xs": "..."}),
-	fbgo.WithE2EE(true),
+client, err := meta.NewClient(
+	meta.WithCookies(auth.Cookies{"c_user": "...", "xs": "..."}),
+	meta.WithE2EE(true),
 )
 if err != nil {
 	return err
@@ -36,9 +36,9 @@ if err := client.Connect(ctx); err != nil {
 	return err
 }
 
-result, err := client.Messenger.Send(ctx, fbgo.SendRequest{
+result, err := client.Messenger.Send(ctx, meta.SendRequest{
 	ThreadID: "1234567890",
-	Text:     "hello from fbgo",
+	Text:     "hello from meta",
 })
 ```
 

@@ -1,20 +1,20 @@
 version: 2
-project_name: fbgo
+project_name: meta.go
 
 before:
   hooks:
     - go mod verify
 
 builds:
-  - id: fbgo
-    main: ./cmd/fbgo
-    binary: fbgo
+  - id: meta
+    main: ./cmd/meta
+    binary: meta
     env:
       - CGO_ENABLED=0
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X go.mewis.me/fbgo.Version={{ .Version }} -X go.mewis.me/fbgo.Commit={{ .Commit }}
+      - -s -w -X go.mewis.me/meta.go.Version={{ .Version }} -X go.mewis.me/meta.go.Commit={{ .Commit }}
     mod_timestamp: "{{ .CommitTimestamp }}"
     goos:
       - linux
@@ -25,10 +25,10 @@ builds:
       - arm64
 
 archives:
-  - id: fbgo
+  - id: meta
     ids:
-      - fbgo
-    name_template: "fbgo_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      - meta
+    name_template: "meta_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
     format_overrides:
@@ -43,7 +43,7 @@ archives:
       - docs/*
 
 checksum:
-  name_template: "fbgo_{{ .Version }}_checksums.txt"
+  name_template: "meta_{{ .Version }}_checksums.txt"
   algorithm: sha256
 
 sboms:

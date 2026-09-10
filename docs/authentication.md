@@ -1,6 +1,6 @@
 # Authentication and profiles
 
-fbgo supports cookie-based sessions and credential login. Cookies are the simplest option when an authenticated browser session already exists.
+meta.go supports cookie-based sessions and credential login. Cookies are the simplest option when an authenticated browser session already exists.
 
 ## Cookies
 
@@ -27,7 +27,7 @@ cookies, err := login.Login(ctx, auth.Credentials{
 })
 ```
 
-`TOTP` is a TOTP seed and fbgo generates the current code when needed. Use `OTP` instead when a one-time numeric code has already been generated. `TOTP` and `OTP` are mutually exclusive.
+`TOTP` is a TOTP seed and meta generates the current code when needed. Use `OTP` instead when a one-time numeric code has already been generated. `TOTP` and `OTP` are mutually exclusive.
 
 Credential login uses the maintained login flow first and a compatibility flow only when the primary protocol changes. Authentication rejection, checkpoints, rate limits and protocol changes are returned as typed errors.
 
@@ -49,4 +49,4 @@ Renaming a profile is transactional across metadata and managed secrets. A parti
 
 ## Logout
 
-Use `ProfileManager.Logout` with an explicit `LogoutPolicy`. fbgo does not guess which persisted state should be destroyed.
+Use `ProfileManager.Logout` with an explicit `LogoutPolicy`. meta.go does not guess which persisted state should be destroyed.

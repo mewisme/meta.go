@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
-	"go.mewis.me/fbgo/internal/fsutil"
+	"go.mewis.me/meta.go/internal/fsutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -74,7 +74,7 @@ func DefaultDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "fbgo"), nil
+	return filepath.Join(dir, "meta"), nil
 }
 
 func DefaultPath(dir string) (string, error) {

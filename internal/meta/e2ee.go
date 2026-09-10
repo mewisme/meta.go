@@ -9,16 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"go.mewis.me/meta-extra/pkg/messagix/methods"
-	"go.mewis.me/meta-extra/pkg/messagix/socket"
-	"go.mewis.me/meta-extra/pkg/messagix/table"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waCommon"
 	"go.mau.fi/whatsmeow/proto/waConsumerApplication"
 	"go.mau.fi/whatsmeow/proto/waMediaTransport"
 	"go.mau.fi/whatsmeow/proto/waMsgApplication"
 	waTypes "go.mau.fi/whatsmeow/types"
-	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta-extra/pkg/messagix/methods"
+	"go.mewis.me/meta-extra/pkg/messagix/socket"
+	"go.mewis.me/meta-extra/pkg/messagix/table"
+	"go.mewis.me/meta.go/model"
 	"google.golang.org/protobuf/proto"
 )
 

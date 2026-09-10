@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"go.mau.fi/whatsmeow/proto/waMediaTransport"
-	"go.mewis.me/fbgo/model"
+	"go.mewis.me/meta.go/model"
 )
 
 func TestE2EEMediaMessageBuildsAllSupportedKinds(t *testing.T) {

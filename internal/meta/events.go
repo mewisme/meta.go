@@ -10,9 +10,9 @@ import (
 	"go.mau.fi/whatsmeow/proto/waConsumerApplication"
 	"go.mau.fi/whatsmeow/proto/waMediaTransport"
 	waEvents "go.mau.fi/whatsmeow/types/events"
-	"go.mewis.me/fbgo/model"
 	"go.mewis.me/meta-extra/pkg/messagix"
 	"go.mewis.me/meta-extra/pkg/messagix/table"
+	"go.mewis.me/meta.go/model"
 )
 
 func (e *Engine) handleTransportEvent(_ context.Context, event any) {

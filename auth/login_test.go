@@ -12,8 +12,8 @@ import (
 	"net/url"
 	"testing"
 
-	fberrors "go.mewis.me/fbgo/errors"
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
+	fberrors "go.mewis.me/meta.go/errors"
 	"maunium.net/go/mautrix/bridgev2"
 )
 

@@ -9,10 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"go.mewis.me/fbgo/auth"
-	"go.mewis.me/fbgo/config"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/storage"
+	"go.mewis.me/meta.go/auth"
+	"go.mewis.me/meta.go/config"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/storage"
 )
 
 type errorBody struct {

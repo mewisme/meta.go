@@ -17,11 +17,11 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/zalando/go-keyring"
-	"go.mewis.me/fbgo"
-	"go.mewis.me/fbgo/auth"
-	"go.mewis.me/fbgo/config"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/storage"
+	"go.mewis.me/meta.go"
+	"go.mewis.me/meta.go/auth"
+	"go.mewis.me/meta.go/config"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/storage"
 )
 
 const (
@@ -62,7 +62,7 @@ func resolveConfigPath(opts *options, allowMissing bool) (string, error) {
 	if opts != nil && strings.TrimSpace(opts.config) != "" {
 		return filepath.Clean(opts.config), nil
 	}
-	if env := strings.TrimSpace(os.Getenv("FBGO_CONFIG")); env != "" {
+	if env := strings.TrimSpace(os.Getenv("META_CONFIG")); env != "" {
 		return filepath.Clean(env), nil
 	}
 	path, err := config.Discover("")
@@ -112,7 +112,7 @@ func loadRuntime(ctx context.Context, opts *options) (*appRuntime, error) {
 }
 
 func loadMasterKey(configPath string) ([]byte, error) {
-	if raw := strings.TrimSpace(os.Getenv("FBGO_MASTER_KEY")); raw != "" {
+	if raw := strings.TrimSpace(os.Getenv("META_MASTER_KEY")); raw != "" {
 		return decodeMasterKey(raw)
 	}
 	canonical, err := canonicalConfigPath(configPath)
@@ -121,19 +121,19 @@ func loadMasterKey(configPath string) ([]byte, error) {
 	}
 	identity := sha256.Sum256([]byte(canonical))
 	user := hex.EncodeToString(identity[:16])
-	raw, err := keyring.Get("fbgo", user)
+	raw, err := keyring.Get("meta", user)
 	if err == nil {
 		return decodeMasterKey(raw)
 	}
 	if !errors.Is(err, keyring.ErrNotFound) {
-		return nil, fmt.Errorf("OS keyring unavailable: %w; set FBGO_MASTER_KEY for headless use", err)
+		return nil, fmt.Errorf("OS keyring unavailable: %w; set META_MASTER_KEY for headless use", err)
 	}
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
 		return nil, err
 	}
-	if err := keyring.Set("fbgo", user, base64.RawStdEncoding.EncodeToString(key)); err != nil {
-		return nil, fmt.Errorf("store fbgo master key: %w", err)
+	if err := keyring.Set("meta", user, base64.RawStdEncoding.EncodeToString(key)); err != nil {
+		return nil, fmt.Errorf("store meta master key: %w", err)
 	}
 	return key, nil
 }
@@ -161,20 +161,20 @@ func decodeMasterKey(raw string) ([]byte, error) {
 			return key, nil
 		}
 	}
-	return nil, errors.New("FBGO_MASTER_KEY must encode exactly 32 bytes as hex or base64")
+	return nil, errors.New("META_MASTER_KEY must encode exactly 32 bytes as hex or base64")
 }
 
 func (r *appRuntime) profileName(opts *options) string {
 	if opts != nil && strings.TrimSpace(opts.profile) != "" {
 		return strings.TrimSpace(opts.profile)
 	}
-	if env := strings.TrimSpace(os.Getenv("FBGO_PROFILE")); env != "" {
+	if env := strings.TrimSpace(os.Getenv("META_PROFILE")); env != "" {
 		return env
 	}
 	return strings.TrimSpace(r.config.DefaultProfile)
 }
 
-func (r *appRuntime) client(ctx context.Context, opts *options) (*fbgo.Client, error) {
+func (r *appRuntime) client(ctx context.Context, opts *options) (*meta.Client, error) {
 	name := r.profileName(opts)
 	if name == "" {
 		return nil, fmt.Errorf("%w: no profile selected", fberrors.ErrInvalidInput)
@@ -187,7 +187,7 @@ func (r *appRuntime) client(ctx context.Context, opts *options) (*fbgo.Client, e
 	if err != nil {
 		return nil, err
 	}
-	client, err := fbgo.NewClient(fbgo.WithProfile(profile), fbgo.WithSecretStore(r.secrets), fbgo.WithTimeout(r.config.Timeout), fbgo.WithE2EE(r.config.E2EE), fbgo.WithEventBuffer(r.config.EventBuffer), fbgo.WithLogger(logger))
+	client, err := meta.NewClient(meta.WithProfile(profile), meta.WithSecretStore(r.secrets), meta.WithTimeout(r.config.Timeout), meta.WithE2EE(r.config.E2EE), meta.WithEventBuffer(r.config.EventBuffer), meta.WithLogger(logger))
 	if err != nil {
 		return nil, err
 	}

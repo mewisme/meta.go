@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"go.mewis.me/fbgo/internal/graphql"
-	"go.mewis.me/fbgo/internal/protocol"
-	"go.mewis.me/fbgo/internal/webapi"
-	"go.mewis.me/fbgo/model"
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
 	"go.mewis.me/meta-extra/pkg/messagix/useragent"
+	"go.mewis.me/meta.go/internal/graphql"
+	"go.mewis.me/meta.go/internal/protocol"
+	"go.mewis.me/meta.go/internal/webapi"
+	"go.mewis.me/meta.go/model"
 )
 
 type browserFormState struct {

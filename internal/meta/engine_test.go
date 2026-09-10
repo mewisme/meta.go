@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"go.mewis.me/fbgo/model"
 	"go.mewis.me/meta-extra/pkg/messagix"
+	"go.mewis.me/meta.go/model"
 )
 
 type fakeBackend struct {

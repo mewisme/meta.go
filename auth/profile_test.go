@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"go.mewis.me/fbgo/storage"
+	"go.mewis.me/meta.go/storage"
 )
 
 func TestProfileLifecycle(t *testing.T) {

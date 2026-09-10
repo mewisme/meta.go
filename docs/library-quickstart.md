@@ -7,17 +7,17 @@ import (
 	"context"
 	"log"
 
-	"go.mewis.me/fbgo"
-	"go.mewis.me/fbgo/auth"
+	"go.mewis.me/meta.go"
+	"go.mewis.me/meta.go/auth"
 )
 
 func main() {
-	client, err := fbgo.NewClient(
-		fbgo.WithCookies(auth.Cookies{
+	client, err := meta.NewClient(
+		meta.WithCookies(auth.Cookies{
 			"c_user": "...",
 			"xs":     "...",
 		}),
-		fbgo.WithE2EE(true),
+		meta.WithE2EE(true),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -29,9 +29,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result, err := client.Messenger.Send(ctx, fbgo.SendRequest{
+	result, err := client.Messenger.Send(ctx, meta.SendRequest{
 		ThreadID: "1234567890",
-		Text:     "hello from fbgo",
+		Text:     "hello from meta",
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -46,7 +46,7 @@ Use either the event channel:
 
 ```go
 for event := range client.Events() {
-	if event.Kind == fbgo.EventMessage && event.Message != nil {
+	if event.Kind == meta.EventMessage && event.Message != nil {
 		log.Printf("message: %s", event.Message.Text)
 	}
 }
@@ -55,7 +55,7 @@ for event := range client.Events() {
 or filtered handlers:
 
 ```go
-unsubscribe := client.On(fbgo.EventMessage, func(event fbgo.Event) {
+unsubscribe := client.On(meta.EventMessage, func(event meta.Event) {
 	// Handler is invoked outside internal locks.
 })
 defer unsubscribe()

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	fberrors "go.mewis.me/fbgo/errors"
+	fberrors "go.mewis.me/meta.go/errors"
 	"io"
 )
 

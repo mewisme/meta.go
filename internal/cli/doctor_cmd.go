@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"go.mewis.me/fbgo"
-	"go.mewis.me/fbgo/auth"
-	"go.mewis.me/fbgo/storage"
+	"go.mewis.me/meta.go"
+	"go.mewis.me/meta.go/auth"
+	"go.mewis.me/meta.go/storage"
 )
 
 type doctorCheck struct {
@@ -27,9 +27,9 @@ type doctorReport struct {
 
 func newDoctorCommand(opts *options) *cobra.Command {
 	online := false
-	cmd := &cobra.Command{Use: "doctor", Short: "Check fbgo configuration and connectivity", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+	cmd := &cobra.Command{Use: "doctor", Short: "Check meta configuration and connectivity", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		report := doctorReport{Online: online}
-		version := fbgo.BuildVersion()
+		version := meta.BuildVersion()
 		report.Checks = append(report.Checks, doctorCheck{Name: "version", OK: true, Detail: fmt.Sprintf("%s %s %s", version.Version, version.Commit, version.GoVersion)})
 		path, err := resolveConfigPath(opts, false)
 		report.Checks = append(report.Checks, doctorCheck{Name: "config", OK: err == nil, Detail: path})
@@ -54,9 +54,9 @@ func newDoctorCommand(opts *options) *cobra.Command {
 			report.Checks = append(report.Checks, doctorCheck{Name: "facebook_connect", OK: err == nil})
 			if client != nil {
 				health := client.Health()
-				report.Checks = append(report.Checks, doctorCheck{Name: "regular_health", OK: health.Regular == fbgo.ConnectionConnected, Detail: string(health.Regular)})
+				report.Checks = append(report.Checks, doctorCheck{Name: "regular_health", OK: health.Regular == meta.ConnectionConnected, Detail: string(health.Regular)})
 				if r.config.E2EE {
-					report.Checks = append(report.Checks, doctorCheck{Name: "e2ee_health", OK: health.E2EE == fbgo.ConnectionConnected, Detail: string(health.E2EE)})
+					report.Checks = append(report.Checks, doctorCheck{Name: "e2ee_health", OK: health.E2EE == meta.ConnectionConnected, Detail: string(health.E2EE)})
 				} else {
 					report.Checks = append(report.Checks, doctorCheck{Name: "e2ee_health", OK: true, Detail: "disabled"})
 				}
@@ -88,7 +88,7 @@ func appendPermissionChecks(report *doctorReport, path string) {
 }
 
 func secretBackendDetail() string {
-	if strings.TrimSpace(os.Getenv("FBGO_MASTER_KEY")) != "" {
+	if strings.TrimSpace(os.Getenv("META_MASTER_KEY")) != "" {
 		return "encrypted-file+environment-master-key"
 	}
 	return "encrypted-file+os-keyring"

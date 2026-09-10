@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/internal/webapi"
-	"go.mewis.me/fbgo/model"
 	"go.mewis.me/meta-extra/pkg/messagix"
 	metaCookies "go.mewis.me/meta-extra/pkg/messagix/cookies"
 	metaHTTP "go.mewis.me/meta-extra/pkg/messagix/httpclient"
 	metaTypes "go.mewis.me/meta-extra/pkg/messagix/types"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/internal/webapi"
+	"go.mewis.me/meta.go/model"
 )
 
 type Session struct {

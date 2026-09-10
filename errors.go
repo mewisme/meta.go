@@ -1,6 +1,6 @@
-package fbgo
+package meta
 
-import fberrors "go.mewis.me/fbgo/errors"
+import fberrors "go.mewis.me/meta.go/errors"
 
 var (
 	ErrUnauthorized       = fberrors.ErrUnauthorized

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/model"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/model"
 )
 
 type fakeBackend struct{}

@@ -1,6 +1,6 @@
 # Migration
 
-fbgo is designed to replace an existing Python Messenger integration at the feature level without requiring the Python runtime architecture.
+meta.go is designed to replace an existing Python Messenger integration at the feature level without requiring the Python runtime architecture.
 
 ## Principles
 
@@ -28,25 +28,25 @@ For JSON exports with supported cookie fields, use `ImportLegacyJSON`. Keep the 
 
 Use `ImportLegacyE2EEState` to stage an existing device-state blob into a profile. The import refuses to overwrite an existing E2EE state entry.
 
-The runtime loader accepts the supported compatibility state representation and converts it into fbgo's versioned device store. Corrupt state fails closed.
+The runtime loader accepts the supported compatibility state representation and converts it into meta.go's versioned device store. Corrupt state fails closed.
 
 ## Application code
 
-Replace dynamic dictionaries/callback payloads with typed fbgo models. Typical mappings are:
+Replace dynamic dictionaries/callback payloads with typed meta.go models. Typical mappings are:
 
 - one client instance per account/profile;
 - `client.Messenger` for regular and encrypted messaging;
 - `client.Threads` for thread operations;
 - `client.Facebook` for Facebook operations;
 - `client.Events()` or `client.On` for realtime events;
-- `errors.Is` plus `fbgo.ClassifyError` for error handling.
+- `errors.Is` plus `meta.ClassifyError` for error handling.
 
 All network operations should inherit the application's `context.Context` and cancellation policy.
 
 ## Cutover sequence
 
 1. Back up the existing cookies and E2EE state.
-2. Create a new fbgo profile and import state without deleting the source.
+2. Create a new meta.go profile and import state without deleting the source.
 3. Validate the session and connect read-only.
 4. Confirm account identity, thread reads and realtime events.
 5. Confirm a regular send/cleanup smoke.

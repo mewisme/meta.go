@@ -1,10 +1,10 @@
 # Security model
 
-fbgo interacts with authenticated Facebook and Messenger sessions. Cookies, passwords, TOTP seeds, one-time codes and E2EE device state must be treated as secrets.
+meta.go interacts with authenticated Facebook and Messenger sessions. Cookies, passwords, TOTP seeds, one-time codes and E2EE device state must be treated as secrets.
 
 ## Secrets at rest
 
-Persistent applications should keep secrets behind `storage.SecretStore`. fbgo's encrypted secret-store layer uses XChaCha20-Poly1305 with authenticated associated data so ciphertext cannot be moved between profile/key slots without detection.
+Persistent applications should keep secrets behind `storage.SecretStore`. meta.go's encrypted secret-store layer uses XChaCha20-Poly1305 with authenticated associated data so ciphertext cannot be moved between profile/key slots without detection.
 
 Secret/profile files use private permissions and atomic replacement. Applications should additionally protect the operating-system account and any keyring/master-key material.
 
@@ -12,7 +12,7 @@ Secret/profile files use private permissions and atomic replacement. Application
 
 The default structured logger is wrapped with redaction for common credential/session keys. Do not add raw cookies, passwords, access tokens, TOTP seeds, E2EE keys or full authentication responses to application logs.
 
-`fbgo.ClassifyError` provides low-cardinality error categories suitable for metrics without using raw server error text as a label.
+`meta.ClassifyError` provides low-cardinality error categories suitable for metrics without using raw server error text as a label.
 
 ## Media downloads
 

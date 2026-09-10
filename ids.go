@@ -1,5 +1,5 @@
-package fbgo
+package meta
 
-import "go.mewis.me/fbgo/model"
+import "go.mewis.me/meta.go/model"
 
 type ID = model.ID

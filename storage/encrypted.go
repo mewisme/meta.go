@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	internalsecrets "go.mewis.me/fbgo/internal/secrets"
+	internalsecrets "go.mewis.me/meta.go/internal/secrets"
 )
 
 var ErrInvalidEncryptionKey = errors.New("invalid secret-store encryption key")
@@ -41,4 +41,4 @@ func (s *EncryptedSecretStore) Delete(ctx context.Context, profile, name string)
 	return s.backend.Delete(ctx, profile, name)
 }
 
-func secretAAD(profile, name string) []byte { return []byte("fbgo:" + profile + ":" + name) }
+func secretAAD(profile, name string) []byte { return []byte("meta:" + profile + ":" + name) }

@@ -1,4 +1,4 @@
-package fbgo
+package meta
 
 import (
 	"bytes"
@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"go.mewis.me/fbgo/auth"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/storage"
+	"go.mewis.me/meta.go/auth"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/storage"
 )
 
 func TestNewClientValidatesOptions(t *testing.T) {

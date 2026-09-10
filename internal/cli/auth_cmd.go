@@ -11,9 +11,9 @@ import (
 
 	"charm.land/huh/v2"
 	"github.com/spf13/cobra"
-	"go.mewis.me/fbgo/auth"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/storage"
+	"go.mewis.me/meta.go/auth"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/storage"
 	"golang.org/x/term"
 )
 

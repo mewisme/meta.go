@@ -1,4 +1,4 @@
-# Releasing fbgo
+# Releasing meta.go
 
 This document describes release preparation. Publishing is intentionally a separate, explicit action.
 
@@ -57,13 +57,13 @@ Do not reuse or move an existing release tag. If a released build needs a fix, c
 Verify checksums locally:
 
 ```sh
-sha256sum -c fbgo_VERSION_checksums.txt
+sha256sum -c meta_VERSION_checksums.txt
 ```
 
 Verify GitHub provenance with GitHub CLI:
 
 ```sh
-gh attestation verify <artifact> --repo mewisme/fbgo
+gh attestation verify <artifact> --repo mewisme/meta.go
 ```
 
 Then perform at least one regular Messenger live smoke and one E2EE live smoke using the published release candidate before declaring the version stable.

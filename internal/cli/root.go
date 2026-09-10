@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"go.mewis.me/fbgo"
-	fberrors "go.mewis.me/fbgo/errors"
+	"go.mewis.me/meta.go"
+	fberrors "go.mewis.me/meta.go/errors"
 )
 
 type options struct {
@@ -25,7 +25,7 @@ type options struct {
 func New() *cobra.Command {
 	opts := new(options)
 	root := &cobra.Command{
-		Use:               "fbgo",
+		Use:               "meta",
 		Short:             "Facebook Messenger client and automation toolkit",
 		SilenceUsage:      true,
 		SilenceErrors:     true,
@@ -52,16 +52,16 @@ func newVersionCommand(opts *options) *cobra.Command {
 		Short: "Print build version",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return writeVersion(cmd.OutOrStdout(), opts.json, opts.jqo, fbgo.BuildVersion())
+			return writeVersion(cmd.OutOrStdout(), opts.json, opts.jqo, meta.BuildVersion())
 		},
 	}
 }
 
-func writeVersion(out io.Writer, asJSON bool, selector string, info fbgo.VersionInfo) error {
+func writeVersion(out io.Writer, asJSON bool, selector string, info meta.VersionInfo) error {
 	if asJSON {
 		return writeJSONOutput(out, outputEnvelope{OK: true, Data: info}, selector)
 	}
-	_, err := fmt.Fprintf(out, "fbgo %s (%s) %s\n", info.Version, info.Commit, info.GoVersion)
+	_, err := fmt.Fprintf(out, "meta %s (%s) %s\n", info.Version, info.Commit, info.GoVersion)
 	return err
 }
 

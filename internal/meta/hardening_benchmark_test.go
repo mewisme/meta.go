@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"go.mewis.me/meta-extra/pkg/messagix/table"
-	fberrors "go.mewis.me/fbgo/errors"
-	"go.mewis.me/fbgo/model"
+	fberrors "go.mewis.me/meta.go/errors"
+	"go.mewis.me/meta.go/model"
 )
 
 func BenchmarkEventConversion(b *testing.B) {

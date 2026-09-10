@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.mewis.me/fbgo/internal/fsutil"
+	"go.mewis.me/meta.go/internal/fsutil"
 )
 
 type FileSecretStore struct {

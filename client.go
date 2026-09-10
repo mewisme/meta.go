@@ -1,4 +1,4 @@
-package fbgo
+package meta
 
 import (
 	"context"
@@ -10,18 +10,18 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"go.mewis.me/fbgo/auth"
-	fberrors "go.mewis.me/fbgo/errors"
-	facebookservice "go.mewis.me/fbgo/facebook"
-	"go.mewis.me/fbgo/internal/logging"
-	"go.mewis.me/fbgo/internal/meta"
-	"go.mewis.me/fbgo/messenger"
-	"go.mewis.me/fbgo/model"
-	"go.mewis.me/fbgo/storage"
-	threadservice "go.mewis.me/fbgo/thread"
+	"go.mewis.me/meta.go/auth"
+	fberrors "go.mewis.me/meta.go/errors"
+	facebookservice "go.mewis.me/meta.go/facebook"
+	"go.mewis.me/meta.go/internal/logging"
+	"go.mewis.me/meta.go/internal/meta"
+	"go.mewis.me/meta.go/messenger"
+	"go.mewis.me/meta.go/model"
+	"go.mewis.me/meta.go/storage"
+	threadservice "go.mewis.me/meta.go/thread"
 )
 
-// Client is the root fbgo client. Feature services are attached as the
+// Client is the root meta client. Feature services are attached as the
 // implementation phases add their transport capabilities.
 type Client struct {
 	Messenger *messenger.Service
@@ -78,14 +78,14 @@ func NewClient(opts ...Option) (*Client, error) {
 
 func (c *Client) Connect(ctx context.Context) error {
 	if c == nil {
-		return errors.New("nil fbgo client")
+		return errors.New("nil meta client")
 	}
 	c.connectMu.Lock()
 	defer c.connectMu.Unlock()
 	c.mu.RLock()
 	if c.closed {
 		c.mu.RUnlock()
-		return errors.New("fbgo client is closed")
+		return errors.New("meta client is closed")
 	}
 	if c.engine != nil && c.engine.Connected() {
 		c.mu.RUnlock()
@@ -137,7 +137,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	if c.closed {
 		c.mu.Unlock()
 		engine.Close()
-		return errors.New("fbgo client is closed")
+		return errors.New("meta client is closed")
 	}
 	c.engine = engine
 	c.account = model.User{ID: account.ID, Name: account.Name, Username: account.Username}

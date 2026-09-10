@@ -1,4 +1,4 @@
-# fbgo documentation
+# meta.go documentation
 
 - [Installation](installation.md)
 - [Library quick start](library-quickstart.md)

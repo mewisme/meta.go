@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/itchyny/gojq"
-	fberrors "go.mewis.me/fbgo/errors"
+	fberrors "go.mewis.me/meta.go/errors"
 )
 
 func applyJQ(selector string, value any) ([]any, error) {
