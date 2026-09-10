@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package meta.v1;
+
+import "meta/v1/common.proto";
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+service RuntimeService {
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+}
+
+message GetInfoRequest {}
+
+message GetInfoResponse {
+  ProtocolVersion protocol = 1;
+  BuildInfo build = 2;
+  repeated string capabilities = 3;
+}

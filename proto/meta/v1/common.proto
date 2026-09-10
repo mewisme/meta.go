@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package meta.v1;
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+message ProtocolVersion {
+  uint32 major = 1;
+  uint32 minor = 2;
+}
+
+message BuildInfo {
+  string version = 1;
+  string commit = 2;
+  string go_version = 3;
+  string os = 4;
+  string arch = 5;
+}
+
+enum ErrorCategory {
+  ERROR_CATEGORY_UNSPECIFIED = 0;
+  ERROR_CATEGORY_UNKNOWN = 1;
+  ERROR_CATEGORY_AUTH = 2;
+  ERROR_CATEGORY_CHECKPOINT = 3;
+  ERROR_CATEGORY_RATE_LIMIT = 4;
+  ERROR_CATEGORY_INVALID_INPUT = 5;
+  ERROR_CATEGORY_CONNECTION = 6;
+  ERROR_CATEGORY_E2EE = 7;
+  ERROR_CATEGORY_PROTOCOL = 8;
+  ERROR_CATEGORY_PERMISSION = 9;
+  ERROR_CATEGORY_NETWORK = 10;
+  ERROR_CATEGORY_CANCELED = 11;
+}
+
+message ErrorDetail {
+  ErrorCategory category = 1;
+  string code = 2;
+  string message = 3;
+  bool retryable = 4;
+  map<string, string> details = 5;
+}
+
+message Account {
+  string id = 1;
+  string name = 2;
+  string username = 3;
+}

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package meta.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+enum ConnectionState {
+  CONNECTION_STATE_UNSPECIFIED = 0;
+  CONNECTION_STATE_DISCONNECTED = 1;
+  CONNECTION_STATE_CONNECTING = 2;
+  CONNECTION_STATE_CONNECTED = 3;
+  CONNECTION_STATE_FAILED = 4;
+}
+
+message HealthSnapshot {
+  ConnectionState regular = 1;
+  ConnectionState e2ee = 2;
+  uint64 reconnect_count = 3;
+  uint64 engine_dropped_event_count = 4;
+  uint64 subscriber_dropped_event_count = 5;
+  google.protobuf.Timestamp last_successful_send = 6;
+  google.protobuf.Timestamp last_receive = 7;
+  string last_error_category = 8;
+}

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package meta.v1;
+
+import "google/protobuf/duration.proto";
+import "meta/v1/common.proto";
+import "meta/v1/health.proto";
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+service SessionService {
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc Connect(ConnectRequest) returns (ConnectResponse);
+  rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse);
+  rpc GetHealth(GetHealthRequest) returns (GetHealthResponse);
+}
+
+message CreateSessionRequest {
+  map<string, string> cookies = 1;
+  bool e2ee = 2;
+  uint32 event_buffer = 3;
+  google.protobuf.Duration timeout = 4;
+}
+
+message CreateSessionResponse {
+  string session_id = 1;
+}
+
+message ConnectRequest {
+  string session_id = 1;
+}
+
+message ConnectResponse {
+  Account account = 1;
+}
+
+message CloseSessionRequest {
+  string session_id = 1;
+}
+
+message CloseSessionResponse {}
+
+message GetHealthRequest {
+  string session_id = 1;
+}
+
+message GetHealthResponse {
+  HealthSnapshot health = 1;
+}

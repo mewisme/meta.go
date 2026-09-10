@@ -20,6 +20,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: go mod verify
+      - run: ./scripts/proto.sh check
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
