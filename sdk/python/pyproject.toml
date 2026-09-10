@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "meewmeew-meta"
+version = "0.0.0"
+description = "Async Python SDK for the meta.go runtime"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [{name = "Mew"}]
+dependencies = [
+  "grpcio>=1.76,<2",
+  "protobuf>=7.36.1,<8",
+]
+
+[project.urls]
+Repository = "https://github.com/mewisme/meta.go"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.2,<2",
+  "ruff>=0.13,<1",
+  "types-grpcio>=1.83.0.20260730",
+  "types-protobuf>=7.35.1.20260906",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/meewmeew_meta", "src/meta"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["meewmeew_meta"]
+mypy_path = "src"

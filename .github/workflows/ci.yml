@@ -85,6 +85,25 @@ jobs:
       - working-directory: sdk/node
         run: npm pack --dry-run
 
+  python-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.10"
+      - run: uv sync --directory sdk/python --frozen --all-groups
+      - run: ./scripts/proto.sh check-python
+      - run: uv run --directory sdk/python ruff check src/meewmeew_meta tests
+      - run: uv run --directory sdk/python ruff format --check src/meewmeew_meta tests
+      - run: uv run --directory sdk/python mypy src/meewmeew_meta
+      - run: uv run --directory sdk/python pytest
+      - run: uv build --directory sdk/python
+
   release-config:
     runs-on: ubuntu-latest
     steps:

@@ -42,6 +42,32 @@ generate_node() {
   return "$status"
 }
 
+generate_python() {
+  image_dir=$(mktemp -d)
+  image="$image_dir/image.binpb"
+  generated="$ROOT/sdk/python/.generated"
+  status=0
+  rm -rf "$generated"
+  (
+    cd "$ROOT"
+    run_buf lint
+    run_buf build --exclude-source-info -o "$image"
+    run_buf generate "$image" --template sdk/python/buf.gen.yaml
+    python3 - <<'PY_NORMALIZE'
+from pathlib import Path
+for path in Path("sdk/python/.generated/meta").rglob("*"):
+    if path.is_file() and path.suffix in {".py", ".pyi"}:
+        path.write_text(path.read_text().rstrip() + "\n")
+PY_NORMALIZE
+    rm -rf sdk/python/src/meta
+    mkdir -p sdk/python/src
+    cp -R sdk/python/.generated/meta sdk/python/src/meta
+    touch sdk/python/src/meta/__init__.py sdk/python/src/meta/py.typed sdk/python/src/meta/v1/__init__.py
+  ) || status=$?
+  rm -rf "$image_dir" "$generated"
+  return "$status"
+}
+
 case "${1:-check}" in
   generate)
     generate
@@ -61,13 +87,21 @@ case "${1:-check}" in
     git -C "$ROOT" diff --exit-code -- sdk/node/src/gen
     test -z "$(git -C "$ROOT" ls-files --others --exclude-standard -- sdk/node/src/gen)"
     ;;
+  generate-python)
+    generate_python
+    ;;
+  check-python)
+    generate_python
+    git -C "$ROOT" diff --exit-code -- sdk/python/src/meta
+    test -z "$(git -C "$ROOT" ls-files --others --exclude-standard -- sdk/python/src/meta)"
+    ;;
   check)
     generate
     git -C "$ROOT" diff --exit-code -- proto gen/go buf.yaml buf.gen.yaml
     test -z "$(git -C "$ROOT" ls-files --others --exclude-standard -- proto gen/go)"
     ;;
   *)
-    echo "usage: $0 {generate|generate-node|lint|breaking [baseline]|check|check-node}" >&2
+    echo "usage: $0 {generate|generate-node|generate-python|lint|breaking [baseline]|check|check-node|check-python}" >&2
     exit 2
     ;;
 esac

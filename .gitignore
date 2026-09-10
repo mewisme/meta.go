@@ -11,3 +11,10 @@ go.work.sum
 /meta.exe
 node_modules/
 /sdk/node/dist/
+/sdk/python/.generated/
+/sdk/python/.venv/
+/sdk/python/dist/
+/sdk/python/.mypy_cache/
+/sdk/python/.pytest_cache/
+/sdk/python/.ruff_cache/
+__pycache__/
