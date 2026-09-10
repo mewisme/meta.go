@@ -17,17 +17,17 @@ import (
 	"go.mewis.me/meta.go/facebook"
 	metav1 "go.mewis.me/meta.go/gen/go/meta/v1"
 	"go.mewis.me/meta.go/internal/runtime/session"
-	"go.mewis.me/meta.go/messenger"
 	"go.mewis.me/meta.go/model"
-	"go.mewis.me/meta.go/thread"
 )
 
 type runtimeFakeClient struct {
-	account  model.User
-	health   model.HealthSnapshot
-	connects int
-	closes   int
-	handler  func(model.Event)
+	account   model.User
+	health    model.HealthSnapshot
+	connects  int
+	closes    int
+	handler   func(model.Event)
+	messenger session.Messenger
+	threads   session.Threads
 }
 
 func (f *runtimeFakeClient) Connect(context.Context) error {
@@ -40,11 +40,11 @@ func (f *runtimeFakeClient) Close() error {
 	return nil
 }
 
-func (f *runtimeFakeClient) Health() model.HealthSnapshot         { return f.health }
-func (f *runtimeFakeClient) Account() model.User                  { return f.account }
-func (f *runtimeFakeClient) MessengerService() *messenger.Service { return nil }
-func (f *runtimeFakeClient) ThreadService() *thread.Service       { return nil }
-func (f *runtimeFakeClient) FacebookService() *facebook.Service   { return nil }
+func (f *runtimeFakeClient) Health() model.HealthSnapshot        { return f.health }
+func (f *runtimeFakeClient) Account() model.User                 { return f.account }
+func (f *runtimeFakeClient) MessengerService() session.Messenger { return f.messenger }
+func (f *runtimeFakeClient) ThreadService() session.Threads      { return f.threads }
+func (f *runtimeFakeClient) FacebookService() *facebook.Service  { return nil }
 func (f *runtimeFakeClient) Subscribe(handler func(model.Event)) func() {
 	f.handler = handler
 	return func() { f.handler = nil }

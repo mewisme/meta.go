@@ -12,9 +12,7 @@ import (
 	metago "go.mewis.me/meta.go"
 	"go.mewis.me/meta.go/auth"
 	"go.mewis.me/meta.go/facebook"
-	"go.mewis.me/meta.go/messenger"
 	"go.mewis.me/meta.go/model"
-	"go.mewis.me/meta.go/thread"
 )
 
 var (
@@ -29,13 +27,58 @@ type Config struct {
 	Timeout     time.Duration
 }
 
+type Messenger interface {
+	Send(context.Context, model.SendRequest) (model.SendResult, error)
+	Forward(context.Context, model.ID, model.ID) (model.SendResult, error)
+	ShareContact(context.Context, model.ID, model.ID, string) error
+	React(context.Context, model.ID, model.ID, string) error
+	Edit(context.Context, model.ID, string) error
+	Unsend(context.Context, model.ID) error
+	Typing(context.Context, model.ID, bool, bool, int64) error
+	Read(context.Context, model.ID, time.Time) error
+	MessageRequests(context.Context) ([]model.MessageRequest, error)
+	Themes(context.Context) ([]model.Theme, error)
+	FindTheme(context.Context, string) (*model.Theme, error)
+	SetTheme(context.Context, model.ID, model.ID) error
+	CurrentNote(context.Context) (*model.Note, error)
+	CreateNote(context.Context, string, string) (*model.Note, error)
+	DeleteNote(context.Context, model.ID) error
+	RecreateNote(context.Context, model.ID, string, string) (*model.Note, error)
+	SetRestricted(context.Context, model.ID, bool) error
+	SetMessageBlocked(context.Context, model.ID, bool) error
+}
+
+type Threads interface {
+	List(context.Context, int) (model.ThreadList, error)
+	Get(context.Context, model.ID) (*model.Thread, error)
+	CreatePoll(context.Context, model.ID, string, []string) error
+	VotePoll(context.Context, model.ID, model.ID, []model.ID) error
+	PinnedMessages(context.Context, model.ID) ([]model.PinnedMessage, error)
+	PollDetails(context.Context, model.ID) (*model.PollDetails, error)
+	SearchMessages(context.Context, model.MessageSearchRequest) (*model.MessageSearchPage, error)
+	Mute(context.Context, model.ID, time.Duration) error
+	MuteCalls(context.Context, model.ID, time.Duration) error
+	SetApprovalMode(context.Context, model.ID, bool) error
+	SetArchived(context.Context, model.ID, bool) error
+	PinMessage(context.Context, model.ID, model.ID) error
+	UnpinMessage(context.Context, model.ID, model.ID) error
+	Delete(context.Context, model.ID) error
+	CreateDM(context.Context, model.ID) (model.ID, error)
+	SearchUsers(context.Context, string) ([]model.User, error)
+	GetContact(context.Context, model.ID) (*model.User, error)
+	SetAdmin(context.Context, model.ID, model.ID, bool) error
+	SetName(context.Context, model.ID, string) error
+	SetEmoji(context.Context, model.ID, string) error
+	SetNickname(context.Context, model.ID, model.ID, string) error
+}
+
 type Client interface {
 	Connect(context.Context) error
 	Close() error
 	Health() model.HealthSnapshot
 	Account() model.User
-	MessengerService() *messenger.Service
-	ThreadService() *thread.Service
+	MessengerService() Messenger
+	ThreadService() Threads
 	FacebookService() *facebook.Service
 	Subscribe(func(model.Event)) func()
 }
@@ -59,13 +102,13 @@ func newManagedClient(config Config) (Client, error) {
 	return &managedClient{client: client}, nil
 }
 
-func (c *managedClient) Connect(ctx context.Context) error    { return c.client.Connect(ctx) }
-func (c *managedClient) Close() error                         { return c.client.Close() }
-func (c *managedClient) Health() model.HealthSnapshot         { return c.client.Health() }
-func (c *managedClient) Account() model.User                  { return c.client.Account() }
-func (c *managedClient) MessengerService() *messenger.Service { return c.client.Messenger }
-func (c *managedClient) ThreadService() *thread.Service       { return c.client.Threads }
-func (c *managedClient) FacebookService() *facebook.Service   { return c.client.Facebook }
+func (c *managedClient) Connect(ctx context.Context) error  { return c.client.Connect(ctx) }
+func (c *managedClient) Close() error                       { return c.client.Close() }
+func (c *managedClient) Health() model.HealthSnapshot       { return c.client.Health() }
+func (c *managedClient) Account() model.User                { return c.client.Account() }
+func (c *managedClient) MessengerService() Messenger        { return c.client.Messenger }
+func (c *managedClient) ThreadService() Threads             { return c.client.Threads }
+func (c *managedClient) FacebookService() *facebook.Service { return c.client.Facebook }
 func (c *managedClient) Subscribe(handler func(model.Event)) func() {
 	return c.client.On("", handler)
 }

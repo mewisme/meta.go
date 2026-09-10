@@ -35,7 +35,7 @@ func run(args []string) int {
 		return 1
 	}
 	defer listener.Close()
-	runtimeServer, err := server.New(server.Config{Token: os.Getenv("META_RUNTIME_TOKEN"), Capabilities: []string{"runtime.info", "session.lifecycle", "session.health"}})
+	runtimeServer, err := server.New(server.Config{Token: os.Getenv("META_RUNTIME_TOKEN"), Capabilities: []string{"messenger.controls", "messenger.notes", "messenger.polls", "messenger.search", "messenger.send", "messenger.threads", "runtime.info", "session.events", "session.health", "session.lifecycle"}})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1

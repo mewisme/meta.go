@@ -1,0 +1,271 @@
+syntax = "proto3";
+
+package meta.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "meta/v1/common.proto";
+
+option go_package = "go.mewis.me/meta.go/gen/go/meta/v1;metav1";
+
+service MessengerService {
+  rpc Send(SendRequest) returns (SendResponse);
+  rpc Forward(ForwardRequest) returns (ForwardResponse);
+  rpc ShareContact(ShareContactRequest) returns (ShareContactResponse);
+  rpc React(ReactRequest) returns (ReactResponse);
+  rpc Edit(EditRequest) returns (EditResponse);
+  rpc Unsend(UnsendRequest) returns (UnsendResponse);
+  rpc SetTyping(SetTypingRequest) returns (SetTypingResponse);
+  rpc MarkRead(MarkReadRequest) returns (MarkReadResponse);
+  rpc ListMessageRequests(ListMessageRequestsRequest) returns (ListMessageRequestsResponse);
+  rpc ListThemes(ListThemesRequest) returns (ListThemesResponse);
+  rpc FindTheme(FindThemeRequest) returns (FindThemeResponse);
+  rpc SetTheme(SetThemeRequest) returns (SetThemeResponse);
+  rpc GetCurrentNote(GetCurrentNoteRequest) returns (GetCurrentNoteResponse);
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
+  rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse);
+  rpc RecreateNote(RecreateNoteRequest) returns (RecreateNoteResponse);
+  rpc SetRestricted(SetRestrictedRequest) returns (SetRestrictedResponse);
+  rpc SetMessageBlocked(SetMessageBlockedRequest) returns (SetMessageBlockedResponse);
+  rpc ListThreads(ListThreadsRequest) returns (ListThreadsResponse);
+  rpc GetThread(GetThreadRequest) returns (GetThreadResponse);
+  rpc CreatePoll(CreatePollRequest) returns (CreatePollResponse);
+  rpc VotePoll(VotePollRequest) returns (VotePollResponse);
+  rpc ListPinnedMessages(ListPinnedMessagesRequest) returns (ListPinnedMessagesResponse);
+  rpc GetPollDetails(GetPollDetailsRequest) returns (GetPollDetailsResponse);
+  rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
+  rpc MuteThread(MuteThreadRequest) returns (MuteThreadResponse);
+  rpc MuteThreadCalls(MuteThreadCallsRequest) returns (MuteThreadCallsResponse);
+  rpc SetApprovalMode(SetApprovalModeRequest) returns (SetApprovalModeResponse);
+  rpc SetArchived(SetArchivedRequest) returns (SetArchivedResponse);
+  rpc SetMessagePinned(SetMessagePinnedRequest) returns (SetMessagePinnedResponse);
+  rpc DeleteThread(DeleteThreadRequest) returns (DeleteThreadResponse);
+  rpc CreateDM(CreateDMRequest) returns (CreateDMResponse);
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+  rpc GetContact(GetContactRequest) returns (GetContactResponse);
+  rpc SetAdmin(SetAdminRequest) returns (SetAdminResponse);
+  rpc SetThreadName(SetThreadNameRequest) returns (SetThreadNameResponse);
+  rpc SetThreadEmoji(SetThreadEmojiRequest) returns (SetThreadEmojiResponse);
+  rpc SetNickname(SetNicknameRequest) returns (SetNicknameResponse);
+}
+
+enum EncryptionPolicy {
+  ENCRYPTION_POLICY_UNSPECIFIED = 0;
+  ENCRYPTION_POLICY_AUTO = 1;
+  ENCRYPTION_POLICY_REQUIRED = 2;
+  ENCRYPTION_POLICY_DISABLED = 3;
+}
+
+enum MessengerBlockStatus {
+  MESSENGER_BLOCK_STATUS_UNSPECIFIED = 0;
+  MESSENGER_BLOCK_STATUS_UNKNOWN = 1;
+  MESSENGER_BLOCK_STATUS_UNBLOCKED = 2;
+  MESSENGER_BLOCK_STATUS_MESSAGE_BLOCKED = 3;
+  MESSENGER_BLOCK_STATUS_FULLY_BLOCKED = 4;
+}
+
+message User {
+  string id = 1;
+  string name = 2;
+  string first_name = 3;
+  string username = 4;
+  string profile_url = 5;
+  string avatar_url = 6;
+  string gender = 7;
+  bool is_messenger_user = 8;
+  bool is_verified = 9;
+  bool can_viewer_message = 10;
+  bool messenger_restricted = 11;
+  MessengerBlockStatus messenger_block_status = 12;
+}
+
+message Thread {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  repeated User participants = 4;
+  repeated string admins = 5;
+  map<string, string> nicknames = 6;
+  string emoji = 7;
+  int64 message_count = 8;
+  bool approval_mode = 9;
+  bool joinable = 10;
+  string joinable_url = 11;
+  google.protobuf.Timestamp last_activity = 12;
+}
+
+message PinnedMessage {
+  string thread_id = 1;
+  string message_id = 2;
+  google.protobuf.Timestamp pinned_at = 3;
+  int64 authority_level = 4;
+}
+
+message PollOption {
+  string id = 1;
+  string text = 2;
+  google.protobuf.Timestamp sort_key_voting_timestamp = 3;
+  google.protobuf.Timestamp sort_key_creation_timestamp = 4;
+}
+
+message PollVote {
+  string option_id = 1;
+  string contact_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  int64 vote_count = 4;
+  string thread_id = 5;
+  string message_id = 6;
+}
+
+message PollDetails {
+  string id = 1;
+  string thread_id = 2;
+  string title = 3;
+  string last_update_message_id = 4;
+  google.protobuf.Timestamp last_update_message_timestamp = 5;
+  int64 last_update_message_event_type = 6;
+  repeated PollOption options = 7;
+  repeated PollVote votes = 8;
+}
+
+message MessageSearchHighlight {
+  int32 offset = 1;
+  int32 length = 2;
+}
+
+message MessageSearchResult {
+  string message_id = 1;
+  string thread_id = 2;
+  string thread_type = 3;
+  int64 global_index = 4;
+  string sender_name = 5;
+  string sender_avatar_url = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  string text = 8;
+  repeated MessageSearchHighlight highlights = 9;
+}
+
+message MessageRequest {
+  string sender_id = 1;
+  string snippet = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message Theme {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string app_color_mode = 4;
+  string composer_background_color = 5;
+  repeated string background_gradient_colors = 6;
+  string title_bar_button_tint_color = 7;
+  repeated string inbound_message_gradient_colors = 8;
+  string title_bar_text_color = 9;
+  string composer_tint_color = 10;
+  string title_bar_attribution_color = 11;
+  string composer_input_background_color = 12;
+  string hot_like_color = 13;
+  string background_image = 14;
+  string message_text_color = 15;
+  string inbound_message_text_color = 16;
+  string primary_button_background_color = 17;
+  string title_bar_background_color = 18;
+  string tertiary_text_color = 19;
+  string reaction_pill_background_color = 20;
+  string secondary_text_color = 21;
+  string fallback_color = 22;
+  repeated string gradient_colors = 23;
+  string normal_theme_id = 24;
+  string icon_asset = 25;
+}
+
+message Note {
+  string id = 1;
+  string description = 2;
+}
+
+message SendRequest {
+  string session_id = 1;
+  string thread_id = 2;
+  string text = 3;
+  ReplyReference reply_to = 4;
+  repeated Mention mentions = 5;
+  string sticker_id = 6;
+  string url = 7;
+  EncryptionPolicy encryption = 8;
+}
+message SendResponse { string message_id = 1; google.protobuf.Timestamp timestamp = 2; }
+message ForwardRequest { string session_id = 1; string thread_id = 2; string message_id = 3; }
+message ForwardResponse { string message_id = 1; google.protobuf.Timestamp timestamp = 2; }
+message ShareContactRequest { string session_id = 1; string thread_id = 2; string contact_id = 3; string text = 4; }
+message ShareContactResponse {}
+message ReactRequest { string session_id = 1; string thread_id = 2; string message_id = 3; string reaction = 4; }
+message ReactResponse {}
+message EditRequest { string session_id = 1; string message_id = 2; string text = 3; }
+message EditResponse {}
+message UnsendRequest { string session_id = 1; string message_id = 2; }
+message UnsendResponse {}
+message SetTypingRequest { string session_id = 1; string thread_id = 2; bool typing = 3; bool group = 4; int64 thread_type = 5; }
+message SetTypingResponse {}
+message MarkReadRequest { string session_id = 1; string thread_id = 2; google.protobuf.Timestamp watermark = 3; }
+message MarkReadResponse {}
+message ListMessageRequestsRequest { string session_id = 1; }
+message ListMessageRequestsResponse { repeated MessageRequest requests = 1; }
+message ListThemesRequest { string session_id = 1; }
+message ListThemesResponse { repeated Theme themes = 1; }
+message FindThemeRequest { string session_id = 1; string query = 2; }
+message FindThemeResponse { Theme theme = 1; }
+message SetThemeRequest { string session_id = 1; string thread_id = 2; string theme_id = 3; }
+message SetThemeResponse {}
+message GetCurrentNoteRequest { string session_id = 1; }
+message GetCurrentNoteResponse { Note note = 1; }
+message CreateNoteRequest { string session_id = 1; string text = 2; string privacy = 3; }
+message CreateNoteResponse { Note note = 1; }
+message DeleteNoteRequest { string session_id = 1; string note_id = 2; }
+message DeleteNoteResponse {}
+message RecreateNoteRequest { string session_id = 1; string old_note_id = 2; string text = 3; string privacy = 4; }
+message RecreateNoteResponse { Note note = 1; }
+message SetRestrictedRequest { string session_id = 1; string user_id = 2; bool restricted = 3; }
+message SetRestrictedResponse {}
+message SetMessageBlockedRequest { string session_id = 1; string user_id = 2; bool blocked = 3; }
+message SetMessageBlockedResponse {}
+message ListThreadsRequest { string session_id = 1; int32 limit = 2; }
+message ListThreadsResponse { repeated Thread threads = 1; int64 sync_sequence_id = 2; }
+message GetThreadRequest { string session_id = 1; string thread_id = 2; }
+message GetThreadResponse { Thread thread = 1; }
+message CreatePollRequest { string session_id = 1; string thread_id = 2; string question = 3; repeated string options = 4; }
+message CreatePollResponse {}
+message VotePollRequest { string session_id = 1; string thread_id = 2; string poll_id = 3; repeated string option_ids = 4; }
+message VotePollResponse {}
+message ListPinnedMessagesRequest { string session_id = 1; string thread_id = 2; }
+message ListPinnedMessagesResponse { repeated PinnedMessage messages = 1; }
+message GetPollDetailsRequest { string session_id = 1; string poll_id = 2; }
+message GetPollDetailsResponse { PollDetails poll = 1; }
+message SearchMessagesRequest { string session_id = 1; string thread_id = 2; string query = 3; optional string cursor = 4; }
+message SearchMessagesResponse { repeated MessageSearchResult results = 1; int64 result_count = 2; bool has_next_page = 3; optional string next_cursor = 4; }
+message MuteThreadRequest { string session_id = 1; string thread_id = 2; google.protobuf.Duration duration = 3; bool indefinitely = 4; }
+message MuteThreadResponse {}
+message MuteThreadCallsRequest { string session_id = 1; string thread_id = 2; google.protobuf.Duration duration = 3; bool indefinitely = 4; }
+message MuteThreadCallsResponse {}
+message SetApprovalModeRequest { string session_id = 1; string thread_id = 2; bool enabled = 3; }
+message SetApprovalModeResponse {}
+message SetArchivedRequest { string session_id = 1; string thread_id = 2; bool archived = 3; }
+message SetArchivedResponse {}
+message SetMessagePinnedRequest { string session_id = 1; string thread_id = 2; string message_id = 3; bool pinned = 4; }
+message SetMessagePinnedResponse {}
+message DeleteThreadRequest { string session_id = 1; string thread_id = 2; }
+message DeleteThreadResponse {}
+message CreateDMRequest { string session_id = 1; string user_id = 2; }
+message CreateDMResponse { string thread_id = 1; }
+message SearchUsersRequest { string session_id = 1; string query = 2; }
+message SearchUsersResponse { repeated User users = 1; }
+message GetContactRequest { string session_id = 1; string user_id = 2; }
+message GetContactResponse { User user = 1; }
+message SetAdminRequest { string session_id = 1; string thread_id = 2; string user_id = 3; bool admin = 4; }
+message SetAdminResponse {}
+message SetThreadNameRequest { string session_id = 1; string thread_id = 2; string name = 3; }
+message SetThreadNameResponse {}
+message SetThreadEmojiRequest { string session_id = 1; string thread_id = 2; string emoji = 3; }
+message SetThreadEmojiResponse {}
+message SetNicknameRequest { string session_id = 1; string thread_id = 2; string user_id = 3; string nickname = 4; }
+message SetNicknameResponse {}

@@ -53,6 +53,7 @@ func New(config Config) (*Server, error) {
 	s.grpc = grpc.NewServer(grpc.UnaryInterceptor(unaryAuth(token)), grpc.StreamInterceptor(streamAuth(token)))
 	metav1.RegisterRuntimeServiceServer(s.grpc, &runtimeService{server: s})
 	metav1.RegisterSessionServiceServer(s.grpc, &sessionService{server: s})
+	metav1.RegisterMessengerServiceServer(s.grpc, &messengerService{server: s})
 	return s, nil
 }
 
