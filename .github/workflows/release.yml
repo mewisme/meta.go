@@ -10,6 +10,15 @@ on:
         description: Existing release tag to resume
         required: true
         type: string
+      release_only:
+        description: Resume only the Go/GitHub release using artifacts from a previous run
+        required: false
+        default: false
+        type: boolean
+      artifact_run_id:
+        description: Previous release workflow run ID containing runtime artifacts
+        required: false
+        type: string
       skip_node_runtime:
         description: Skip an already published Node runtime
         required: false
@@ -56,16 +65,20 @@ jobs:
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: echo "version=$(bash scripts/release-version.sh "$RELEASE_TAG")" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@v7
+        if: github.event_name != 'workflow_dispatch' || !inputs.release_only
         with:
           go-version-file: go.mod
           cache: true
       - uses: actions/setup-node@v7
+        if: github.event_name != 'workflow_dispatch' || !inputs.release_only
         with:
           node-version: 24
       - uses: astral-sh/setup-uv@v10.0.1
+        if: github.event_name != 'workflow_dispatch' || !inputs.release_only
         with:
           version: "0.12.10"
       - name: Verify source
+        if: github.event_name != 'workflow_dispatch' || !inputs.release_only
         run: |
           corepack enable
           corepack prepare pnpm@11.25.0 --activate
@@ -87,6 +100,7 @@ jobs:
           uv run --directory sdk/python pytest
 
   build-runtime:
+    if: github.event_name != 'workflow_dispatch' || !inputs.release_only
     needs: validate
     runs-on: ubuntu-latest
     strategy:
@@ -220,6 +234,7 @@ jobs:
           if-no-files-found: error
 
   package-node-sdk:
+    if: github.event_name != 'workflow_dispatch' || !inputs.release_only
     needs: validate
     runs-on: ubuntu-latest
     steps:
@@ -246,6 +261,7 @@ jobs:
           if-no-files-found: error
 
   package-python-sdk:
+    if: github.event_name != 'workflow_dispatch' || !inputs.release_only
     needs: validate
     runs-on: ubuntu-latest
     steps:
@@ -373,7 +389,7 @@ jobs:
           packages-dir: dist
 
   release-go:
-    if: always() && needs.validate.result == 'success' && needs.build-runtime.result == 'success' && (needs.publish-node-sdk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_node_sdk)) && (needs.publish-python-sdk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_python_sdk))
+    if: always() && needs.validate.result == 'success' && ((github.event_name == 'workflow_dispatch' && inputs.release_only) || (needs.build-runtime.result == 'success' && (needs.publish-node-sdk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_node_sdk)) && (needs.publish-python-sdk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_python_sdk))))
     needs: [validate, build-runtime, publish-node-sdk, publish-python-sdk]
     runs-on: ubuntu-latest
     permissions:
@@ -385,6 +401,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_only && inputs.tag || github.ref }}
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
@@ -394,6 +411,9 @@ jobs:
           pattern: runtime-*
           path: ${{ runner.temp }}/runtime-dist
           merge-multiple: true
+          run-id: ${{ github.event_name == 'workflow_dispatch' && inputs.release_only && inputs.artifact_run_id || github.run_id }}
+          repository: ${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Runtime checksums
         env:
           VERSION: ${{ needs.validate.outputs.version }}
