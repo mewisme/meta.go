@@ -8,6 +8,7 @@
   "bin": {"meta-runtime": "./meta-runtime"},
   "os": ["darwin"],
   "cpu": ["arm64"],
+  "repository": {"type": "git", "url": "https://github.com/mewisme/meta.go"},
   "license": "AGPL-3.0-only",
   "publishConfig": {"access": "public"}
 }
