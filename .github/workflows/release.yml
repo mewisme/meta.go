@@ -10,6 +10,16 @@ on:
         description: Existing release tag to resume
         required: true
         type: string
+      skip_node_runtime:
+        description: Skip an already published Node runtime
+        required: false
+        default: false
+        type: boolean
+      skip_node_sdk:
+        description: Skip an already published Node SDK
+        required: false
+        default: false
+        type: boolean
       skip_python_runtime:
         description: Skip an already published Python runtime
         required: false
@@ -287,6 +297,7 @@ jobs:
         run: python3 scripts/validate-release.py --version "$VERSION" --python-runtime-dir dist
 
   publish-node-runtime:
+    if: github.event_name != 'workflow_dispatch' || !inputs.skip_node_runtime
     needs: [validate, validate-node-runtime-artifacts]
     runs-on: ubuntu-latest
     environment: npm
@@ -325,6 +336,7 @@ jobs:
           packages-dir: dist
 
   publish-node-sdk:
+    if: always() && needs.package-node-sdk.result == 'success' && (needs.publish-node-runtime.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_node_runtime)) && !(github.event_name == 'workflow_dispatch' && inputs.skip_node_sdk)
     needs: [publish-node-runtime, package-node-sdk]
     runs-on: ubuntu-latest
     environment: npm
@@ -361,7 +373,7 @@ jobs:
           packages-dir: dist
 
   release-go:
-    if: always() && needs.validate.result == 'success' && needs.build-runtime.result == 'success' && needs.publish-node-sdk.result == 'success' && (needs.publish-python-sdk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_python_sdk))
+    if: always() && needs.validate.result == 'success' && needs.build-runtime.result == 'success' && (needs.publish-node-sdk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_node_sdk)) && (needs.publish-python-sdk.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_python_sdk))
     needs: [validate, build-runtime, publish-node-sdk, publish-python-sdk]
     runs-on: ubuntu-latest
     permissions:
@@ -380,13 +392,13 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           pattern: runtime-*
-          path: runtime-dist
+          path: ${{ runner.temp }}/runtime-dist
           merge-multiple: true
       - name: Runtime checksums
         env:
           VERSION: ${{ needs.validate.outputs.version }}
         run: |
-          cd runtime-dist
+          cd "$RUNNER_TEMP/runtime-dist"
           sha256sum meta-runtime_* > "meta-runtime_${VERSION}_checksums.txt"
       - name: Install Syft
         id: syft
@@ -410,7 +422,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-        run: gh release upload "$RELEASE_TAG" runtime-dist/* --clobber
+        run: gh release upload "$RELEASE_TAG" "$RUNNER_TEMP"/runtime-dist/* --clobber
       - name: Attest release artifacts
         uses: actions/attest@v4
         with:
@@ -419,4 +431,4 @@ jobs:
             dist/*.zip
             dist/*checksums.txt
             dist/*.sbom.json
-            runtime-dist/*
+            ${{ runner.temp }}/runtime-dist/*
