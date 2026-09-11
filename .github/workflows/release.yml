@@ -297,6 +297,7 @@ jobs:
       - run: for package in ./dist/*.tgz; do npm publish "$package" --access public --provenance; done
 
   publish-python-runtime:
+    if: github.event_name != 'workflow_dispatch'
     needs: validate-python-runtime-artifacts
     runs-on: ubuntu-latest
     environment: pypi
