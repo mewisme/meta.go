@@ -94,7 +94,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           version: "0.12.10"
       - run: uv sync --directory sdk/python --frozen --all-groups
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           version: "0.12.10"
       - run: pnpm --dir sdk/node install --frozen-lockfile
