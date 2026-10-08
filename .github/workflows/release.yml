@@ -422,7 +422,7 @@ jobs:
           sha256sum meta-runtime_* > "meta-runtime_${VERSION}_checksums.txt"
       - name: Install Syft
         id: syft
-        uses: anchore/sbom-action/download-syft@v0.24.2
+        uses: anchore/sbom-action/download-syft@v0.24.3
       - name: Add Syft to PATH
         run: dirname '${{ steps.syft.outputs.cmd }}' >> "$GITHUB_PATH"
       - name: Install UPX
